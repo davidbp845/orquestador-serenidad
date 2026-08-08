@@ -85,7 +85,13 @@ class EjecutorHerramientas:
     def __init__(self, casos_de_uso: dict):
         self._casos = casos_de_uso
 
-    def ejecutar(self, nombre_tool: str, entrada: dict) -> dict:
+    def ejecutar(
+        self,
+        nombre_tool: str,
+        entrada: dict,
+        canal: str | None = None,
+        usuario_id: str | None = None,
+    ) -> dict:
         try:
             if nombre_tool == "comprobar_disponibilidad":
                 slots = self._casos["comprobar_disponibilidad"].ejecutar(
@@ -105,12 +111,18 @@ class EjecutorHerramientas:
                 }
 
             if nombre_tool == "crear_reserva":
-                cita = self._casos["crear_reserva"].ejecutar(
-                    servicio_id=entrada["servicio_id"],
-                    profesional_id=entrada["profesional_id"],
-                    cliente_id=entrada["cliente_id"],
-                    inicio=datetime.fromisoformat(entrada["inicio"]),
-                )
+                kwargs = {
+                    "servicio_id": entrada["servicio_id"],
+                    "profesional_id": entrada["profesional_id"],
+                    "cliente_id": entrada["cliente_id"],
+                    "inicio": datetime.fromisoformat(entrada["inicio"]),
+                }
+                # El chat_id de Telegram solo se conoce (y solo tiene
+                # sentido persistirlo) cuando la reserva se hace por ese
+                # canal — ver Cliente.telegram_chat_id y #38.
+                if canal == "telegram" and usuario_id is not None:
+                    kwargs["telegram_chat_id"] = usuario_id
+                cita = self._casos["crear_reserva"].ejecutar(**kwargs)
                 return {"cita_id": str(cita.id), "estado": cita.estado.value}
 
             if nombre_tool == "registrar_pedido":

@@ -176,6 +176,42 @@ def test_construir_sistema_usa_google_calendar_si_hay_credenciales(monkeypatch):
     assert cancelar_reserva._calendario is mock_calendario_cls.return_value
 
 
+def test_construir_sistema_sin_token_telegram_no_instancia_notificador(monkeypatch):
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
+         patch("main.RepositorioConocimientoChroma") as mock_chroma_cls:
+        mock_llm_cls.return_value = MagicMock()
+        mock_chroma_cls.return_value = MagicMock()
+
+        import main
+        orquestador, _ = main.construir_sistema("config/business.yaml")
+
+    crear_reserva = orquestador._ejecutor._casos["crear_reserva"]
+    cancelar_reserva = orquestador._ejecutor._casos["cancelar_reserva"]
+    assert crear_reserva._notificador is None
+    assert cancelar_reserva._notificador is None
+
+
+def test_construir_sistema_usa_notificador_telegram_si_hay_token(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "token-falso")
+    with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
+         patch("main.RepositorioConocimientoChroma") as mock_chroma_cls, \
+         patch("adapters.out.notificador_telegram.NotificadorMensajesTelegram") as mock_notificador_cls:
+        mock_llm_cls.return_value = MagicMock()
+        mock_chroma_cls.return_value = MagicMock()
+        mock_notificador_cls.return_value = MagicMock()
+
+        import main
+        orquestador, _ = main.construir_sistema("config/business.yaml")
+
+    crear_reserva = orquestador._ejecutor._casos["crear_reserva"]
+    cancelar_reserva = orquestador._ejecutor._casos["cancelar_reserva"]
+
+    mock_notificador_cls.assert_called_once_with("token-falso")
+    assert crear_reserva._notificador is mock_notificador_cls.return_value
+    assert cancelar_reserva._notificador is mock_notificador_cls.return_value
+
+
 def test_construir_repositorio_sesiones_usa_memoria_sin_redis_url(monkeypatch):
     monkeypatch.delenv("REDIS_URL", raising=False)
 

@@ -45,6 +45,10 @@ class Cliente:
     telefono: str | None = None
     email: str | None = None
     notas: str = ""
+    # Chat id de Telegram del cliente, si ha reservado alguna vez por ese
+    # canal — lo que permite mandarle una notificación proactiva (ver
+    # NotificadorMensajes) sin depender de una sesión de conversación activa.
+    telegram_chat_id: str | None = None
 
 
 @dataclass

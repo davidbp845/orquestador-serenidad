@@ -101,6 +101,13 @@ def test_clientes_guardar_es_upsert():
     assert repo.obtener("c1").nombre == "Juan Actualizado"
 
 
+def test_clientes_telegram_chat_id():
+    repo = RepositorioClientesPostgres(_engine())
+    repo.guardar(Cliente(id="c1", nombre="Juan", telegram_chat_id="chat123"))
+
+    assert repo.obtener("c1").telegram_chat_id == "chat123"
+
+
 def test_pedidos_guardar_y_obtener_con_lineas():
     repo = RepositorioPedidosPostgres(_engine())
     pedido = Pedido.nuevo("c1", [

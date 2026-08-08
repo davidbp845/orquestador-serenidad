@@ -104,6 +104,13 @@ def construir_sistema(ruta_config: str = "config/business.yaml") -> OrquestadorA
     else:
         calendario = None
 
+    telegram_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if telegram_bot_token:
+        from adapters.out.notificador_telegram import NotificadorMensajesTelegram
+        notificador = NotificadorMensajesTelegram(telegram_bot_token)
+    else:
+        notificador = None
+
     proveedor_llm = os.environ.get("PROVEEDOR_LLM", "anthropic").lower()
     if proveedor_llm == "mock":
         llm = ProveedorLLMMock()
@@ -118,9 +125,9 @@ def construir_sistema(ruta_config: str = "config/business.yaml") -> OrquestadorA
     disponibilidad = ComprobarDisponibilidad(repo_servicios, repo_profesionales, repo_citas)
     crear_reserva = CrearReserva(
         repo_servicios, repo_profesionales, repo_citas, repo_clientes,
-        disponibilidad, calendario,
+        disponibilidad, calendario, notificador,
     )
-    cancelar_reserva = CancelarReserva(repo_citas, calendario)
+    cancelar_reserva = CancelarReserva(repo_citas, calendario, repo_clientes, notificador)
     registrar_pedido = RegistrarPedido(repo_pedidos, repo_servicios)
     consultar_conocimiento = ConsultarConocimientoNegocio(conocimiento)
 

@@ -37,9 +37,13 @@ class FakeEjecutor:
     def __init__(self, resultado=None):
         self.resultado = resultado if resultado is not None else {"ok": True}
         self.llamadas = []
+        self.canal_recibido = None
+        self.usuario_id_recibido = None
 
-    def ejecutar(self, nombre_tool, entrada):
+    def ejecutar(self, nombre_tool, entrada, canal=None, usuario_id=None):
         self.llamadas.append((nombre_tool, entrada))
+        self.canal_recibido = canal
+        self.usuario_id_recibido = usuario_id
         return self.resultado
 
 
@@ -94,6 +98,21 @@ def test_ejecuta_tool_y_responde_con_el_siguiente_texto():
     assert mensajes_tool_result[0]["type"] == "tool_result"
     assert mensajes_tool_result[0]["tool_use_id"] == "call1"
     assert "55" in mensajes_tool_result[0]["content"]
+
+
+def test_pasa_canal_y_usuario_id_de_la_sesion_al_ejecutor():
+    llm = FakeLLM([
+        {"content": [_bloque_tool_use("call1", "crear_reserva", {})]},
+        {"content": [_bloque_texto("Listo.")]},
+    ])
+    ejecutor = FakeEjecutor()
+    orquestador = OrquestadorAgente(llm=llm, ejecutor_herramientas=ejecutor, system_prompt="system")
+    sesion = SesionConversacion(canal="telegram", usuario_id="chat123")
+
+    orquestador.responder(sesion, "resérvame un masaje")
+
+    assert ejecutor.canal_recibido == "telegram"
+    assert ejecutor.usuario_id_recibido == "chat123"
 
 
 def test_concatena_varios_bloques_de_texto():
@@ -177,6 +196,21 @@ def test_stream_ejecuta_tool_y_acumula_fuentes_deduplicadas():
     assert evento_done["tipo"] == "done"
     assert evento_done["respuesta"] == "El masaje cuesta 55€."
     assert evento_done["fuentes"] == [{"fuente": "servicios.md", "categoria": "servicios"}]
+
+
+def test_stream_pasa_canal_y_usuario_id_de_la_sesion_al_ejecutor():
+    llm = FakeLLM([
+        {"content": [_bloque_tool_use("call1", "crear_reserva", {})]},
+        {"content": [_bloque_texto("Listo.")]},
+    ])
+    ejecutor = FakeEjecutor()
+    orquestador = OrquestadorAgente(llm=llm, ejecutor_herramientas=ejecutor, system_prompt="system")
+    sesion = SesionConversacion(canal="telegram", usuario_id="chat123")
+
+    list(orquestador.responder_stream(sesion, "resérvame un masaje"))
+
+    assert ejecutor.canal_recibido == "telegram"
+    assert ejecutor.usuario_id_recibido == "chat123"
 
 
 def test_stream_da_mensaje_de_fallback_tras_agotar_iteraciones():

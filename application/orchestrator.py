@@ -72,7 +72,10 @@ class OrquestadorAgente:
 
             resultados_tool = []
             for bloque in bloques_tool:
-                resultado = self._ejecutor.ejecutar(bloque["name"], bloque["input"])
+                resultado = self._ejecutor.ejecutar(
+                    bloque["name"], bloque["input"],
+                    canal=sesion.canal, usuario_id=sesion.usuario_id,
+                )
                 resultados_tool.append({
                     "type": "tool_result",
                     "tool_use_id": bloque["id"],
@@ -122,7 +125,10 @@ class OrquestadorAgente:
 
             resultados_tool = []
             for bloque in bloques_tool:
-                resultado = self._ejecutor.ejecutar(bloque["name"], bloque["input"])
+                resultado = self._ejecutor.ejecutar(
+                    bloque["name"], bloque["input"],
+                    canal=sesion.canal, usuario_id=sesion.usuario_id,
+                )
                 if isinstance(resultado, dict):
                     for f in resultado.get("fuentes", []):
                         fuentes_turno.setdefault(f["fuente"], f)

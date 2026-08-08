@@ -18,6 +18,7 @@ class ClienteDB(SQLModel, table=True):
     telefono: str | None = Field(default=None, index=True)
     email: str | None = None
     notas: str = ""
+    telegram_chat_id: str | None = None
 
 
 class CitaDB(SQLModel, table=True):

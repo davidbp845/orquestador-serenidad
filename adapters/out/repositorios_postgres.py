@@ -129,6 +129,7 @@ class RepositorioClientesPostgres(RepositorioClientes):
                 telefono=cliente.telefono,
                 email=cliente.email,
                 notas=cliente.notas,
+                telegram_chat_id=cliente.telegram_chat_id,
             ))
             sesion.commit()
 
@@ -144,6 +145,7 @@ class RepositorioClientesPostgres(RepositorioClientes):
         return Cliente(
             id=fila.id, nombre=fila.nombre, telefono=fila.telefono,
             email=fila.email, notas=fila.notas,
+            telegram_chat_id=fila.telegram_chat_id,
         )
 
 

@@ -11,9 +11,11 @@ from uuid import UUID
 
 from .entities import (
     Cita,
+    Cliente,
     EstadoPedido,
     LineaPedido,
     Pedido,
+    Servicio,
     SlotDisponible,
 )
 from .exceptions import (
@@ -23,6 +25,7 @@ from .exceptions import (
     TransicionEstadoInvalida,
 )
 from .ports import (
+    NotificadorMensajes,
     RepositorioCitas,
     RepositorioClientes,
     RepositorioConocimiento,
@@ -109,6 +112,7 @@ class CrearReserva:
         clientes: RepositorioClientes,
         disponibilidad: ComprobarDisponibilidad,
         calendario: SincronizadorCalendario | None = None,
+        notificador: NotificadorMensajes | None = None,
     ):
         self._servicios = servicios
         self._profesionales = profesionales
@@ -116,6 +120,7 @@ class CrearReserva:
         self._clientes = clientes
         self._disponibilidad = disponibilidad
         self._calendario = calendario
+        self._notificador = notificador
 
     def ejecutar(
         self,
@@ -123,6 +128,7 @@ class CrearReserva:
         profesional_id: str,
         cliente_id: str,
         inicio: datetime,
+        telegram_chat_id: str | None = None,
     ) -> Cita:
         servicio = self._servicios.obtener(servicio_id)
         if servicio is None:
@@ -136,6 +142,16 @@ class CrearReserva:
         cabe = any(s.inicio <= inicio and s.fin >= fin for s in libres)
         if not cabe:
             raise ProfesionalNoDisponible(profesional_id, inicio)
+
+        if telegram_chat_id is not None:
+            # Registra (o actualiza) el chat_id de Telegram del cliente para
+            # poder mandarle notificaciones proactivas sin depender de que
+            # haya una sesión de conversación activa (ver más abajo).
+            cliente = self._clientes.obtener(cliente_id)
+            if cliente is None:
+                cliente = Cliente(id=cliente_id, nombre=cliente_id)
+            cliente.telegram_chat_id = telegram_chat_id
+            self._clientes.guardar(cliente)
 
         cita = Cita.nueva(servicio_id, profesional_id, cliente_id, inicio, fin)
 
@@ -155,7 +171,30 @@ class CrearReserva:
                 )
 
         self._citas.guardar(cita)
+
+        if self._notificador is not None:
+            self._notificar_confirmacion(cita, servicio)
+
         return cita
+
+    def _notificar_confirmacion(self, cita: Cita, servicio: Servicio) -> None:
+        # Best-effort, igual que la sincronización con el calendario: un
+        # fallo al notificar no debe deshacer ni bloquear la reserva ya
+        # creada.
+        assert self._notificador is not None  # solo se llama tras comprobarlo
+        cliente = self._clientes.obtener(cita.cliente_id)
+        if cliente is None or not cliente.telegram_chat_id:
+            return
+        try:
+            self._notificador.enviar(
+                cliente.telegram_chat_id,
+                f"Reserva confirmada: {servicio.nombre} el {cita.inicio:%d/%m/%Y} "
+                f"a las {cita.inicio:%H:%M}.",
+            )
+        except Exception:
+            logger.exception(
+                "No se pudo notificar la confirmación de la cita %s", cita.id
+            )
 
 
 class CancelarReserva:
@@ -163,24 +202,51 @@ class CancelarReserva:
         self,
         citas: RepositorioCitas,
         calendario: SincronizadorCalendario | None = None,
+        clientes: RepositorioClientes | None = None,
+        notificador: NotificadorMensajes | None = None,
     ):
         self._citas = citas
         self._calendario = calendario
+        self._clientes = clientes
+        self._notificador = notificador
 
     def ejecutar(self, cita_id: UUID) -> None:
-        if self._calendario is not None:
+        cita = None
+        if self._calendario is not None or self._notificador is not None:
             cita = self._citas.obtener(cita_id)
-            if cita is not None and cita.evento_calendario_id:
-                try:
-                    self._calendario.cancelar_evento(cita.evento_calendario_id)
-                except Exception:
-                    logger.exception(
-                        "No se pudo cancelar en el calendario externo el "
-                        "evento de la cita %s",
-                        cita_id,
-                    )
+
+        if self._calendario is not None and cita is not None and cita.evento_calendario_id:
+            try:
+                self._calendario.cancelar_evento(cita.evento_calendario_id)
+            except Exception:
+                logger.exception(
+                    "No se pudo cancelar en el calendario externo el "
+                    "evento de la cita %s",
+                    cita_id,
+                )
+
+        if self._notificador is not None and cita is not None:
+            self._notificar_cancelacion(cita)
 
         self._citas.cancelar(cita_id)
+
+    def _notificar_cancelacion(self, cita: Cita) -> None:
+        assert self._notificador is not None  # solo se llama tras comprobarlo
+        if self._clientes is None:
+            return
+        cliente = self._clientes.obtener(cita.cliente_id)
+        if cliente is None or not cliente.telegram_chat_id:
+            return
+        try:
+            self._notificador.enviar(
+                cliente.telegram_chat_id,
+                f"Tu reserva del {cita.inicio:%d/%m/%Y} a las {cita.inicio:%H:%M} "
+                f"ha sido cancelada.",
+            )
+        except Exception:
+            logger.exception(
+                "No se pudo notificar la cancelación de la cita %s", cita.id
+            )
 
 
 class RegistrarPedido:

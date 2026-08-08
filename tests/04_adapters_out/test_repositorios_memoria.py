@@ -93,6 +93,14 @@ def test_repositorio_clientes():
     assert repo.buscar_por_telefono("no_existe") is None
 
 
+def test_repositorio_clientes_telegram_chat_id():
+    repo = RepositorioClientesMemoria()
+    cliente = Cliente(id="c1", nombre="Juan", telegram_chat_id="chat123")
+    repo.guardar(cliente)
+
+    assert repo.obtener("c1").telegram_chat_id == "chat123"
+
+
 def test_repositorio_pedidos():
     repo = RepositorioPedidosMemoria()
     pedido = Pedido.nuevo("c1", [LineaPedido(servicio_id="s1", cantidad=1)])
