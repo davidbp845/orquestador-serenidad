@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 import secrets
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 # `streamlit run` pone en sys.path el directorio de este script
@@ -76,6 +76,44 @@ def _construir_conocimiento() -> RepositorioConocimientoChroma:
     return RepositorioConocimientoChroma()
 
 
+def _mes_relativo(d: date, delta: int) -> date:
+    """Primer día del mes `delta` meses antes/después del de `d`
+    (delta negativo = hacia atrás). Evita sumar '±30 días', que
+    desfasa entre meses de distinta longitud."""
+    mes_index = d.month - 1 + delta
+    anio = d.year + mes_index // 12
+    mes = mes_index % 12 + 1
+    return date(anio, mes, 1)
+
+
+def _rango_agenda(ancla: date, vista: str) -> tuple[date, date]:
+    if vista == "Semana":
+        inicio_semana = ancla - timedelta(days=ancla.weekday())
+        return inicio_semana, inicio_semana + timedelta(days=6)
+    if vista == "Mes":
+        primer_dia = ancla.replace(day=1)
+        return primer_dia, _mes_relativo(primer_dia, 1) - timedelta(days=1)
+    return ancla, ancla  # Día
+
+
+def _desplazar_ancla(ancla: date, vista: str, direccion: int) -> date:
+    if vista == "Semana":
+        return ancla + timedelta(days=7 * direccion)
+    if vista == "Mes":
+        return _mes_relativo(ancla, direccion)
+    return ancla + timedelta(days=direccion)  # Día
+
+
+def _tarjeta_cita(cita, repo_servicios, repo_profesionales) -> None:
+    servicio = repo_servicios.obtener(cita.servicio_id)
+    profesional = repo_profesionales.obtener(cita.profesional_id)
+    with st.container(border=True):
+        st.markdown(f"**{cita.inicio:%H:%M} – {cita.fin:%H:%M}**")
+        st.write(f"{servicio.nombre if servicio else cita.servicio_id} · "
+                 f"{profesional.nombre if profesional else cita.profesional_id}")
+        st.caption(f"Cliente: {cita.cliente_id} · Estado: {cita.estado.value}")
+
+
 # ---------- Gate de acceso mínimo ----------
 # Sin PANEL_EMPLEADOS_PASSWORD, el panel se abre directamente (cómodo
 # para desarrollo local); con ella, hay que introducirla una vez por
@@ -107,22 +145,50 @@ st.caption(f"{_DIAS_SEMANA_ES[_hoy.weekday()].capitalize()}, {_hoy:%d/%m/%Y}")
 with st.sidebar:
     opcion = st.radio("Menú", ["📅 Agenda", "📦 Pedidos", "⚙️ Ajustes"])
 
-# ---------- Agenda del día ----------
+# ---------- Agenda ----------
 if opcion == "📅 Agenda":
-    dia = st.date_input("Día", value=date.today())
-    citas = sorted(repo_citas.citas_en_fecha(dia), key=lambda c: c.inicio)
+    if "agenda_ancla" not in st.session_state:
+        st.session_state["agenda_ancla"] = date.today()  # arranca en hoy
+
+    vista = st.radio("Vista", ["Día", "Semana", "Mes"], horizontal=True, key="agenda_vista")
+
+    col_ant, col_hoy, col_sig = st.columns(3)
+    if col_ant.button("◀ Anterior", use_container_width=True):
+        st.session_state["agenda_ancla"] = _desplazar_ancla(st.session_state["agenda_ancla"], vista, -1)
+        st.rerun()
+    if col_hoy.button("Hoy", use_container_width=True):
+        st.session_state["agenda_ancla"] = date.today()
+        st.rerun()
+    if col_sig.button("Siguiente ▶", use_container_width=True):
+        st.session_state["agenda_ancla"] = _desplazar_ancla(st.session_state["agenda_ancla"], vista, 1)
+        st.rerun()
+
+    ancla = st.session_state["agenda_ancla"]
+    desde, hasta = _rango_agenda(ancla, vista)
+
+    if vista == "Día":
+        st.caption(f"{_DIAS_SEMANA_ES[ancla.weekday()].capitalize()}, {ancla:%d/%m/%Y}")
+    else:
+        st.caption(f"{desde:%d/%m/%Y} – {hasta:%d/%m/%Y}")
+
+    citas = sorted(repo_citas.citas_en_rango(desde, hasta), key=lambda c: c.inicio)
 
     if not citas:
-        st.info("Sin citas para ese día.")
+        st.info("Sin citas en este periodo.")
 
-    for cita in citas:
-        servicio = repo_servicios.obtener(cita.servicio_id)
-        profesional = repo_profesionales.obtener(cita.profesional_id)
-        with st.container(border=True):
-            st.markdown(f"**{cita.inicio:%H:%M} – {cita.fin:%H:%M}**")
-            st.write(f"{servicio.nombre if servicio else cita.servicio_id} · "
-                     f"{profesional.nombre if profesional else cita.profesional_id}")
-            st.caption(f"Cliente: {cita.cliente_id} · Estado: {cita.estado.value}")
+    if vista == "Día":
+        for cita in citas:
+            _tarjeta_cita(cita, repo_servicios, repo_profesionales)
+    else:
+        # Agrupadas por día (subcabecera), no una lista plana — sigue
+        # siendo tarjetas apiladas, legible en móvil.
+        citas_por_dia: dict[date, list] = {}
+        for cita in citas:
+            citas_por_dia.setdefault(cita.inicio.date(), []).append(cita)
+        for dia_grupo in sorted(citas_por_dia):
+            st.markdown(f"**{_DIAS_SEMANA_ES[dia_grupo.weekday()].capitalize()} {dia_grupo:%d/%m}**")
+            for cita in citas_por_dia[dia_grupo]:
+                _tarjeta_cita(cita, repo_servicios, repo_profesionales)
 
 # ---------- Pedidos pendientes ----------
 elif opcion == "📦 Pedidos":

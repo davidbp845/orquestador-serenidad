@@ -53,10 +53,15 @@ class RepositorioCitas(ABC):
     ) -> list[Cita]: ...
 
     @abstractmethod
-    def citas_en_fecha(self, dia: date) -> list[Cita]:
-        """Todas las citas de ese día, de cualquier profesional —
-        la agenda agregada que necesita el panel interno."""
+    def citas_en_rango(self, desde: date, hasta: date) -> list[Cita]:
+        """Todas las citas entre 'desde' y 'hasta' (ambos incluidos),
+        de cualquier profesional — la agenda agregada que necesita
+        el panel interno (vista de día/semana/mes)."""
         ...
+
+    def citas_en_fecha(self, dia: date) -> list[Cita]:
+        """Atajo de citas_en_rango para un único día."""
+        return self.citas_en_rango(dia, dia)
 
     @abstractmethod
     def cancelar(self, cita_id: UUID) -> None: ...

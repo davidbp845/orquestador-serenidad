@@ -82,10 +82,10 @@ class RepositorioCitasPostgres(RepositorioCitas):
             ).all()
             return [self._a_entidad(f) for f in filas if f.inicio.date() == dia]
 
-    def citas_en_fecha(self, dia: date) -> list[Cita]:
+    def citas_en_rango(self, desde: date, hasta: date) -> list[Cita]:
         with Session(self._engine) as sesion:
             filas = sesion.exec(select(CitaDB)).all()
-            return [self._a_entidad(f) for f in filas if f.inicio.date() == dia]
+            return [self._a_entidad(f) for f in filas if desde <= f.inicio.date() <= hasta]
 
     def cancelar(self, cita_id) -> None:
         cita_id = _como_uuid(cita_id)

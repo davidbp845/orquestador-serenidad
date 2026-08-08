@@ -56,8 +56,8 @@ class RepositorioCitasMemoria(RepositorioCitas):
             if c.profesional_id == profesional_id and c.inicio.date() == dia
         ]
 
-    def citas_en_fecha(self, dia: date) -> list[Cita]:
-        return [c for c in self._data.values() if c.inicio.date() == dia]
+    def citas_en_rango(self, desde: date, hasta: date) -> list[Cita]:
+        return [c for c in self._data.values() if desde <= c.inicio.date() <= hasta]
 
     def cancelar(self, cita_id) -> None:
         if cita_id in self._data:

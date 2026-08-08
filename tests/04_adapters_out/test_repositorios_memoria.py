@@ -59,6 +59,30 @@ def test_repositorio_citas_en_fecha_agrega_todos_los_profesionales():
     assert set(c.id for c in resultado) == {cita_ana.id, cita_beatriz.id}
 
 
+def test_repositorio_citas_en_rango_incluye_los_limites_y_excluye_fuera_de_rango():
+    repo = RepositorioCitasMemoria()
+    cita_antes = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 2, 9, 0), datetime(2026, 8, 2, 10, 0))
+    cita_limite_inferior = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    cita_intermedia = Cita.nueva("s1", "beatriz", "c2", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0))
+    cita_limite_superior = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 5, 9, 0), datetime(2026, 8, 5, 10, 0))
+    cita_despues = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 6, 9, 0), datetime(2026, 8, 6, 10, 0))
+    for cita in (cita_antes, cita_limite_inferior, cita_intermedia, cita_limite_superior, cita_despues):
+        repo.guardar(cita)
+
+    resultado = repo.citas_en_rango(date(2026, 8, 3), date(2026, 8, 5))
+
+    assert {c.id for c in resultado} == {
+        cita_limite_inferior.id, cita_intermedia.id, cita_limite_superior.id,
+    }
+
+
+def test_repositorio_citas_en_rango_vacio_si_no_hay_citas_en_ese_rango():
+    repo = RepositorioCitasMemoria()
+    repo.guardar(Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 1, 9, 0), datetime(2026, 8, 1, 10, 0)))
+
+    assert repo.citas_en_rango(date(2026, 8, 10), date(2026, 8, 20)) == []
+
+
 def test_repositorio_citas_cancelar():
     repo = RepositorioCitasMemoria()
     cita = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
