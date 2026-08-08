@@ -122,8 +122,15 @@ def _tarjeta_cita(cita, repo_servicios, repo_profesionales) -> None:
 _clave_panel = os.environ.get("PANEL_EMPLEADOS_PASSWORD")
 if _clave_panel and not st.session_state.get("autenticado"):
     st.title("🔒 Acceso al panel")
-    intento = st.text_input("Contraseña", type="password")
-    if st.button("Entrar"):
+    # st.form en vez de un text_input + button sueltos: sin form, el
+    # navegador puede mandar el clic del botón antes de confirmar el
+    # último cambio del campo de texto, así que a veces se compara
+    # contra un valor desactualizado. El form sincroniza campo y envío
+    # en un único evento atómico, y de paso permite enviar con Enter.
+    with st.form("form_acceso"):
+        intento = st.text_input("Contraseña", type="password")
+        entrar = st.form_submit_button("Entrar")
+    if entrar:
         if secrets.compare_digest(intento, _clave_panel):
             st.session_state["autenticado"] = True
             st.rerun()
