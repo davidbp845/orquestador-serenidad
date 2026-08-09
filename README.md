@@ -51,6 +51,9 @@ cp .env.example .env
 
 # 1. Prepara tu vault de Obsidian con el conocimiento del negocio
 #    (precios, políticas, horarios, FAQs) en ./vault_negocio/*.md
+#    Para probar rápido sin escribir contenido propio, copia el vault de
+#    ejemplo ya versionado en el repo (mismo patrón que .env.example -> .env):
+cp -r vault_example vault_negocio
 
 # 2. Indexa el vault en el RAG
 python -m adapters.out.obsidian_ingest --vault ./vault_negocio

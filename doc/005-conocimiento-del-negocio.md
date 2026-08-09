@@ -18,6 +18,13 @@ El vault de ejemplo (`vault_negocio/`) tiene ocho notas:
 del chat y (si lo marca así) una página pública en la web — la misma nota,
 dos consumidores.
 
+`vault_negocio/` está en `.gitignore` a propósito (puede llegar a contener
+datos reales de un negocio concreto), así que clonar el repo no trae
+ningún contenido de vault por defecto. `vault_example/` es una copia
+versionada de ese mismo contenido de ejemplo, pensada para probar el
+sistema de inmediato — `cp -r vault_example vault_negocio` antes del paso
+de ingesta (ver `README.md`), el mismo patrón que `.env.example` → `.env`.
+
 ## Cómo llega una nota al RAG: la ingesta
 
 `python -m adapters.out.obsidian_ingest --vault ./vault_negocio`
