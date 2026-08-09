@@ -64,6 +64,11 @@ python main.py
 cd frontend && npm install && npm run dev   # http://localhost:4321
 ```
 
+Alternativa a los pasos 4-5 (+ el panel interno): `./scripts/dev_up.sh`
+verifica el entorno (dependencias, LLM, Chroma, Postgres/Redis si están
+configurados) y arranca backend, frontend y panel en un solo comando —
+ver `scripts/verificar_entorno.py` para correr solo la verificación.
+
 El chat web queda disponible en `POST http://localhost:8000/chat`
 (respuesta completa en JSON) y en `POST http://localhost:8000/chat/stream`
 (streaming vía Server-Sent Events, el que usa `frontend/`), ambos con
