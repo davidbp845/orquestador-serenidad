@@ -7,7 +7,9 @@ actuar sobre él vía agentes, expuesto sobre todo a través de canales
 conversacionales (chat, Telegram), mientras la web actúa como 
 escaparate estático generado desde la misma fuente de conocimiento.
 
-[Documentación](doc/001-intro.md)
+[Documentación](doc/001-intro.md) — narrativa más profunda que este README:
+arquitectura, RAG, cómo extender a otro negocio, despliegue y referencia de
+la API del chat.
 
 ## Estructura
 
