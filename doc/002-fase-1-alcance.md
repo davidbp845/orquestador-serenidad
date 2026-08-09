@@ -309,7 +309,7 @@ una cita existe.
 "funcione en la demo" — esto cubre desde tests hasta bugs de producción reales
 encontrados probando el flujo completo.
 
-- **86 tests iniciales → 196 hoy** (#5, cerrado, y crecido orgánicamente desde
+- **86 tests iniciales → 219 hoy** (#5, cerrado, y crecido orgánicamente desde
   entonces): la suite sigue la misma estructura en capas que la arquitectura
   (`tests/01_domain` → `tests/06_main`, de dentro hacia fuera), con fakes
   hechos a mano para los tests de dominio y mocks de los SDKs externos
@@ -338,6 +338,20 @@ encontrados probando el flujo completo.
   `llm_cohere.py`, variables reasignadas entre implementaciones en
   memoria/Postgres en `main.py::construir_sistema` sin anotar con el tipo del
   puerto) — deuda conocida y documentada, no una omisión.
+- **#42 — CI en `main` rota desde hace 3 días por lint** (cerrado): detectado
+  por el email de fallo de CI en un push rutinario, pero el diagnóstico mostró
+  que no era un caso aislado — los 14 pushes anteriores a `main`, desde el
+  commit que añadió `scripts/evaluar_prompt.py` (2026-08-06), habían fallado
+  en el job `lint` sin que nadie lo notara, porque `ruff` no corre en un
+  pre-commit hook local, solo en CI. Dos errores concretos: `E402` (el script
+  inserta la raíz del repo en `sys.path` antes de importar `application/`,
+  necesario porque se ejecuta suelto — mismo patrón ya exceptuado para
+  `main.py`/`tests/`/el panel en `pyproject.toml`, solo le faltaba su propia
+  entrada) y `UP037` (comillas innecesarias en un forward reference con
+  `from __future__ import annotations` ya activo). El job `test` nunca estuvo
+  roto — solo `lint`. Fix trivial, verificado con `ruff check .` limpio y los
+  219 tests en verde antes de hacer push, y confirmado después con el run de
+  CI ya en verde.
 
 ## 8. El sitio web público y su SEO
 
@@ -456,22 +470,25 @@ está definido. Email como canal de notificación quedó fuera de alcance (ver
 desplegar de verdad" — documentación, tipado, y un par de cosas hardcodeadas
 para desarrollo que no deberían llegar tal cual a producción.
 
-- **#20 — Documentación inicial** (Backlog): esta serie de documentos en
-  `doc/` (narrativa profunda, no referencia terse como `README.md`/`CLAUDE.md`)
-  — introducción, arquitectura, conocimiento del negocio, cómo extender a
-  otro negocio, despliegue, API.
+- **#20 — Documentación inicial** (cerrado): la serie completa de
+  documentos en `doc/` (narrativa profunda, no referencia terse como
+  `README.md`/`CLAUDE.md`), numerada `001` a `008` — introducción,
+  este mismo documento de alcance, modelo de datos, arquitectura,
+  conocimiento del negocio, cómo extender a otro negocio, despliegue, y
+  referencia de la API del chat. `doc/001-intro.md` (antes vacío, enlazado en
+  roto desde el `README.md`) es ahora el punto de entrada que enlaza al
+  resto de la serie.
 - **#37 — Puesta en producción: checklist + arreglar CORS hardcodeado**
-  (abierto, parcialmente hecho): el bloqueante de código ya está resuelto —
-  `adapters/in_/fastapi_app.py` ya no tiene los orígenes CORS hardcodeados,
-  ahora son configurables vía `CORS_ORIGINS` (lista separada por comas),
-  manteniendo los orígenes de dev como default si no está definida. Lo que
-  queda abierto no es código de este repo sino decisiones y trabajo de
-  despliegue real: qué hacer con las sesiones en RAM y el proceso único antes
-  de abrir el dominio al público (¿asumirlo por ahora?, ¿rate limiting en
-  `/chat`, que hoy no tiene?), y la checklist de infraestructura en sí — DNS,
-  TLS, secrets, Postgres provisionado, indexar el vault, build del frontend.
-  Deliberadamente sigue abierto hasta que haya un despliegue real que la
-  recorra.
+  (cerrado): el bloqueante de código (CORS hardcodeado) ya estaba resuelto
+  desde antes — `adapters/in_/fastapi_app.py` lo expone vía `CORS_ORIGINS`,
+  manteniendo los orígenes de dev como default si no está definida. El resto
+  del issue —qué hacer con las sesiones en RAM y el proceso único antes de
+  abrir el dominio al público, rate limiting en `/chat` (que sigue sin
+  tener), y la checklist de infraestructura (DNS, TLS, secrets, Postgres
+  provisionado, indexar el vault, build del frontend)— no era código de este
+  repo, así que se movió tal cual a `doc/007-despliegue.md` como referencia
+  viva que se recorre en el momento de un despliegue real, en vez de quedar
+  como una tarea de tracker que nunca se puede marcar "hecha" de verdad.
 - **#19 — Type-checking (mypy)** (ya mencionado en la sección 7 — cerrado de
   forma incremental, `domain`/`application` cubiertos, `adapters`/`main.py`
   pendientes): tipado estático ayuda a que refactors futuros —muy probables
@@ -483,16 +500,18 @@ para desarrollo que no deberían llegar tal cual a producción.
 
 | Estado | Issues |
 |---|---|
-| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #38, #39, #40, #41 |
-| **Listo para empezar (Ready)** | #23, #37 (parcial: CORS ya resuelto) |
-| **Backlog** | #20, #21, #22 |
+| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #20, #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #37 (movido a `doc/007-despliegue.md`), #38, #39, #40, #41 |
+| **Listo para empezar (Ready)** | #23 |
+| **Backlog** | #21, #22 |
 
-De 34 issues etiquetados `Fase I`, 29 están cerrados. Lo que queda por delante
-se concentra en dos frentes: **calidad conversacional** (#21, #22 — el
-modelo ya funciona, pero afinar el tono comercial y automatizar su
-verificación es trabajo continuo) y **estar listo para producción de verdad**
-(#20, #23, #37 — documentación, el token de Hugging Face, y el resto del
-checklist de despliegue más allá del CORS ya arreglado). Las notificaciones
-proactivas al cliente (#38), la revisión del modelo de datos (#36) y el
-Postgres real de desarrollo (#41) ya están resueltos — ver la sección 9 y
-`doc/003-modelo-datos.md` respectivamente.
+De 34 issues etiquetados `Fase I`, 31 están cerrados. Lo que queda por
+delante se concentra en dos frentes: **calidad conversacional** (#21, #22 —
+el modelo ya funciona, pero afinar el tono comercial y automatizar su
+verificación es trabajo continuo) y un único cabo suelto de infraestructura
+de desarrollo (**#23** — el token de Hugging Face Hub). Las notificaciones
+proactivas al cliente (#38), la revisión del modelo de datos (#36), el
+Postgres real de desarrollo (#41), la CI rota en `main` (#42, sin label
+`Fase I` por ser un fallo de infraestructura de CI, no de alcance — fuera de
+este recuento), la documentación inicial completa (#20) y el checklist de
+producción (#37) ya están resueltos — ver la sección 9,
+`doc/003-modelo-datos.md` y `doc/007-despliegue.md` respectivamente.
