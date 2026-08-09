@@ -277,21 +277,22 @@ con Redis activo una conversación sobrevive a un reinicio completo del
 proceso, y que sin él, no — exactamente el problema que motivó el issue
 ("el bot olvida a todo el mundo en cada despliegue").
 
-**Pendiente — Postgres real de desarrollo (#41, Ready):** el código de la
-persistencia Postgres funciona y está probado (repositorios, migraciones,
-selección automática por `DATABASE_URL` tanto en `main.py` como en el panel),
-pero en esta máquina no hay ningún Postgres corriendo — sin Docker, sin
-`psql`, sin paquete `postgresql` instalado. El síntoma detectado depurando en
-vivo: sin `DATABASE_URL`, `main.py` (el chat) y `panel_empleados/streamlit_app.py`
-(#10) son procesos separados, cada uno con su propio
-`RepositorioCitasMemoria`/`RepositorioClientesMemoria`/`RepositorioPedidosMemoria`
-en RAM — una reserva creada por el chat nunca aparece en el panel, porque
-arranca con su propio almacén vacío. Lo que falta no es código, es decidir
-*cómo* se provisiona el Postgres de desarrollo (Docker local, Postgres nativo
-vía `apt` — necesita sudo, fuera de lo autónomo — o un servicio gestionado
-gratuito tipo Neon/Supabase/Railway, mismo patrón que la clave de trial de
-Cohere para prototipar sin infraestructura propia). Postgres de producción
-queda explícitamente fuera de este issue — eso es parte del checklist de #37.
+**Postgres real de desarrollo (#41, cerrado):** el código de la persistencia
+Postgres ya funcionaba y estaba probado (repositorios, migraciones,
+selección automática por `DATABASE_URL` tanto en `main.py` como en el panel);
+lo que faltaba era infraestructura, no código. Se resolvió provisionando un
+Postgres gestionado gratuito en Neon (opción C de las barajadas en el
+issue — sin Docker ni permisos de sistema, mismo patrón que la clave de
+trial de Cohere para prototipar sin infraestructura propia), aplicando
+`alembic upgrade head` contra él, y documentando `DATABASE_URL` en
+`.env.example` (antes sin comentario, a diferencia del resto de variables).
+Verificado explícitamente el síntoma original: dos procesos Python
+independientes, cada uno construyendo sus propios repositorios contra el
+mismo `DATABASE_URL` (igual que hacen `main.py::construir_sistema()` y
+`panel_empleados/streamlit_app.py::_construir_repos()`), comparten los datos
+— una cita creada por el primero es visible por el segundo sin reiniciar
+nada. Postgres de producción queda fuera de este issue — eso sigue siendo
+parte del checklist de #37.
 
 **Sincronización externa — Google Calendar (#33, cerrado):**
 `adapters/out/calendario_google.py` refleja cada `Cita` creada como un evento
@@ -482,18 +483,16 @@ para desarrollo que no deberían llegar tal cual a producción.
 
 | Estado | Issues |
 |---|---|
-| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #38, #39, #40 |
-| **Listo para empezar (Ready)** | #23, #37 (parcial: CORS ya resuelto), #41 |
+| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #38, #39, #40, #41 |
+| **Listo para empezar (Ready)** | #23, #37 (parcial: CORS ya resuelto) |
 | **Backlog** | #20, #21, #22 |
 
-De 34 issues etiquetados `Fase I`, 28 están cerrados. Lo que queda por delante
-se concentra en tres frentes: **calidad conversacional** (#21, #22 — el
+De 34 issues etiquetados `Fase I`, 29 están cerrados. Lo que queda por delante
+se concentra en dos frentes: **calidad conversacional** (#21, #22 — el
 modelo ya funciona, pero afinar el tono comercial y automatizar su
-verificación es trabajo continuo), **infraestructura de desarrollo** (#41 —
-el código de Postgres ya funciona, falta decidir cómo se provisiona un
-Postgres real para que chat y panel compartan estado) y **estar listo para
-producción de verdad** (#20, #23, #37 — documentación, el token de Hugging
-Face, y el resto del checklist de despliegue más allá del CORS ya
-arreglado). Las notificaciones proactivas al cliente (#38) y la revisión del
-modelo de datos (#36) ya están resueltas — ver la sección 9 y
+verificación es trabajo continuo) y **estar listo para producción de verdad**
+(#20, #23, #37 — documentación, el token de Hugging Face, y el resto del
+checklist de despliegue más allá del CORS ya arreglado). Las notificaciones
+proactivas al cliente (#38), la revisión del modelo de datos (#36) y el
+Postgres real de desarrollo (#41) ya están resueltos — ver la sección 9 y
 `doc/003-modelo-datos.md` respectivamente.

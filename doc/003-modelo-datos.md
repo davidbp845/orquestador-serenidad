@@ -135,20 +135,27 @@ Ninguna migración toca `servicios` ni `profesionales` porque esas dos
 entidades nunca han tenido tabla propia — son catálogo derivado del YAML, no
 estado persistente.
 
-## Qué sigue sin resolver
+## Postgres de desarrollo provisionado (#41, cerrado)
 
-**Sin `DATABASE_URL`, chat y panel no comparten estado (#41, Ready).** No es
-un problema del modelo de datos en sí — `RepositorioCitasPostgres`,
-`RepositorioClientesPostgres` y `RepositorioPedidosPostgres` funcionan y
-`main.py`/`panel_empleados/streamlit_app.py` ya seleccionan Postgres en
-cuanto `DATABASE_URL` está definida — sino de que en desarrollo, sin ningún
-Postgres corriendo, cada proceso (`main.py` y el panel) tiene su propio
-`RepositorioCitasMemoria`/`RepositorioClientesMemoria`/`RepositorioPedidosMemoria`
-en RAM, aislado del otro: una reserva creada por el chat nunca aparece en el
-panel. Lo que falta es decidir cómo se provisiona un Postgres real de
-desarrollo (Docker local, Postgres nativo vía `apt` — necesita sudo — o un
-servicio gestionado gratuito tipo Neon/Supabase/Railway); ver #41 para el
-detalle de las opciones.
+El código de la persistencia Postgres ya funcionaba y estaba probado antes de
+este issue — el hueco era puramente de infraestructura: en esta máquina no
+había ningún Postgres corriendo (sin Docker, sin `psql`, sin paquete
+`postgresql`), así que sin `DATABASE_URL` cada proceso (`main.py` y el panel)
+tenía su propio `RepositorioCitasMemoria`/`RepositorioClientesMemoria`/
+`RepositorioPedidosMemoria` en RAM, aislado del otro. Se resolvió
+provisionando un Postgres gestionado gratuito en [Neon](https://neon.tech/)
+(sin Docker ni permisos de sistema — mismo patrón que la clave de trial de
+Cohere), aplicando `alembic upgrade head` contra él, y documentando
+`DATABASE_URL` en `.env.example` (antes era la única variable de conexión sin
+comentario explicativo). Se verificó explícitamente el síntoma original con
+dos procesos Python independientes construyendo cada uno sus propios repos
+contra el mismo `DATABASE_URL` (una réplica mínima de lo que hacen
+`main.py::construir_sistema()` y `panel_empleados/streamlit_app.py::_construir_repos()`):
+una cita creada por el primero es visible por el segundo sin reiniciar nada.
+Postgres de producción queda fuera de este issue — es parte del checklist de
+#37.
+
+## Qué sigue sin resolver
 
 Este documento cierra el issue #36 tal como estaba planteado (una foto del
 estado actual), pero dos preguntas de fondo que el propio issue original
