@@ -43,7 +43,10 @@ real, aunque la decisión sea "lo asumimos por ahora":
   diccionario en memoria por defecto, o Redis compartido si está activo), no
   se puede simplemente levantar más de un worker sin haber activado Redis
   primero — cada worker en memoria tendría su propio estado de conversación,
-  aislado de los demás.
+  aislado de los demás. `GET /health` (`doc/008-api.md`) ya existe y es
+  justo la pieza que un supervisor real (systemd, Docker, un balanceador)
+  necesitaría consultar para decidir cuándo reiniciar el proceso — hoy nadie
+  lo consulta automáticamente, solo está disponible para quien lo conecte.
 - **`/chat` y `/chat/stream` son públicos y sin límite de uso.** No hay rate
   limiting ni autenticación en ninguno de los dos endpoints. En cuanto el
   dominio sea público e indexable, cualquiera — o un bot — puede agotar la

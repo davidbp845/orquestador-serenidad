@@ -60,6 +60,9 @@ python -m adapters.out.obsidian_ingest --vault ./vault_negocio
 # 4. Arranca el backend
 python main.py
 
+# Verifica que arrancó bien, en otra terminal:
+curl http://localhost:8000/health   # {"status": "ok"}
+
 # 5. (opcional) Arranca la web pública + chat, en otra terminal
 cd frontend && npm install && npm run dev   # http://localhost:4321
 ```
