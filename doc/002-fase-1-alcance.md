@@ -71,12 +71,16 @@ que exista todavía una necesidad concreta de esa edición en caliente. Mientras
 nadie la pida, `business.yaml` como fuente de verdad del catálogo sigue siendo
 lo más simple.
 
-Sigue abierta, en cambio, una revisión más amplia del modelo de datos:
-
-- **#36 — Revisar modelo de datos** (Backlog): revisión más amplia de si el
-  modelo actual (una única entidad `Servicio` sin variantes, un `Cliente` sin
-  historial estructurado más allá de `notas: str`) aguanta un negocio real más
-  allá del ejemplo del centro de masajes.
+**#36 — Revisar modelo de datos** (cerrado): en la práctica era un documento
+de referencia, no una tarea con entregable de código, así que se movió a
+`doc/003-modelo-datos.md` — mapa de dónde vive cada entidad hoy (memoria,
+Postgres, Redis, Google Calendar) y qué cambió desde la primera foto. Dos
+preguntas de fondo que ese issue dejaba abiertas siguen sin decidirse y no
+tienen issue propio todavía: si el modelo actual (una única entidad
+`Servicio` sin variantes, un `Cliente` sin historial estructurado más allá de
+`notas: str`) aguanta un negocio real más allá del centro de masajes, y qué
+pasa con las sesiones en memoria en un despliegue con más de un worker sin
+Redis delante.
 
 ## 2. El orquestador de agentes (aplicación)
 
@@ -273,6 +277,22 @@ con Redis activo una conversación sobrevive a un reinicio completo del
 proceso, y que sin él, no — exactamente el problema que motivó el issue
 ("el bot olvida a todo el mundo en cada despliegue").
 
+**Pendiente — Postgres real de desarrollo (#41, Ready):** el código de la
+persistencia Postgres funciona y está probado (repositorios, migraciones,
+selección automática por `DATABASE_URL` tanto en `main.py` como en el panel),
+pero en esta máquina no hay ningún Postgres corriendo — sin Docker, sin
+`psql`, sin paquete `postgresql` instalado. El síntoma detectado depurando en
+vivo: sin `DATABASE_URL`, `main.py` (el chat) y `panel_empleados/streamlit_app.py`
+(#10) son procesos separados, cada uno con su propio
+`RepositorioCitasMemoria`/`RepositorioClientesMemoria`/`RepositorioPedidosMemoria`
+en RAM — una reserva creada por el chat nunca aparece en el panel, porque
+arranca con su propio almacén vacío. Lo que falta no es código, es decidir
+*cómo* se provisiona el Postgres de desarrollo (Docker local, Postgres nativo
+vía `apt` — necesita sudo, fuera de lo autónomo — o un servicio gestionado
+gratuito tipo Neon/Supabase/Railway, mismo patrón que la clave de trial de
+Cohere para prototipar sin infraestructura propia). Postgres de producción
+queda explícitamente fuera de este issue — eso es parte del checklist de #37.
+
 **Sincronización externa — Google Calendar (#33, cerrado):**
 `adapters/out/calendario_google.py` refleja cada `Cita` creada como un evento
 en un calendario real de Google, vía una cuenta de servicio
@@ -376,9 +396,9 @@ caso de uso `CambiarEstadoPedido`, con una pequeña máquina de estados
 El panel consume esos casos de uso directamente, sin pasar por el orquestador
 ni por ningún LLM (construye sus propios repositorios igual que
 `main.py::construir_sistema()`: Postgres si hay `DATABASE_URL`, en memoria si
-no). Tres secciones — agenda del día (solo lectura), pedidos pendientes (con
-cambio de estado) y un botón de reindexado de RAG — con un enfoque
-mobile-first deliberadamente barato: la navegación vive en `st.sidebar`, que
+no). Tres secciones — agenda (solo lectura), pedidos pendientes (con cambio
+de estado) y un botón de reindexado de RAG — con un enfoque mobile-first
+deliberadamente barato: la navegación vive en `st.sidebar`, que
 Streamlit ya colapsa por sí solo en pantallas estrechas, y el contenido son
 tarjetas apiladas (`st.container(border=True)`) en vez de tablas o columnas,
 que en móvil fuerzan scroll horizontal. Un gate de acceso mínimo
@@ -399,18 +419,35 @@ chequeo HTTP puede dar un falso positivo). Y `.streamlit/config.toml`
 añade por defecto a cualquier app local — este panel es interno, no algo
 pensado para Streamlit Community Cloud.
 
-**Relacionado — #12 (cerrado) y #38 (Backlog):** el puerto `NotificadorMensajes`
-(`domain/ports.py`) ya tiene una implementación real,
+**Agenda día/semana/mes con navegación (#40, cerrado):** la sección de agenda
+arrancó (#10) mostrando un único día elegido con un `st.date_input`, sin más
+navegación. #40 la amplió con un selector de vista (día/semana/mes) y botones
+"◀ Anterior" / "Hoy" / "Siguiente ▶" que desplazan una fecha ancla guardada en
+`st.session_state` (1 día, 7 días o 1 mes según la vista activa, usando el
+primer día del mes siguiente/anterior en vez de `± 30 días` para no
+desfasarse entre meses de distinta longitud). Requirió un método nuevo en el
+puerto, `RepositorioCitas.citas_en_rango(desde, hasta)` (rango inclusivo,
+todos los profesionales), implementado en `RepositorioCitasMemoria` y
+`RepositorioCitasPostgres`; `citas_en_fecha(dia)` pasó a delegar en
+`citas_en_rango(dia, dia)` en vez de duplicar el filtro de fecha en ambas
+implementaciones. Ver `doc/003-modelo-datos.md` para el detalle de este
+cambio en el modelo de datos.
+
+**Notificaciones de reserva conectadas a Telegram (#38, cerrado):** el puerto
+`NotificadorMensajes` (`domain/ports.py`) ya tenía una implementación real,
 `NotificadorMensajesTelegram` (#12), pero deliberadamente sin conectar a
-nada — ni `CrearReserva`/`CancelarReserva` la reciben como dependencia, ni
-`main.py` la instancia. Esa conexión (mandar un mensaje de
-confirmación/cancelación automático al crear o cancelar una reserva) es el
-issue **#38**, y está bloqueada por una decisión de diseño pendiente:
-`NotificadorMensajesTelegram.enviar()` necesita el `chat_id` de Telegram del
-cliente, pero `Cliente` (`domain/entities.py`) hoy solo guarda `telefono` y
-`email` — no hay ningún campo para identificador de contacto por canal, así
-que hay que decidir si vive en `Cliente` (ej. `telegram_chat_id`) o se
-resuelve desde `SesionConversacion` en el momento del envío.
+nada — ni `CrearReserva`/`CancelarReserva` la recibían como dependencia, ni
+`main.py` la instanciaba. #38 cerró esa conexión: `Cliente`
+(`domain/entities.py`) ganó un campo `telegram_chat_id: str | None`
+(migración `8c8bf2f0d3c8_telegram_chat_id_en_clientes.py`), poblado desde
+`CrearReserva` cuando la reserva se origina en una sesión de Telegram, y
+`CrearReserva`/`CancelarReserva` reciben ahora un `NotificadorMensajes | None`
+opcional que manda confirmación/cancelación tras guardar la cita —
+best-effort, mismo patrón que la sincronización con Google Calendar: un fallo
+de Telegram nunca impide crear o cancelar una reserva en el sistema propio.
+`main.py` instancia `NotificadorMensajesTelegram` solo si `TELEGRAM_BOT_TOKEN`
+está definido. Email como canal de notificación quedó fuera de alcance (ver
+#12), descartado por ahora sin un caso de uso claro que lo dispare.
 
 ## 10. Base para operar en producción
 
@@ -445,16 +482,18 @@ para desarrollo que no deberían llegar tal cual a producción.
 
 | Estado | Issues |
 |---|---|
-| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #39 |
-| **Listo para empezar (Ready)** | #23, #37 (parcial: CORS ya resuelto) |
-| **Backlog** | #20, #21, #22, #36, #38 |
+| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #38, #39, #40 |
+| **Listo para empezar (Ready)** | #23, #37 (parcial: CORS ya resuelto), #41 |
+| **Backlog** | #20, #21, #22 |
 
-De 32 issues etiquetados `Fase I`, 25 están cerrados. Lo que queda por delante
-se concentra en tres frentes: **calidad conversacional** (#21, #22 — el modelo
-ya funciona, pero afinar el tono comercial y automatizar su verificación es
-trabajo continuo), **notificaciones proactivas al cliente** (#38 — el
-adaptador de Telegram ya existe desde #12, falta conectarlo a
-`CrearReserva`/`CancelarReserva`, bloqueado en decidir dónde vive el chat_id
-del cliente) y **estar listo para producción de verdad** (#20, #23, #36, #37 —
-documentación, el token de Hugging Face, revisar el modelo de datos, y el
-resto del checklist de despliegue más allá del CORS ya arreglado).
+De 34 issues etiquetados `Fase I`, 28 están cerrados. Lo que queda por delante
+se concentra en tres frentes: **calidad conversacional** (#21, #22 — el
+modelo ya funciona, pero afinar el tono comercial y automatizar su
+verificación es trabajo continuo), **infraestructura de desarrollo** (#41 —
+el código de Postgres ya funciona, falta decidir cómo se provisiona un
+Postgres real para que chat y panel compartan estado) y **estar listo para
+producción de verdad** (#20, #23, #37 — documentación, el token de Hugging
+Face, y el resto del checklist de despliegue más allá del CORS ya
+arreglado). Las notificaciones proactivas al cliente (#38) y la revisión del
+modelo de datos (#36) ya están resueltas — ver la sección 9 y
+`doc/003-modelo-datos.md` respectivamente.
