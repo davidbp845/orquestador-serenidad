@@ -173,10 +173,21 @@ alimentando la respuesta del LLM en texto libre, pero nunca sale como enlace
 clicable, lo que da control fino sobre qué información interna es apta para
 mostrarse como contenido público.
 
-**Pendiente relacionado:** #23 — Crear token de Hugging Face Hub (Ready). Hoy
-la descarga del modelo de embeddings funciona sin autenticación, pero con
-rate limits más bajos y avisos en el log en cada arranque; el token no
-desbloquea ninguna funcionalidad nueva, solo hace la descarga más fiable.
+**Cerrado sin implementar — #23 — Crear token de Hugging Face Hub.** Hoy la
+descarga del modelo de embeddings funciona sin autenticación, pero con rate
+limits más bajos y un aviso en el log en cada arranque (`Warning: You are
+sending unauthenticated requests to the HF Hub...`, visible en
+`logs/backend.log` si se arranca vía `scripts/dev_up.sh`, o directamente en
+la terminal con `python main.py`); el token no desbloquea ninguna
+funcionalidad nueva, solo hace la descarga más fiable. Se intentó darse de
+alta en huggingface.co para crear el token, pero el registro falla en
+Firefox sobre Ubuntu — sospecha razonable: el alta usa un captcha Cloudflare
+Turnstile, que es conocido por fallar en silencio con
+`privacy.resistFingerprinting` u otras protecciones de fingerprinting/tracking
+activadas. Se cierra por prioridad (el aviso es cosmético, no bloquea
+ninguna funcionalidad) — `HF_TOKEN` ya quedó documentado como placeholder en
+`.env.example` por si se retoma más adelante, desde otro navegador o
+dispositivo.
 
 ## 4. El agente habla con distintos proveedores de LLM
 
@@ -500,18 +511,16 @@ para desarrollo que no deberían llegar tal cual a producción.
 
 | Estado | Issues |
 |---|---|
-| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #20, #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #37 (movido a `doc/007-despliegue.md`), #38, #39, #40, #41 |
-| **Listo para empezar (Ready)** | #23 |
+| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #20, #23 (cerrado sin implementar — signup de Hugging Face bloqueado, aviso cosmético, ver sección 3), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #37 (movido a `doc/007-despliegue.md`), #38, #39, #40, #41 |
 | **Backlog** | #21, #22 |
 
-De 34 issues etiquetados `Fase I`, 31 están cerrados. Lo que queda por
-delante se concentra en dos frentes: **calidad conversacional** (#21, #22 —
-el modelo ya funciona, pero afinar el tono comercial y automatizar su
-verificación es trabajo continuo) y un único cabo suelto de infraestructura
-de desarrollo (**#23** — el token de Hugging Face Hub). Las notificaciones
-proactivas al cliente (#38), la revisión del modelo de datos (#36), el
-Postgres real de desarrollo (#41), la CI rota en `main` (#42, sin label
-`Fase I` por ser un fallo de infraestructura de CI, no de alcance — fuera de
-este recuento), la documentación inicial completa (#20) y el checklist de
-producción (#37) ya están resueltos — ver la sección 9,
+De 34 issues etiquetados `Fase I`, 32 están cerrados. Lo único que queda por
+delante es **calidad conversacional** (#21, #22 — el modelo ya funciona,
+pero afinar el tono comercial y automatizar su verificación es trabajo
+continuo). Las notificaciones proactivas al cliente (#38), la revisión del
+modelo de datos (#36), el Postgres real de desarrollo (#41), la CI rota en
+`main` (#42, sin label `Fase I` por ser un fallo de infraestructura de CI,
+no de alcance — fuera de este recuento), la documentación inicial completa
+(#20) y el checklist de producción (#37) ya están resueltos — ver la
+sección 9,
 `doc/003-modelo-datos.md` y `doc/007-despliegue.md` respectivamente.
