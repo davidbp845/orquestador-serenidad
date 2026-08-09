@@ -58,6 +58,9 @@ edita el código, no para leerse de un tirón):
 7. **[007-despliegue.md](007-despliegue.md)** — checklist de puesta en
    producción, más allá de `localhost`.
 8. **[008-api.md](008-api.md)** — referencia de los endpoints HTTP del chat.
+9. **[009-errores-conocidos.md](009-errores-conocidos.md)** — avisos y
+   errores que vas a ver corriendo el sistema o la CI que ya están
+   diagnosticados y no son bugs.
 
 Para poner el sistema en marcha en local, el punto de partida sigue siendo el
 [`README.md`](../README.md) de la raíz del repo.
