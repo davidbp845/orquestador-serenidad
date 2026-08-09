@@ -51,7 +51,7 @@ class CasoDificil:
     turnos_previos: list[str] = field(default_factory=list)  # mensajes de usuario antes del turno evaluado
 
     @staticmethod
-    def desde_dict(d: dict[str, Any]) -> "CasoDificil":
+    def desde_dict(d: dict[str, Any]) -> CasoDificil:
         return CasoDificil(
             id=d["id"],
             entrada=d["entrada"],

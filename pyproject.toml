@@ -29,6 +29,10 @@ select = [
 # de importar domain/application/adapters/config (ver comentario en el
 # propio fichero) — igual motivo que main.py arriba.
 "panel_empleados/streamlit_app.py" = ["E402"]
+# evaluar_prompt.py se ejecuta como script suelto fuera de la raíz del
+# repo (python scripts/evaluar_prompt.py) e inserta RAIZ_REPO en
+# sys.path antes de importar application/ — igual motivo que arriba.
+"scripts/evaluar_prompt.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.12"
