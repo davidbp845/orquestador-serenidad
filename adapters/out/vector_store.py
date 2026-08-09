@@ -47,6 +47,19 @@ class RepositorioConocimientoChroma(RepositorioConocimiento):
             metadatas=[f.get("metadata", {}) for f in fragmentos],
         )
 
+    def vaciar(self) -> None:
+        """Borra todos los fragmentos indexados y recrea la colección
+        vacía. indexar_fragmentos() usa upsert, así que nunca retira por
+        sí solo los fragmentos de notas que ya no existen — esto es lo
+        que hace falta para cambiar de vault de forma limpia (ver
+        scripts/vaciar_chroma.py) en vez de mezclar el vault nuevo con
+        restos del anterior."""
+        nombre = self._coleccion.name
+        self._client.delete_collection(name=nombre)
+        self._coleccion = self._client.get_or_create_collection(
+            name=nombre, embedding_function=self._embed_fn
+        )
+
     def buscar(self, consulta: str, top_k: int = 5) -> list[str]:
         resultado = self._coleccion.query(query_texts=[consulta], n_results=top_k)
         documentos = resultado.get("documents", [[]])

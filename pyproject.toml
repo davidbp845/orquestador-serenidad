@@ -33,6 +33,9 @@ select = [
 # repo (python scripts/evaluar_prompt.py) e inserta RAIZ_REPO en
 # sys.path antes de importar application/ — igual motivo que arriba.
 "scripts/evaluar_prompt.py" = ["E402"]
+# vaciar_chroma.py: mismo motivo, inserta RAIZ_REPO antes de importar
+# adapters/.
+"scripts/vaciar_chroma.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.12"

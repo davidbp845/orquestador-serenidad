@@ -81,6 +81,23 @@ def test_indexar_fragmentos_lista_vacia_no_llama_a_upsert():
     mock_coleccion.upsert.assert_not_called()
 
 
+def test_vaciar_borra_la_coleccion_y_la_recrea_vacia():
+    repo, mock_client, mock_coleccion_original, _, _ = _construir_con_mocks()
+    mock_coleccion_nueva = MagicMock()
+    mock_client.get_or_create_collection.return_value = mock_coleccion_nueva
+
+    repo.vaciar()
+
+    mock_client.delete_collection.assert_called_once_with(name=mock_coleccion_original.name)
+    assert mock_client.get_or_create_collection.call_count == 2  # al construir, y al vaciar
+
+    # A partir de aquí, indexar_fragmentos() debe ir contra la colección
+    # nueva, no contra la que se acaba de borrar.
+    repo.indexar_fragmentos([{"id": "f1", "texto": "x", "metadata": {}}])
+    mock_coleccion_nueva.upsert.assert_called_once()
+    mock_coleccion_original.upsert.assert_not_called()
+
+
 def test_buscar_devuelve_los_documentos_de_la_query():
     repo, _, mock_coleccion, _, _ = _construir_con_mocks()
     mock_coleccion.query.return_value = {"documents": [["frag1", "frag2"]]}
