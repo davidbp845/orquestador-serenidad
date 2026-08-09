@@ -475,6 +475,36 @@ de Telegram nunca impide crear o cancelar una reserva en el sistema propio.
 está definido. Email como canal de notificación quedó fuera de alcance (ver
 #12), descartado por ahora sin un caso de uso claro que lo dispare.
 
+**Ciclo de vida de la Cita completado (#43, cerrado):** `EstadoCita` pasó de
+cuatro valores con solo dos transiciones reales (creación en `PENDIENTE`,
+cancelación a `CANCELADA`; `CONFIRMADA`/`COMPLETADA` nunca se asignaban en
+ningún sitio del código) a seis: `PENDIENTE`, `CONFIRMADA`, `EN_CURSO`,
+`FINALIZADA`, `CANCELADA`, `NO_SHOW`. Las cuatro nuevas transiciones
+(`confirmar`, `marcar en curso`, `finalizar`, `no-show`) son manuales desde
+el panel — nunca las dispara el LLM — vía el caso de uso nuevo
+`CambiarEstadoCita` (`domain/use_cases.py`), con su propia tabla
+`_TRANSICIONES_CITA_VALIDAS`, mismo patrón que `CambiarEstadoPedido`.
+`CANCELADA` sigue sin cambios, gestionada solo por `CancelarReserva` — no es
+un destino válido de `CambiarEstadoCita`, así que el selector del panel no
+la ofrece como opción (evita mostrar una opción que siempre fallaría).
+
+Al confirmar una cita se manda una notificación al cliente, mismo patrón
+*best-effort* que ya usan `CrearReserva`/`CancelarReserva`
+(`NotificadorMensajes` opcional, silencioso si el cliente no tiene
+`telegram_chat_id`). Esto exigió un cambio no obvio: el panel no construía
+hasta ahora ni `repo_clientes` ni ningún `NotificadorMensajes` propio —
+`panel_empleados/streamlit_app.py::_construir_repos()` y una función nueva,
+`_construir_notificador()`, lo añaden con el mismo condicional
+`TELEGRAM_BOT_TOKEN` que ya usa `main.py::construir_sistema()`.
+
+Ninguna de estas transiciones toca el evento de Google Calendar —
+deliberado, son puramente internas al sistema. Y un hueco real que salió al
+analizar esto, documentado en el propio issue: hoy no hay ninguna forma de
+cancelar una cita desde la aplicación en marcha (ni chat ni panel) — el
+caso de uso `CancelarReserva` existe y está conectado en el executor, pero
+no está expuesto en `TOOLS_SCHEMA` ni tiene botón en el panel. Queda fuera
+de #43 tal como se pidió, pero conviene tenerlo presente.
+
 ## 10. Base para operar en producción
 
 **Qué resuelve:** el hueco final entre "funciona en local" y "se puede
@@ -511,16 +541,20 @@ para desarrollo que no deberían llegar tal cual a producción.
 
 | Estado | Issues |
 |---|---|
-| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #20, #23 (cerrado sin implementar — signup de Hugging Face bloqueado, aviso cosmético, ver sección 3), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #37 (movido a `doc/007-despliegue.md`), #38, #39, #40, #41 |
+| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #20, #23 (cerrado sin implementar — signup de Hugging Face bloqueado, aviso cosmético, ver sección 3), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #37 (movido a `doc/007-despliegue.md`), #38, #39, #40, #41, #43, #46 |
+| **Listo para empezar (Ready)** | #17 (movido de Fase II — canal de entrada más, no integración comercial, ver el propio issue) |
 | **Backlog** | #21, #22 |
 
-De 34 issues etiquetados `Fase I`, 32 están cerrados. Lo único que queda por
+De 37 issues etiquetados `Fase I`, 34 están cerrados. Lo único que queda por
 delante es **calidad conversacional** (#21, #22 — el modelo ya funciona,
 pero afinar el tono comercial y automatizar su verificación es trabajo
-continuo). Las notificaciones proactivas al cliente (#38), la revisión del
-modelo de datos (#36), el Postgres real de desarrollo (#41), la CI rota en
-`main` (#42, sin label `Fase I` por ser un fallo de infraestructura de CI,
-no de alcance — fuera de este recuento), la documentación inicial completa
-(#20) y el checklist de producción (#37) ya están resueltos — ver la
+continuo) y **#17**, un canal de entrada más (WhatsApp) ya analizado y
+documentado, listo para empezar cuando haya hueco. Las notificaciones
+proactivas al cliente (#38), la revisión del modelo de datos (#36), el
+Postgres real de desarrollo (#41), la CI rota en `main` (#42, sin label
+`Fase I` por ser un fallo de infraestructura de CI, no de alcance — fuera de
+este recuento), la documentación inicial completa (#20), el checklist de
+producción (#37), el vault de ejemplo versionado (#46) y el ciclo de vida
+completo de la Cita (#43) ya están resueltos — ver la
 sección 9,
 `doc/003-modelo-datos.md` y `doc/007-despliegue.md` respectivamente.

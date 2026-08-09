@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from .entities import EstadoPedido
+from .entities import EstadoCita, EstadoPedido
 
 
 class DominioError(Exception):
@@ -29,10 +29,23 @@ class PedidoNoExiste(DominioError):
         self.pedido_id = pedido_id
 
 
+class CitaNoExiste(DominioError):
+    def __init__(self, cita_id: UUID) -> None:
+        super().__init__(f"La cita '{cita_id}' no existe.")
+        self.cita_id = cita_id
+
+
 class TransicionEstadoInvalida(DominioError):
-    def __init__(self, estado_actual: EstadoPedido, estado_nuevo: EstadoPedido) -> None:
+    """Genérica para cualquier entidad con máquina de estados (Pedido,
+    Cita...) — el mensaje no asume cuál, solo reporta los estados."""
+
+    def __init__(
+        self,
+        estado_actual: EstadoPedido | EstadoCita,
+        estado_nuevo: EstadoPedido | EstadoCita,
+    ) -> None:
         super().__init__(
-            f"No se puede pasar un pedido de '{estado_actual}' a '{estado_nuevo}'."
+            f"No se puede pasar de '{estado_actual}' a '{estado_nuevo}'."
         )
         self.estado_actual = estado_actual
         self.estado_nuevo = estado_nuevo

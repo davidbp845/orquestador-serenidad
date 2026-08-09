@@ -14,8 +14,10 @@ from uuid import UUID, uuid4
 class EstadoCita(StrEnum):
     PENDIENTE = "pendiente"
     CONFIRMADA = "confirmada"
+    EN_CURSO = "en_curso"
+    FINALIZADA = "finalizada"
     CANCELADA = "cancelada"
-    COMPLETADA = "completada"
+    NO_SHOW = "no_show"
 
 
 @dataclass

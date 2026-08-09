@@ -30,6 +30,7 @@ from dotenv import load_dotenv
 from adapters.out.obsidian_ingest import procesar_vault
 from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
+    RepositorioClientesMemoria,
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
     RepositorioServiciosMemoria,
@@ -38,7 +39,12 @@ from adapters.out.vector_store import RepositorioConocimientoChroma
 from config.loader import cargar_config, construir_profesionales, construir_servicios
 from domain.entities import EstadoPedido
 from domain.exceptions import TransicionEstadoInvalida
-from domain.use_cases import _DIAS_SEMANA_ES, CambiarEstadoPedido
+from domain.use_cases import (
+    _DIAS_SEMANA_ES,
+    _TRANSICIONES_CITA_VALIDAS,
+    CambiarEstadoCita,
+    CambiarEstadoPedido,
+)
 
 load_dotenv()
 
@@ -58,22 +64,37 @@ def _construir_repos():
     if database_url:
         from adapters.out.repositorios_postgres import (
             RepositorioCitasPostgres,
+            RepositorioClientesPostgres,
             RepositorioPedidosPostgres,
             crear_engine,
         )
         engine = crear_engine(database_url)
         repo_citas = RepositorioCitasPostgres(engine)
+        repo_clientes = RepositorioClientesPostgres(engine)
         repo_pedidos = RepositorioPedidosPostgres(engine)
     else:
         repo_citas = RepositorioCitasMemoria()
+        repo_clientes = RepositorioClientesMemoria()
         repo_pedidos = RepositorioPedidosMemoria()
 
-    return config, repo_servicios, repo_profesionales, repo_citas, repo_pedidos
+    return config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos
 
 
 @st.cache_resource
 def _construir_conocimiento() -> RepositorioConocimientoChroma:
     return RepositorioConocimientoChroma()
+
+
+@st.cache_resource
+def _construir_notificador():
+    # Mismo condicional "opcional, sin ella no se notifica nada" que ya
+    # usa main.py::construir_sistema() — el panel no tenía hasta ahora
+    # ningún NotificadorMensajes propio.
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if not token:
+        return None
+    from adapters.out.notificador_telegram import NotificadorMensajesTelegram
+    return NotificadorMensajesTelegram(token)
 
 
 def _mes_relativo(d: date, delta: int) -> date:
@@ -104,7 +125,7 @@ def _desplazar_ancla(ancla: date, vista: str, direccion: int) -> date:
     return ancla + timedelta(days=direccion)  # Día
 
 
-def _tarjeta_cita(cita, repo_servicios, repo_profesionales) -> None:
+def _tarjeta_cita(cita, repo_servicios, repo_profesionales, cambiar_estado_cita) -> None:
     servicio = repo_servicios.obtener(cita.servicio_id)
     profesional = repo_profesionales.obtener(cita.profesional_id)
     with st.container(border=True):
@@ -112,6 +133,23 @@ def _tarjeta_cita(cita, repo_servicios, repo_profesionales) -> None:
         st.write(f"{servicio.nombre if servicio else cita.servicio_id} · "
                  f"{profesional.nombre if profesional else cita.profesional_id}")
         st.caption(f"Cliente: {cita.cliente_id} · Estado: {cita.estado.value}")
+
+        # Solo confirmar/en curso/finalizar/no-show: cancelar sigue su
+        # propio camino (CancelarReserva), no pasa por aquí — por eso no
+        # aparece como opción, en vez de ofrecerla y que falle siempre.
+        opciones_estado = sorted(_TRANSICIONES_CITA_VALIDAS[cita.estado], key=lambda e: e.value)
+        if opciones_estado:
+            nuevo_estado = st.selectbox(
+                "Cambiar a", opciones_estado,
+                format_func=lambda e: e.value,
+                key=f"estado_cita_{cita.id}",
+            )
+            if st.button("Actualizar", key=f"btn_cita_{cita.id}"):
+                try:
+                    cambiar_estado_cita.ejecutar(cita.id, nuevo_estado)
+                    st.rerun()
+                except TransicionEstadoInvalida as exc:
+                    st.error(str(exc))
 
 
 # ---------- Gate de acceso mínimo ----------
@@ -138,8 +176,10 @@ if _clave_panel and not st.session_state.get("autenticado"):
             st.error("Contraseña incorrecta")
     st.stop()
 
-config, repo_servicios, repo_profesionales, repo_citas, repo_pedidos = _construir_repos()
+config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos = _construir_repos()
+notificador = _construir_notificador()
 cambiar_estado_pedido = CambiarEstadoPedido(repo_pedidos)
+cambiar_estado_cita = CambiarEstadoCita(repo_citas, repo_clientes, notificador)
 
 # ---------- Cabecera ----------
 _hoy = date.today()
@@ -185,7 +225,7 @@ if opcion == "📅 Agenda":
 
     if vista == "Día":
         for cita in citas:
-            _tarjeta_cita(cita, repo_servicios, repo_profesionales)
+            _tarjeta_cita(cita, repo_servicios, repo_profesionales, cambiar_estado_cita)
     else:
         # Agrupadas por día (subcabecera), no una lista plana — sigue
         # siendo tarjetas apiladas, legible en móvil.
@@ -195,7 +235,7 @@ if opcion == "📅 Agenda":
         for dia_grupo in sorted(citas_por_dia):
             st.markdown(f"**{_DIAS_SEMANA_ES[dia_grupo.weekday()].capitalize()} {dia_grupo:%d/%m}**")
             for cita in citas_por_dia[dia_grupo]:
-                _tarjeta_cita(cita, repo_servicios, repo_profesionales)
+                _tarjeta_cita(cita, repo_servicios, repo_profesionales, cambiar_estado_cita)
 
 # ---------- Pedidos pendientes ----------
 elif opcion == "📦 Pedidos":

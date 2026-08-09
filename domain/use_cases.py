@@ -12,6 +12,7 @@ from uuid import UUID
 from .entities import (
     Cita,
     Cliente,
+    EstadoCita,
     EstadoPedido,
     LineaPedido,
     Pedido,
@@ -19,6 +20,7 @@ from .entities import (
     SlotDisponible,
 )
 from .exceptions import (
+    CitaNoExiste,
     PedidoNoExiste,
     ProfesionalNoDisponible,
     ServicioNoExiste,
@@ -246,6 +248,76 @@ class CancelarReserva:
         except Exception:
             logger.exception(
                 "No se pudo notificar la cancelación de la cita %s", cita.id
+            )
+
+
+# Transiciones válidas del ciclo de vida de una cita. Confirmar, marcar
+# en curso, finalizar y marcar no-show se disparan manualmente desde el
+# panel interno — el LLM nunca las invoca. Cancelar sigue siendo
+# CancelarReserva, sin relación con esta tabla (por eso CANCELADA no
+# aparece aquí como destino: ese camino no pasa por CambiarEstadoCita).
+_TRANSICIONES_CITA_VALIDAS: dict[EstadoCita, set[EstadoCita]] = {
+    EstadoCita.PENDIENTE: {EstadoCita.CONFIRMADA, EstadoCita.NO_SHOW},
+    EstadoCita.CONFIRMADA: {EstadoCita.EN_CURSO, EstadoCita.FINALIZADA, EstadoCita.NO_SHOW},
+    EstadoCita.EN_CURSO: {EstadoCita.FINALIZADA},
+    EstadoCita.FINALIZADA: set(),
+    EstadoCita.CANCELADA: set(),
+    EstadoCita.NO_SHOW: set(),
+}
+
+
+class CambiarEstadoCita:
+    """Transiciona el estado de una cita (confirmar, marcar en curso,
+    finalizar, marcar no-show), usado por el panel interno. Valida la
+    transición antes de delegar en el repo. No toca el calendario
+    externo (a diferencia de CrearReserva/CancelarReserva) — estas
+    transiciones son puramente internas al sistema."""
+
+    def __init__(
+        self,
+        citas: RepositorioCitas,
+        clientes: RepositorioClientes | None = None,
+        notificador: NotificadorMensajes | None = None,
+    ):
+        self._citas = citas
+        self._clientes = clientes
+        self._notificador = notificador
+
+    def ejecutar(self, cita_id: UUID, nuevo_estado: EstadoCita) -> Cita:
+        cita = self._citas.obtener(cita_id)
+        if cita is None:
+            raise CitaNoExiste(cita_id)
+
+        if nuevo_estado not in _TRANSICIONES_CITA_VALIDAS[cita.estado]:
+            raise TransicionEstadoInvalida(cita.estado, nuevo_estado)
+
+        cita.estado = nuevo_estado
+        self._citas.guardar(cita)
+
+        if nuevo_estado == EstadoCita.CONFIRMADA and self._notificador is not None:
+            self._notificar_confirmacion(cita)
+
+        return cita
+
+    def _notificar_confirmacion(self, cita: Cita) -> None:
+        # Best-effort, igual que las notificaciones de CrearReserva/
+        # CancelarReserva: un fallo aquí no debe deshacer la transición
+        # ya aplicada.
+        assert self._notificador is not None  # solo se llama tras comprobarlo
+        if self._clientes is None:
+            return
+        cliente = self._clientes.obtener(cita.cliente_id)
+        if cliente is None or not cliente.telegram_chat_id:
+            return
+        try:
+            self._notificador.enviar(
+                cliente.telegram_chat_id,
+                f"Tu reserva del {cita.inicio:%d/%m/%Y} a las {cita.inicio:%H:%M} "
+                f"ha sido confirmada.",
+            )
+        except Exception:
+            logger.exception(
+                "No se pudo notificar la confirmación de la cita %s", cita.id
             )
 
 

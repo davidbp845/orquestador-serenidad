@@ -5,10 +5,17 @@ from datetime import date, datetime, time
 
 import pytest
 
-from domain.entities import Cita, Cliente, EstadoPedido, LineaPedido, Pedido, Profesional, Servicio
-from domain.exceptions import PedidoNoExiste, ProfesionalNoDisponible, ServicioNoExiste, TransicionEstadoInvalida
+from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, Profesional, Servicio
+from domain.exceptions import (
+    CitaNoExiste,
+    PedidoNoExiste,
+    ProfesionalNoDisponible,
+    ServicioNoExiste,
+    TransicionEstadoInvalida,
+)
 from domain.use_cases import (
     _DIAS_SEMANA_ES,
+    CambiarEstadoCita,
     CambiarEstadoPedido,
     CancelarReserva,
     ComprobarDisponibilidad,
@@ -516,6 +523,136 @@ class TestCancelarReserva:
         CancelarReserva(repo_citas, clientes=repo_clientes, notificador=notificador).ejecutar(cita.id)
 
         assert repo_citas.canceladas == [cita.id]
+
+
+class TestCambiarEstadoCita:
+    @staticmethod
+    def _cita_pendiente():
+        return Cita.nueva(
+            "masaje", "ana", "cliente1",
+            datetime.combine(_LUNES, time(9, 0)), datetime.combine(_LUNES, time(9, 30)),
+        )
+
+    def test_lanza_si_cita_no_existe(self):
+        caso = CambiarEstadoCita(FakeRepoCitas())
+        with pytest.raises(CitaNoExiste):
+            caso.ejecutar("no_existe", EstadoCita.CONFIRMADA)
+
+    def test_transicion_valida_actualiza_y_guarda(self):
+        cita = self._cita_pendiente()
+        repo = FakeRepoCitas([cita])
+        caso = CambiarEstadoCita(repo)
+
+        actualizada = caso.ejecutar(cita.id, EstadoCita.CONFIRMADA)
+
+        assert actualizada.estado == EstadoCita.CONFIRMADA
+        assert repo.obtener(cita.id).estado == EstadoCita.CONFIRMADA
+
+    def test_lanza_si_transicion_invalida(self):
+        cita = self._cita_pendiente()  # PENDIENTE no puede saltar directo a FINALIZADA
+        repo = FakeRepoCitas([cita])
+        caso = CambiarEstadoCita(repo)
+
+        with pytest.raises(TransicionEstadoInvalida):
+            caso.ejecutar(cita.id, EstadoCita.FINALIZADA)
+
+    def test_estado_terminal_no_admite_transicion(self):
+        cita = self._cita_pendiente()
+        cita.estado = EstadoCita.FINALIZADA
+        repo = FakeRepoCitas([cita])
+        caso = CambiarEstadoCita(repo)
+
+        with pytest.raises(TransicionEstadoInvalida):
+            caso.ejecutar(cita.id, EstadoCita.CONFIRMADA)
+
+    def test_cancelada_no_es_destino_valido_desde_ningun_estado(self):
+        # CANCELADA se gestiona vía CancelarReserva, no a través de esta
+        # transición — por diseño (ver issue #43).
+        cita = self._cita_pendiente()
+        repo = FakeRepoCitas([cita])
+        caso = CambiarEstadoCita(repo)
+
+        with pytest.raises(TransicionEstadoInvalida):
+            caso.ejecutar(cita.id, EstadoCita.CANCELADA)
+
+    def test_confirmada_permite_saltar_directo_a_finalizada(self):
+        cita = self._cita_pendiente()
+        cita.estado = EstadoCita.CONFIRMADA
+        repo = FakeRepoCitas([cita])
+        caso = CambiarEstadoCita(repo)
+
+        actualizada = caso.ejecutar(cita.id, EstadoCita.FINALIZADA)
+
+        assert actualizada.estado == EstadoCita.FINALIZADA
+
+    def test_en_curso_solo_permite_finalizar(self):
+        cita = self._cita_pendiente()
+        cita.estado = EstadoCita.EN_CURSO
+        repo = FakeRepoCitas([cita])
+        caso = CambiarEstadoCita(repo)
+
+        with pytest.raises(TransicionEstadoInvalida):
+            caso.ejecutar(cita.id, EstadoCita.NO_SHOW)
+
+    def test_notifica_al_confirmar_si_el_cliente_tiene_telegram_chat_id(self):
+        cita = self._cita_pendiente()
+        repo_citas = FakeRepoCitas([cita])
+        repo_clientes = FakeRepoClientes()
+        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan", telegram_chat_id="chat123"))
+        notificador = FakeNotificadorMensajes()
+
+        CambiarEstadoCita(repo_citas, repo_clientes, notificador).ejecutar(cita.id, EstadoCita.CONFIRMADA)
+
+        assert len(notificador.enviados) == 1
+        assert notificador.enviados[0][0] == "chat123"
+
+    def test_no_notifica_si_el_cliente_no_tiene_telegram_chat_id(self):
+        cita = self._cita_pendiente()
+        repo_citas = FakeRepoCitas([cita])
+        repo_clientes = FakeRepoClientes()
+        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan"))
+        notificador = FakeNotificadorMensajes()
+
+        CambiarEstadoCita(repo_citas, repo_clientes, notificador).ejecutar(cita.id, EstadoCita.CONFIRMADA)
+
+        assert notificador.enviados == []
+
+    def test_no_notifica_sin_repositorio_de_clientes_aunque_haya_notificador(self):
+        cita = self._cita_pendiente()
+        repo_citas = FakeRepoCitas([cita])
+        notificador = FakeNotificadorMensajes()
+
+        actualizada = CambiarEstadoCita(repo_citas, notificador=notificador).ejecutar(
+            cita.id, EstadoCita.CONFIRMADA
+        )
+
+        assert actualizada.estado == EstadoCita.CONFIRMADA
+        assert notificador.enviados == []
+
+    def test_no_notifica_en_transiciones_distintas_de_confirmada(self):
+        cita = self._cita_pendiente()
+        cita.estado = EstadoCita.CONFIRMADA
+        repo_citas = FakeRepoCitas([cita])
+        repo_clientes = FakeRepoClientes()
+        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan", telegram_chat_id="chat123"))
+        notificador = FakeNotificadorMensajes()
+
+        CambiarEstadoCita(repo_citas, repo_clientes, notificador).ejecutar(cita.id, EstadoCita.EN_CURSO)
+
+        assert notificador.enviados == []
+
+    def test_no_falla_si_el_notificador_lanza_excepcion(self):
+        cita = self._cita_pendiente()
+        repo_citas = FakeRepoCitas([cita])
+        repo_clientes = FakeRepoClientes()
+        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan", telegram_chat_id="chat123"))
+        notificador = FakeNotificadorMensajes(lanza=True)
+
+        actualizada = CambiarEstadoCita(repo_citas, repo_clientes, notificador).ejecutar(
+            cita.id, EstadoCita.CONFIRMADA
+        )
+
+        assert actualizada.estado == EstadoCita.CONFIRMADA
 
 
 class TestRegistrarPedido:

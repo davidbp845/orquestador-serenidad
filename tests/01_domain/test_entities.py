@@ -37,6 +37,14 @@ def test_cliente_valores_por_defecto():
     assert cliente.notas == ""
 
 
+def test_estado_cita_tiene_los_seis_valores_del_ciclo_de_vida():
+    # Ver issue #43: pendiente al crear, confirmada/en_curso/finalizada/
+    # no_show manuales desde el panel, cancelada vía CancelarReserva.
+    assert {e.value for e in EstadoCita} == {
+        "pendiente", "confirmada", "en_curso", "finalizada", "cancelada", "no_show",
+    }
+
+
 def test_cita_nueva_genera_id_y_estado_pendiente():
     inicio = datetime(2026, 8, 3, 9, 0)
     fin = datetime(2026, 8, 3, 10, 0)
