@@ -65,6 +65,10 @@ edita el código, no para leerse de un tirón):
     cuándo se construye el prompt del asistente, qué superficies existen
     para tocar la calidad de sus respuestas, y el método para mejorarlas y
     verificarlas sin regresiones (#21, #22, #31, #32).
+11. **[011-integracion-continua.md](011-integracion-continua.md)** — qué
+    corre en cada push/PR (`lint`/`mypy`/`test`), por qué cada uno tiene el
+    alcance que tiene, el job opcional de calidad de prompts, y cómo
+    reproducir CI en local antes de hacer push.
 
 Para poner el sistema en marcha en local, el punto de partida sigue siendo el
 [`README.md`](../README.md) de la raíz del repo.

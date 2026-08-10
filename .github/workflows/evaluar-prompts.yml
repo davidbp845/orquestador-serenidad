@@ -1,0 +1,61 @@
+name: Evaluar calidad de prompts (manual)
+
+# Job opcional y manual (#22): corre el banco de "casos difíciles"
+# (tests/03_application/casos-dificiles/centro_masajes.yaml) contra un
+# proveedor de LLM real (OpenAI, ver #32 sobre por qué no Cohere/mock)
+# para detectar regresiones de calidad conversacional. A propósito NO
+# se dispara en push/pull_request: cada ejecución gasta tokens reales
+# de una API de pago y los LLMs alojados no son 100% deterministas ni
+# siquiera con temperature=0 (ver #32) — bloquear cada PR con esto
+# generaría fallos intermitentes sin relación con el cambio de código.
+# Disparo siempre manual, desde la pestaña Actions o `gh workflow run`.
+on:
+  workflow_dispatch:
+
+jobs:
+  evaluar-prompt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      # Gating opcional (#22, punto 4): si no hay OPENAI_API_KEY
+      # configurada como secret del repo, el job se salta con un aviso
+      # en vez de fallar — mismo patrón "opcional, degrada" que ya usa
+      # el proyecto para DATABASE_URL/REDIS_URL/GOOGLE_CALENDAR_*.
+      - name: Comprobar que OPENAI_API_KEY está configurada
+        id: check_key
+        run: |
+          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Preparar vault de ejemplo e indexar el RAG
+        if: steps.check_key.outputs.found == 'true'
+        run: |
+          cp -r vault_example vault_negocio
+          python -m adapters.out.obsidian_ingest --vault ./vault_negocio
+
+      - name: Evaluar banco de casos difíciles contra OpenAI
+        if: steps.check_key.outputs.found == 'true'
+        env:
+          PROVEEDOR_LLM: openai
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python scripts/evaluar_prompt.py
+
+      - name: Job saltado (sin OPENAI_API_KEY)
+        if: steps.check_key.outputs.found == 'false'
+        run: |
+          echo "OPENAI_API_KEY no está configurada como secret del repo — job saltado."
+          echo "Ver doc/010-prompt-engineering.md o el issue #22 para configurarlo."
