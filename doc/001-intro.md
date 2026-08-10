@@ -69,6 +69,10 @@ edita el código, no para leerse de un tirón):
     corre en cada push/PR (`lint`/`mypy`/`test`), por qué cada uno tiene el
     alcance que tiene, el job opcional de calidad de prompts, y cómo
     reproducir CI en local antes de hacer push.
+12. **[012-decisiones-tecnologicas.md](012-decisiones-tecnologicas.md)** —
+    qué tecnologías se usan y cuáles del stack habitual del mercado (LangChain,
+    LangGraph, CrewAI, LlamaIndex, Next.js, Pinecone...) se han evitado
+    deliberadamente, y por qué.
 
 Para poner el sistema en marcha en local, el punto de partida sigue siendo el
 [`README.md`](../README.md) de la raíz del repo.
