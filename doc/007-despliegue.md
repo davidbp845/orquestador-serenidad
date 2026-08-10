@@ -29,6 +29,12 @@
   `DATABASE_URL` definida, `main.py` y el panel interno comparten el mismo
   estado. El mismo patrón sirve para producción: lo que cambia es solo qué
   Postgres hay detrás de esa URL, no el código.
+- **`/chat`/`/chat/stream` ya tienen rate limiting.** #49 añadió un límite
+  por `usuario_id` (no por IP), configurable con
+  `RATE_LIMIT_CHAT_MAX_PETICIONES`/`RATE_LIMIT_CHAT_VENTANA_SEGUNDOS` — ver
+  `doc/008-api.md`. Sigue sin haber autenticación (ver más abajo), pero el
+  riesgo de que un bot agote la cuota del proveedor de LLM sin ningún freno
+  ya no aplica igual que antes.
 
 ## Limitaciones que siguen sin resolver — decisiones, no bugs
 
@@ -43,17 +49,16 @@ real, aunque la decisión sea "lo asumimos por ahora":
   diccionario en memoria por defecto, o Redis compartido si está activo), no
   se puede simplemente levantar más de un worker sin haber activado Redis
   primero — cada worker en memoria tendría su propio estado de conversación,
-  aislado de los demás. `GET /health` (`doc/008-api.md`) ya existe y es
-  justo la pieza que un supervisor real (systemd, Docker, un balanceador)
-  necesitaría consultar para decidir cuándo reiniciar el proceso — hoy nadie
-  lo consulta automáticamente, solo está disponible para quien lo conecte.
-- **`/chat` y `/chat/stream` son públicos y sin límite de uso.** No hay rate
-  limiting ni autenticación en ninguno de los dos endpoints. En cuanto el
-  dominio sea público e indexable, cualquiera — o un bot — puede agotar la
-  cuota del proveedor de LLM configurado sin ningún freno. No hay issue
-  abierto todavía específicamente para esto; si se aborda, un rate limit por
-  IP o por `usuario_id` (p. ej. vía `slowapi` o un middleware propio) sería
-  el punto de partida más simple.
+  aislado de los demás (y, desde #49, también su propio contador de rate
+  limiting). `GET /health` (`doc/008-api.md`) ya existe y es justo la pieza
+  que un supervisor real (systemd, Docker, un balanceador) necesitaría
+  consultar para decidir cuándo reiniciar el proceso — hoy nadie lo consulta
+  automáticamente, solo está disponible para quien lo conecte.
+- **`/chat` y `/chat/stream` siguen sin autenticación.** El rate limiting de
+  #49 frena el abuso evidente (bucles, bots sin identidad), pero no sustituye
+  a un login — cualquiera puede seguir usando el chat con cualquier
+  `usuario_id`, dentro del límite configurado. Autenticación real es #11,
+  issue separado, todavía abierto.
 
 ## Checklist de infraestructura para un despliegue real
 

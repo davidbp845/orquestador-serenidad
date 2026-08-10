@@ -47,6 +47,16 @@ def cliente(modulo):
     return TestClient(app), orquestador, repositorio_sesiones
 
 
+@pytest.fixture
+def cliente_con_limite(modulo):
+    orquestador = FakeOrquestador()
+    repositorio_sesiones = RepositorioSesionesMemoria()
+    app = modulo.crear_router(
+        orquestador, repositorio_sesiones, limite_peticiones=2, ventana_segundos=60
+    )
+    return TestClient(app), orquestador, repositorio_sesiones
+
+
 def test_health(cliente):
     client, _, _ = cliente
     respuesta = client.get("/health")
@@ -182,3 +192,40 @@ def test_cors_origins_env_var_sustituye_los_origenes_de_dev(monkeypatch):
         },
     )
     assert "access-control-allow-origin" not in respuesta_dev.headers
+
+
+def test_chat_devuelve_429_al_superar_el_limite_de_peticiones(cliente_con_limite):
+    client, orquestador, _ = cliente_con_limite
+
+    for _ in range(2):
+        respuesta = client.post("/chat", json={"usuario_id": "u1", "mensaje": "hola"})
+        assert respuesta.status_code == 200
+
+    respuesta = client.post("/chat", json={"usuario_id": "u1", "mensaje": "hola"})
+
+    assert respuesta.status_code == 429
+    assert len(orquestador.llamadas) == 2  # la 3ª petición no llega al orquestador
+
+
+def test_chat_el_limite_es_independiente_por_usuario_id(cliente_con_limite):
+    client, orquestador, _ = cliente_con_limite
+
+    for _ in range(2):
+        client.post("/chat", json={"usuario_id": "u1", "mensaje": "hola"})
+
+    respuesta_otro_usuario = client.post("/chat", json={"usuario_id": "u2", "mensaje": "hola"})
+
+    assert respuesta_otro_usuario.status_code == 200
+    assert ("u2", "hola") in orquestador.llamadas
+
+
+def test_chat_stream_tambien_respeta_el_limite_de_peticiones(cliente_con_limite):
+    client, _, _ = cliente_con_limite
+
+    for _ in range(2):
+        respuesta = client.post("/chat/stream", json={"usuario_id": "u1", "mensaje": "hola"})
+        assert respuesta.status_code == 200
+
+    respuesta = client.post("/chat/stream", json={"usuario_id": "u1", "mensaje": "hola"})
+
+    assert respuesta.status_code == 429

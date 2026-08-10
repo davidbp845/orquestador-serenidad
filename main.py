@@ -20,6 +20,7 @@ load_dotenv()  # lee .env si existe; si las variables ya están exportadas
 import uvicorn
 
 from adapters.in_.fastapi_app import crear_router
+from adapters.in_.rate_limit import LimitadorPeticiones, LimitadorPeticionesMemoria, LimitadorPeticionesRedis
 from adapters.in_.telegram_bot import crear_bot
 from adapters.in_.whatsapp_webhook import crear_router_whatsapp
 from adapters.out.llm_anthropic import ProveedorLLMAnthropic
@@ -156,11 +157,30 @@ def construir_repositorio_sesiones() -> RepositorioSesiones:
     return RepositorioSesionesMemoria()
 
 
+def construir_limitador_peticiones() -> LimitadorPeticiones:
+    # Mismo condicional que construir_repositorio_sesiones() (#49): sin
+    # REDIS_URL, cada proceso lleva su propio contador en memoria — un
+    # límite compartido entre varios workers/procesos necesita Redis,
+    # igual que las sesiones necesitan Redis para sobrevivir/compartirse.
+    redis_url = os.environ.get("REDIS_URL")
+    if redis_url:
+        return LimitadorPeticionesRedis(redis_url)
+    return LimitadorPeticionesMemoria()
+
+
 def main():
     orquestador, config = construir_sistema()
     repositorio_sesiones = construir_repositorio_sesiones()
+    limitador_peticiones = construir_limitador_peticiones()
+    limite_chat = int(os.environ.get("RATE_LIMIT_CHAT_MAX_PETICIONES", "20"))
+    ventana_chat = int(os.environ.get("RATE_LIMIT_CHAT_VENTANA_SEGUNDOS", "60"))
 
-    app = crear_router(orquestador, repositorio_sesiones)
+    app = crear_router(
+        orquestador, repositorio_sesiones,
+        limitador=limitador_peticiones,
+        limite_peticiones=limite_chat,
+        ventana_segundos=ventana_chat,
+    )
 
     if config.get("canales", {}).get("whatsapp"):
         verify_token = os.environ.get("WHATSAPP_VERIFY_TOKEN")
