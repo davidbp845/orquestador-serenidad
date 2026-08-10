@@ -66,6 +66,14 @@ class RepositorioCitas(ABC):
     @abstractmethod
     def cancelar(self, cita_id: UUID) -> None: ...
 
+    @abstractmethod
+    def borrar_todo(self) -> int:
+        """Vacía el repositorio entero. Solo lo usa la herramienta de
+        borrado de datos del panel interno (entorno local/desarrollo,
+        ver panel_empleados/streamlit_app.py) — ningún caso de uso del
+        dominio la llama. Devuelve cuántas filas se borraron."""
+        ...
+
 
 class RepositorioClientes(ABC):
     @abstractmethod
@@ -80,6 +88,12 @@ class RepositorioClientes(ABC):
     @abstractmethod
     def listar(self) -> list[Cliente]: ...
 
+    @abstractmethod
+    def borrar_todo(self) -> int:
+        """Ver RepositorioCitas.borrar_todo — misma herramienta de
+        panel, mismo alcance de "solo entorno local"."""
+        ...
+
 
 class RepositorioPedidos(ABC):
     @abstractmethod
@@ -93,6 +107,13 @@ class RepositorioPedidos(ABC):
         """Pedidos que aún no han llegado a un estado terminal
         (ni entregados ni cancelados) — lo que el panel interno
         necesita gestionar activamente."""
+        ...
+
+    @abstractmethod
+    def borrar_todo(self) -> int:
+        """Ver RepositorioCitas.borrar_todo. Incluye también las líneas
+        de pedido (pedido_lineas), que este repositorio gestiona de
+        forma interna."""
         ...
 
 

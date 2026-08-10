@@ -116,6 +116,20 @@ def _construir_notificador():
     return NotificadorMensajesTelegram(token)
 
 
+@st.cache_resource
+def _construir_calendario():
+    # Mismo condicional que main.py:104-113 — solo lo usa la
+    # herramienta de borrado de datos (sección Herramientas) para
+    # cancelar los eventos espejo antes de vaciar las citas.
+    credenciales = os.environ.get("GOOGLE_CALENDAR_CREDENTIALS_JSON")
+    calendar_id = os.environ.get("GOOGLE_CALENDAR_ID")
+    if not (credenciales and calendar_id):
+        return None
+    from adapters.out.calendario_google import SincronizadorCalendarioGoogle
+    zona_horaria = os.environ.get("GOOGLE_CALENDAR_TIMEZONE", "Europe/Madrid")
+    return SincronizadorCalendarioGoogle(credenciales, calendar_id, zona_horaria)
+
+
 def _mes_relativo(d: date, delta: int) -> date:
     """Primer día del mes `delta` meses antes/después del de `d`
     (delta negativo = hacia atrás). Evita sumar '±30 días', que
@@ -209,7 +223,7 @@ st.caption(f"{_DIAS_SEMANA_ES[_hoy.weekday()].capitalize()}, {_hoy:%d/%m/%Y}")
 
 # ---------- Menú (sidebar: colapsado automáticamente en móvil) ----------
 with st.sidebar:
-    opcion = st.radio("Menú", ["📅 Agenda", "📦 Pedidos", "👤 Clientes", "🚦 Rate limiting", "⚙️ Ajustes"])
+    opcion = st.radio("Menú", ["📅 Agenda", "📦 Pedidos", "👤 Clientes", "🚦 Rate limiting", "🛠️ Herramientas"])
 
 # ---------- Agenda ----------
 if opcion == "📅 Agenda":
@@ -339,8 +353,8 @@ elif opcion == "🚦 Rate limiting":
                 if entrada.peticiones >= limite:
                     st.error("Límite alcanzado")
 
-# ---------- Ajustes ----------
-else:
+# ---------- Herramientas ----------
+elif opcion == "🛠️ Herramientas":
     st.subheader("Base de conocimiento (RAG)")
     st.write("Reindexa el vault de Obsidian tras editar precios, horarios u otro contenido.")
     if st.button("Reindexar conocimiento"):
@@ -351,3 +365,51 @@ else:
                 st.success(f"Reindexados {len(fragmentos)} fragmentos.")
             except Exception as exc:
                 st.error(f"Error al reindexar: {exc}")
+
+    st.divider()
+    st.subheader("Borrado de datos")
+    # Gate explícito por opt-in (ENTORNO_LOCAL=true), no inferido de
+    # DATABASE_URL/localhost: un túnel SSH a producción también
+    # resolvería a "localhost", lo que sería peligroso para un botón
+    # destructivo (ver issue #53).
+    if os.environ.get("ENTORNO_LOCAL", "").lower() != "true":
+        st.caption(
+            "Sección oculta salvo con ENTORNO_LOCAL=true en el entorno del "
+            "proceso — nunca debe activarse en producción."
+        )
+    else:
+        st.warning(
+            "Borra TODAS las citas, clientes, pedidos y líneas de pedido, y "
+            "cancela los eventos de Google Calendar asociados (si hay uno "
+            "configurado). Acción irreversible."
+        )
+        confirmar = st.checkbox("Sí, quiero borrar todos los datos")
+        if st.button("Borrar todos los datos", type="primary", disabled=not confirmar):
+            with st.spinner("Borrando..."):
+                calendario = _construir_calendario()
+                eventos_cancelados = 0
+                eventos_fallidos = 0
+                if calendario is not None:
+                    for cita in repo_citas.citas_en_rango(date.min, date.max):
+                        if not cita.evento_calendario_id:
+                            continue
+                        try:
+                            calendario.cancelar_evento(cita.evento_calendario_id)
+                            eventos_cancelados += 1
+                        except Exception:
+                            eventos_fallidos += 1
+
+                n_citas = repo_citas.borrar_todo()
+                n_clientes = repo_clientes.borrar_todo()
+                n_pedidos = repo_pedidos.borrar_todo()
+
+            st.success(
+                f"Borrado: {n_citas} citas, {n_clientes} clientes, "
+                f"{n_pedidos} pedidos (con sus líneas)."
+            )
+            if calendario is not None:
+                st.caption(
+                    f"Google Calendar: {eventos_cancelados} eventos cancelados"
+                    + (f", {eventos_fallidos} fallos." if eventos_fallidos else ".")
+                )
+            st.rerun()

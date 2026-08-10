@@ -6,9 +6,9 @@ el mismo dialecto core independientemente del backend. No hace falta
 red ni credenciales ni un Postgres real."""
 from datetime import date, datetime
 
-from sqlmodel import create_engine
+from sqlmodel import Session, create_engine, select
 
-from adapters.out.db_models import SQLModel
+from adapters.out.db_models import LineaPedidoDB, SQLModel
 from adapters.out.repositorios_postgres import (
     RepositorioCitasPostgres,
     RepositorioClientesPostgres,
@@ -191,3 +191,36 @@ def test_pedidos_listar_pendientes_excluye_estados_terminales():
     resultado = repo.listar_pendientes()
 
     assert {p.id for p in resultado} == {pendiente.id}
+
+
+def test_citas_borrar_todo():
+    repo = RepositorioCitasPostgres(_engine())
+    repo.guardar(Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0)))
+    repo.guardar(Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0)))
+
+    assert repo.borrar_todo() == 2
+    assert repo.citas_en_rango(date(2026, 1, 1), date(2026, 12, 31)) == []
+    assert repo.borrar_todo() == 0  # repetirlo sobre una tabla vacía no lanza
+
+
+def test_clientes_borrar_todo():
+    repo = RepositorioClientesPostgres(_engine())
+    repo.guardar(Cliente(id="c1", nombre="Juan"))
+    repo.guardar(Cliente(id="c2", nombre="Ana"))
+
+    assert repo.borrar_todo() == 2
+    assert repo.listar() == []
+
+
+def test_pedidos_borrar_todo_incluye_las_lineas():
+    engine = _engine()
+    repo = RepositorioPedidosPostgres(engine)
+    repo.guardar(Pedido.nuevo("c1", [LineaPedido(servicio_id="s1", cantidad=2)]))
+    repo.guardar(Pedido.nuevo("c1", [LineaPedido(servicio_id="s2", cantidad=1)]))
+
+    borrados = repo.borrar_todo()
+
+    assert borrados == 2
+    assert repo.listar_pendientes() == []
+    with Session(engine) as sesion:
+        assert sesion.exec(select(LineaPedidoDB)).all() == []

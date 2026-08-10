@@ -64,6 +64,11 @@ class RepositorioCitasMemoria(RepositorioCitas):
             from domain.entities import EstadoCita
             self._data[cita_id].estado = EstadoCita.CANCELADA
 
+    def borrar_todo(self) -> int:
+        n = len(self._data)
+        self._data.clear()
+        return n
+
 
 class RepositorioClientesMemoria(RepositorioClientes):
     def __init__(self):
@@ -81,6 +86,11 @@ class RepositorioClientesMemoria(RepositorioClientes):
     def listar(self) -> list[Cliente]:
         return list(self._data.values())
 
+    def borrar_todo(self) -> int:
+        n = len(self._data)
+        self._data.clear()
+        return n
+
 
 class RepositorioPedidosMemoria(RepositorioPedidos):
     def __init__(self):
@@ -97,3 +107,8 @@ class RepositorioPedidosMemoria(RepositorioPedidos):
             p for p in self._data.values()
             if p.estado not in (EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO)
         ]
+
+    def borrar_todo(self) -> int:
+        n = len(self._data)
+        self._data.clear()
+        return n

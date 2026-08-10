@@ -158,3 +158,31 @@ def test_repositorio_pedidos_listar_pendientes_excluye_estados_terminales():
     repo.guardar(cancelado)
 
     assert repo.listar_pendientes() == [pendiente]
+
+
+def test_repositorio_citas_borrar_todo():
+    repo = RepositorioCitasMemoria()
+    repo.guardar(Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0)))
+    repo.guardar(Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0)))
+
+    assert repo.borrar_todo() == 2
+    assert repo.citas_en_rango(date(2026, 1, 1), date(2026, 12, 31)) == []
+    assert repo.borrar_todo() == 0
+
+
+def test_repositorio_clientes_borrar_todo():
+    repo = RepositorioClientesMemoria()
+    repo.guardar(Cliente(id="c1", nombre="Juan"))
+    repo.guardar(Cliente(id="c2", nombre="Ana"))
+
+    assert repo.borrar_todo() == 2
+    assert repo.listar() == []
+
+
+def test_repositorio_pedidos_borrar_todo():
+    repo = RepositorioPedidosMemoria()
+    repo.guardar(Pedido.nuevo("c1", [LineaPedido(servicio_id="s1", cantidad=1)]))
+    repo.guardar(Pedido.nuevo("c1", [LineaPedido(servicio_id="s2", cantidad=1)]))
+
+    assert repo.borrar_todo() == 2
+    assert repo.listar_pendientes() == []

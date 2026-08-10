@@ -14,6 +14,7 @@ import os
 from datetime import date
 from uuid import UUID
 
+from sqlalchemy import delete
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido
@@ -98,6 +99,12 @@ class RepositorioCitasPostgres(RepositorioCitas):
                 sesion.add(fila)
                 sesion.commit()
 
+    def borrar_todo(self) -> int:
+        with Session(self._engine) as sesion:
+            n = sesion.execute(delete(CitaDB)).rowcount
+            sesion.commit()
+            return n
+
     @staticmethod
     def _a_entidad(fila: CitaDB) -> Cita:
         return Cita(
@@ -144,6 +151,12 @@ class RepositorioClientesPostgres(RepositorioClientes):
         with Session(self._engine) as sesion:
             filas = sesion.exec(select(ClienteDB)).all()
             return [self._a_entidad(fila) for fila in filas]
+
+    def borrar_todo(self) -> int:
+        with Session(self._engine) as sesion:
+            n = sesion.execute(delete(ClienteDB)).rowcount
+            sesion.commit()
+            return n
 
     @staticmethod
     def _a_entidad(fila: ClienteDB) -> Cliente:
@@ -200,6 +213,15 @@ class RepositorioPedidosPostgres(RepositorioPedidos):
                 select(PedidoDB).where(PedidoDB.estado.not_in(estados_terminales))
             ).all()
             return [self._a_entidad(sesion, c) for c in cabeceras]
+
+    def borrar_todo(self) -> int:
+        # pedido_lineas antes que pedidos: es la única FK real del
+        # esquema (pedido_lineas.pedido_id -> pedidos.id).
+        with Session(self._engine) as sesion:
+            sesion.execute(delete(LineaPedidoDB))
+            n = sesion.execute(delete(PedidoDB)).rowcount
+            sesion.commit()
+            return n
 
     @staticmethod
     def _a_entidad(sesion: Session, cabecera: PedidoDB) -> Pedido:
