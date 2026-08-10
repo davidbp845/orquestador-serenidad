@@ -33,12 +33,13 @@
       "Bash(gh project list *)",
       "Bash(gh label list *)",
       "Bash(gh secret list *)",
+      "Bash(gh issue close *)",
+      "Bash(gh project item-edit *)",
       "Edit(**)"
     ],
     "ask": [
       "Bash(git push *)",
       "Bash(gh pr merge *)",
-      "Bash(gh issue close *)",
       "Bash(gh issue delete *)",
       "Bash(npm publish *)",
       "Bash(npm version *)",
