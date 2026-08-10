@@ -40,7 +40,7 @@ def test_cargar_config_aplica_valores_por_defecto_a_los_campos_opcionales(tmp_pa
     config = cargar_config(str(ruta))
 
     assert config["vault_obsidian"] == "./vault_negocio"
-    assert config["canales"] == {"web": False, "telegram": False}
+    assert config["canales"] == {"web": False, "telegram": False, "whatsapp": False}
     assert config["servicios"] == []
     assert config["profesionales"] == []
 

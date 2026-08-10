@@ -21,6 +21,7 @@ import uvicorn
 
 from adapters.in_.fastapi_app import crear_router
 from adapters.in_.telegram_bot import crear_bot
+from adapters.in_.whatsapp_webhook import crear_router_whatsapp
 from adapters.out.llm_anthropic import ProveedorLLMAnthropic
 from adapters.out.llm_cohere import ProveedorLLMCohere
 from adapters.out.llm_mock import ProveedorLLMMock
@@ -160,6 +161,24 @@ def main():
     repositorio_sesiones = construir_repositorio_sesiones()
 
     app = crear_router(orquestador, repositorio_sesiones)
+
+    if config.get("canales", {}).get("whatsapp"):
+        verify_token = os.environ.get("WHATSAPP_VERIFY_TOKEN")
+        access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+        phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+        app_secret = os.environ.get("WHATSAPP_APP_SECRET")
+        if verify_token and access_token and phone_number_id and app_secret:
+            crear_router_whatsapp(
+                app, orquestador, repositorio_sesiones,
+                verify_token, access_token, phone_number_id, app_secret,
+            )
+            logger.info("Webhook de WhatsApp registrado en /webhook/whatsapp.")
+        else:
+            logger.warning(
+                "canales.whatsapp activado pero faltan variables WHATSAPP_* "
+                "(VERIFY_TOKEN, ACCESS_TOKEN, PHONE_NUMBER_ID, APP_SECRET): "
+                "webhook de WhatsApp no registrado."
+            )
 
     hilo_web = threading.Thread(
         target=lambda: uvicorn.run(app, host="0.0.0.0", port=8000),

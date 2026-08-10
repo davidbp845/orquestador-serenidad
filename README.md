@@ -21,7 +21,8 @@ application/      → orquestador de agentes (síncrono y en streaming),
                      definición de tools, construcción del system
                      prompt.
 adapters/in_/     → adaptadores de entrada: FastAPI (chat web, con
-                     variante en streaming vía SSE), Telegram.
+                     variante en streaming vía SSE), Telegram, webhook
+                     de WhatsApp (Meta Cloud API).
 adapters/out/     → adaptadores de salida: LLM (Anthropic, Cohere o
                      un mock heurístico — intercambiables por
                      variable de entorno), vector store (Chroma) +
@@ -46,6 +47,10 @@ pip install -r requirements.txt
 #   COHERE_API_KEY=...                # si PROVEEDOR_LLM=cohere (vale una trial key gratuita)
 #   PROVEEDOR_LLM=anthropic|mock|cohere
 #   TELEGRAM_BOT_TOKEN=...            # opcional, solo si quieres el canal Telegram
+#   WHATSAPP_ACCESS_TOKEN=...         # opcional, solo si quieres el canal WhatsApp
+#   WHATSAPP_PHONE_NUMBER_ID=...      # (las cuatro WHATSAPP_* juntas, ver .env.example)
+#   WHATSAPP_VERIFY_TOKEN=...
+#   WHATSAPP_APP_SECRET=...
 #   LOG_LEVEL=INFO                    # opcional, DEBUG|INFO|WARNING|ERROR
 cp .env.example .env
 

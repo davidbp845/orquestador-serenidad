@@ -40,6 +40,7 @@ class ProfesionalConfig(BaseModel):
 class CanalesConfig(BaseModel):
     web: bool = False
     telegram: bool = False
+    whatsapp: bool = False
 
 
 class ConfigNegocio(BaseModel):

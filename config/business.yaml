@@ -72,6 +72,9 @@ vault_obsidian: "./vault_negocio"
 canales:
   web: true
   telegram: true
+  # Desactivado por defecto: hace falta configurar la app de Meta y las
+  # variables WHATSAPP_* (ver .env.example) antes de activarlo.
+  whatsapp: false
 
 servicios:
   - id: "masaje_relajante_60"
