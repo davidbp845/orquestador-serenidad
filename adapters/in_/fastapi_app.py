@@ -16,14 +16,12 @@ from pydantic import BaseModel
 from application.orchestrator import OrquestadorAgente, SesionConversacion
 from application.ports import RepositorioSesiones
 
-from .rate_limit import LimitadorPeticiones, LimitadorPeticionesMemoria
-
-# Límite por defecto si main.py no pasa uno explícito (#49): generoso
-# para no interferir con uso normal ni con los tests existentes, solo
-# pensado para frenar abuso evidente (bucles, bots) que agotarían la
-# cuota del proveedor de LLM configurado.
-_LIMITE_PETICIONES_DEFECTO = 20
-_VENTANA_SEGUNDOS_DEFECTO = 60
+from .rate_limit import (
+    LIMITE_PETICIONES_DEFECTO,
+    VENTANA_SEGUNDOS_DEFECTO,
+    LimitadorPeticiones,
+    LimitadorPeticionesMemoria,
+)
 
 app = FastAPI(title="Orquestador agéntico — chat web")
 
@@ -66,8 +64,8 @@ def crear_router(
     orquestador: OrquestadorAgente,
     repositorio_sesiones: RepositorioSesiones,
     limitador: LimitadorPeticiones | None = None,
-    limite_peticiones: int = _LIMITE_PETICIONES_DEFECTO,
-    ventana_segundos: int = _VENTANA_SEGUNDOS_DEFECTO,
+    limite_peticiones: int = LIMITE_PETICIONES_DEFECTO,
+    ventana_segundos: int = VENTANA_SEGUNDOS_DEFECTO,
 ) -> FastAPI:
     limitador = limitador or LimitadorPeticionesMemoria()
 

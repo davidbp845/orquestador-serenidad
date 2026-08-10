@@ -27,6 +27,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import streamlit as st
 from dotenv import load_dotenv
 
+from adapters.in_.rate_limit import (
+    LIMITE_PETICIONES_DEFECTO,
+    VENTANA_SEGUNDOS_DEFECTO,
+    LimitadorPeticionesRedis,
+)
 from adapters.out.obsidian_ingest import procesar_vault
 from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
@@ -83,6 +88,20 @@ def _construir_repos():
 @st.cache_resource
 def _construir_conocimiento() -> RepositorioConocimientoChroma:
     return RepositorioConocimientoChroma()
+
+
+@st.cache_resource
+def _construir_limitador_consumo() -> LimitadorPeticionesRedis | None:
+    # A diferencia de los otros _construir_*, no hay alternativa en
+    # memoria aquí (#50): el panel es un proceso distinto a main.py,
+    # sin memoria compartida, así que un LimitadorPeticionesMemoria
+    # propio del panel siempre estaría vacío — nunca reflejaría el
+    # consumo real del backend. Sin REDIS_URL, esta sección no tiene
+    # nada real que mostrar.
+    redis_url = os.environ.get("REDIS_URL")
+    if not redis_url:
+        return None
+    return LimitadorPeticionesRedis(redis_url)
 
 
 @st.cache_resource
@@ -190,7 +209,7 @@ st.caption(f"{_DIAS_SEMANA_ES[_hoy.weekday()].capitalize()}, {_hoy:%d/%m/%Y}")
 
 # ---------- Menú (sidebar: colapsado automáticamente en móvil) ----------
 with st.sidebar:
-    opcion = st.radio("Menú", ["📅 Agenda", "📦 Pedidos", "👤 Clientes", "⚙️ Ajustes"])
+    opcion = st.radio("Menú", ["📅 Agenda", "📦 Pedidos", "👤 Clientes", "🚦 Rate limiting", "⚙️ Ajustes"])
 
 # ---------- Agenda ----------
 if opcion == "📅 Agenda":
@@ -290,6 +309,35 @@ elif opcion == "👤 Clientes":
             if cliente.notas:
                 st.caption(cliente.notas)
             st.caption("📱 Telegram vinculado" if cliente.telegram_chat_id else "📱 Sin Telegram vinculado")
+
+# ---------- Rate limiting ----------
+elif opcion == "🚦 Rate limiting":
+    limitador_consumo = _construir_limitador_consumo()
+    # Mismo motivo que en main.py: `or` en vez de un default en .get(),
+    # para que una variable definida pero vacía en .env no rompa int().
+    limite = int(os.environ.get("RATE_LIMIT_CHAT_MAX_PETICIONES") or LIMITE_PETICIONES_DEFECTO)
+    ventana = int(os.environ.get("RATE_LIMIT_CHAT_VENTANA_SEGUNDOS") or VENTANA_SEGUNDOS_DEFECTO)
+
+    if limitador_consumo is None:
+        st.info(
+            "No disponible sin REDIS_URL configurada — sin Redis, el "
+            "contador de peticiones vive solo dentro del proceso del "
+            "backend (main.py) y este panel no puede leerlo."
+        )
+    else:
+        st.caption(f"Límite configurado: {limite} peticiones / {ventana}s, por usuario_id.")
+        consumo = sorted(limitador_consumo.listar_consumo(), key=lambda c: c.peticiones, reverse=True)
+
+        if not consumo:
+            st.info("Sin peticiones registradas en la ventana actual.")
+
+        for entrada in consumo:
+            with st.container(border=True):
+                st.markdown(f"**{entrada.clave}**")
+                st.write(f"{entrada.peticiones}/{limite} peticiones")
+                st.caption(f"Ventana se libera en {entrada.segundos_restantes}s")
+                if entrada.peticiones >= limite:
+                    st.error("Límite alcanzado")
 
 # ---------- Ajustes ----------
 else:

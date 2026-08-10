@@ -20,7 +20,13 @@ load_dotenv()  # lee .env si existe; si las variables ya están exportadas
 import uvicorn
 
 from adapters.in_.fastapi_app import crear_router
-from adapters.in_.rate_limit import LimitadorPeticiones, LimitadorPeticionesMemoria, LimitadorPeticionesRedis
+from adapters.in_.rate_limit import (
+    LIMITE_PETICIONES_DEFECTO,
+    VENTANA_SEGUNDOS_DEFECTO,
+    LimitadorPeticiones,
+    LimitadorPeticionesMemoria,
+    LimitadorPeticionesRedis,
+)
 from adapters.in_.telegram_bot import crear_bot
 from adapters.in_.whatsapp_webhook import crear_router_whatsapp
 from adapters.out.llm_anthropic import ProveedorLLMAnthropic
@@ -172,8 +178,12 @@ def main():
     orquestador, config = construir_sistema()
     repositorio_sesiones = construir_repositorio_sesiones()
     limitador_peticiones = construir_limitador_peticiones()
-    limite_chat = int(os.environ.get("RATE_LIMIT_CHAT_MAX_PETICIONES", "20"))
-    ventana_chat = int(os.environ.get("RATE_LIMIT_CHAT_VENTANA_SEGUNDOS", "60"))
+    # `or` en vez de un default en .get(): si .env define la variable
+    # vacía (RATE_LIMIT_CHAT_MAX_PETICIONES=, como queda tras copiar
+    # .env.example sin rellenarla), .get() devuelve "" en vez del
+    # default, y int("") lanzaría ValueError.
+    limite_chat = int(os.environ.get("RATE_LIMIT_CHAT_MAX_PETICIONES") or LIMITE_PETICIONES_DEFECTO)
+    ventana_chat = int(os.environ.get("RATE_LIMIT_CHAT_VENTANA_SEGUNDOS") or VENTANA_SEGUNDOS_DEFECTO)
 
     app = crear_router(
         orquestador, repositorio_sesiones,
