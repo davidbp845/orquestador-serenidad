@@ -77,6 +77,9 @@ class RepositorioClientes(ABC):
     @abstractmethod
     def buscar_por_telefono(self, telefono: str) -> Cliente | None: ...
 
+    @abstractmethod
+    def listar(self) -> list[Cliente]: ...
+
 
 class RepositorioPedidos(ABC):
     @abstractmethod

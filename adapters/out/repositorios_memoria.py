@@ -78,6 +78,9 @@ class RepositorioClientesMemoria(RepositorioClientes):
     def buscar_por_telefono(self, telefono: str) -> Cliente | None:
         return next((c for c in self._data.values() if c.telefono == telefono), None)
 
+    def listar(self) -> list[Cliente]:
+        return list(self._data.values())
+
 
 class RepositorioPedidosMemoria(RepositorioPedidos):
     def __init__(self):

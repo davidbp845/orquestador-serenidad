@@ -190,7 +190,7 @@ st.caption(f"{_DIAS_SEMANA_ES[_hoy.weekday()].capitalize()}, {_hoy:%d/%m/%Y}")
 
 # ---------- Menú (sidebar: colapsado automáticamente en móvil) ----------
 with st.sidebar:
-    opcion = st.radio("Menú", ["📅 Agenda", "📦 Pedidos", "⚙️ Ajustes"])
+    opcion = st.radio("Menú", ["📅 Agenda", "📦 Pedidos", "👤 Clientes", "⚙️ Ajustes"])
 
 # ---------- Agenda ----------
 if opcion == "📅 Agenda":
@@ -266,6 +266,30 @@ elif opcion == "📦 Pedidos":
                     st.rerun()
                 except TransicionEstadoInvalida as exc:
                     st.error(str(exc))
+
+# ---------- Clientes ----------
+elif opcion == "👤 Clientes":
+    busqueda = st.text_input("Buscar por nombre o teléfono").strip().lower()
+
+    clientes = repo_clientes.listar()
+    if busqueda:
+        clientes = [
+            c for c in clientes
+            if busqueda in c.nombre.lower() or busqueda in (c.telefono or "").lower()
+        ]
+    clientes.sort(key=lambda c: c.nombre.lower())
+
+    if not clientes:
+        st.info("Sin clientes que coincidan con la búsqueda." if busqueda else "No hay clientes registrados.")
+
+    for cliente in clientes:
+        with st.container(border=True):
+            st.markdown(f"**{cliente.nombre}**")
+            st.write(cliente.telefono or "Sin teléfono")
+            st.write(cliente.email or "Sin email")
+            if cliente.notas:
+                st.caption(cliente.notas)
+            st.caption("📱 Telegram vinculado" if cliente.telegram_chat_id else "📱 Sin Telegram vinculado")
 
 # ---------- Ajustes ----------
 else:

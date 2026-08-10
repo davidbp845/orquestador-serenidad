@@ -140,6 +140,11 @@ class RepositorioClientesPostgres(RepositorioClientes):
             ).first()
             return self._a_entidad(fila) if fila else None
 
+    def listar(self) -> list[Cliente]:
+        with Session(self._engine) as sesion:
+            filas = sesion.exec(select(ClienteDB)).all()
+            return [self._a_entidad(fila) for fila in filas]
+
     @staticmethod
     def _a_entidad(fila: ClienteDB) -> Cliente:
         return Cliente(

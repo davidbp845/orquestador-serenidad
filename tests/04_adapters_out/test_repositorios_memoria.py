@@ -125,6 +125,18 @@ def test_repositorio_clientes_telegram_chat_id():
     assert repo.obtener("c1").telegram_chat_id == "chat123"
 
 
+def test_repositorio_clientes_listar():
+    repo = RepositorioClientesMemoria()
+    assert repo.listar() == []
+
+    cliente1 = Cliente(id="c1", nombre="Juan", telefono="600111222")
+    cliente2 = Cliente(id="c2", nombre="Ana", telefono="600333444")
+    repo.guardar(cliente1)
+    repo.guardar(cliente2)
+
+    assert {c.id for c in repo.listar()} == {"c1", "c2"}
+
+
 def test_repositorio_pedidos():
     repo = RepositorioPedidosMemoria()
     pedido = Pedido.nuevo("c1", [LineaPedido(servicio_id="s1", cantidad=1)])
