@@ -175,6 +175,14 @@ with a summary when done.
   read-only API, querying a local/dev database.
 - Run `alembic upgrade head` against a local `DATABASE_URL` (additive schema change,
   not data-destructive).
+- Run a full **sprint**: for every GitHub issue currently at project Status = Ready,
+  implement it end-to-end (code, tests, `ruff check`), commit locally, comment on the
+  issue documenting what was done and how it was verified, then close it and move
+  Status to **In review** (never Done) — following the documented open/close cycle.
+  Move on to the next Ready issue without pausing for confirmation in between. Still
+  stop for anything listed under "Blocked entirely" or "Still requires explicit
+  confirmation" below (e.g. `git push`, PR merges) — report back with a summary once
+  the batch of Ready issues is exhausted or one of those is hit.
 
 ### Blocked entirely (enforced in `.claude/settings.json`, not even askable in-session)
 - `git push --force` to any remote.
@@ -184,8 +192,9 @@ with a summary when done.
 
 ### Still requires explicit confirmation
 - `git push` (non-force) to any remote, and merging pull requests.
-- Deleting or renaming remote branches, closing or reopening GitHub issues/PRs,
-  changing labels/milestones in bulk.
+- Deleting or renaming remote branches, closing or reopening GitHub pull requests,
+  reopening GitHub issues, changing labels/milestones in bulk. (Closing an issue after
+  finishing and verifying its work is covered by the sprint workflow above, not this.)
 - Publishing packages (`npm publish`), tagging releases, or anything that touches
   a production/staging environment or deployment pipeline.
 - Modifying CI/CD configuration, secrets, environment variables, or `.env` files
