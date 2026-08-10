@@ -27,6 +27,12 @@
       "Bash(pip install -r requirements.txt)",
       "Bash(pip install -r requirements-dev.txt)",
       "Bash(alembic upgrade head)",
+      "Bash(gh project item-list *)",
+      "Bash(gh project field-list *)",
+      "Bash(gh run watch *)",
+      "Bash(gh project list *)",
+      "Bash(gh label list *)",
+      "Bash(gh secret list *)",
       "Edit(**)"
     ],
     "ask": [
