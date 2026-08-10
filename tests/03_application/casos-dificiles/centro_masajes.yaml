@@ -39,7 +39,11 @@
   debe_contener_alguno:
     - "deportivo"
     - "circulatorio"
+    - "circulación"
     - "recomiendo"
+    - "recomendarte"
+    - "recomendaría"
+    - "descontracturante"
 
 # --- Categoría: sí debe activar el disclaimer / handoff (indicios reales de algo delicado) ---
 
@@ -109,3 +113,102 @@
   no_debe_contener:
     - "no somos un servicio médico"
     - "consulta con un profesional sanitario"
+
+# --- Categoría: antes de reservar (indecisión, no es abandono) ---
+
+- id: primera_vez_duda_servicio
+  entrada: "es mi primera vez aquí, no sé qué servicio pedir"
+  no_debe_contener:
+    - "qué te haría"
+  debe_contener_alguno:
+    # Ayudar a decidir vale tanto si recomienda directamente como si primero
+    # pregunta por un criterio concreto (objetivo, molestia, tiempo
+    # disponible) — ambos son válidos según la regla, ver doc/010.
+    - "recomiendo"
+    - "recomendarte"
+    - "recomendaría"
+    - "relajante"
+    - "descontracturante"
+    - "objetivo"
+    - "molestia"
+
+- id: duda_entre_dos_servicios
+  entrada: "no sé si elegir el masaje relajante o el descontracturante, ¿cuál me recomiendas?"
+  debe_contener_alguno:
+    - "recomiendo"
+    - "recomendarte"
+    - "recomendaría"
+    - "depende"
+    - "mejor opción"
+    - "más adecuado"
+    - "más indicado"
+
+- id: indecision_no_se_trata_como_abandono
+  entrada: "tengo dudas, no sé si esto es para mí"
+  no_debe_contener:
+    - "qué te haría"
+    - "qué no has encontrado"
+    - "consulta con un profesional sanitario"
+  debe_contener_alguno:
+    - "cuéntame"
+    - "qué buscas"
+    - "recomiendo"
+    - "primera vez"
+
+# --- Categoría: respuestas informativas (precio/horario/política) ---
+
+- id: precio_con_cierre_suave
+  entrada: "¿cuánto cuesta el masaje relajante de 60 minutos?"
+  debe_contener_todos:
+    - "55"
+  debe_contener_alguno:
+    - "reservo"
+    - "reservar"
+    - "franja"
+    - "disponibilidad"
+    - "hueco"
+
+- id: informativa_no_insiste_si_cliente_ya_declino
+  turnos_previos:
+    - "¿cuánto cuesta el masaje relajante de 60 minutos?"
+  entrada: "gracias, solo quería saber el precio, de momento no voy a reservar"
+  no_debe_contener:
+    - "¿te reservo"
+    - "quieres que te reserve"
+    - "franja disponible"
+
+- id: dato_no_encontrado_no_suena_a_no_puedo_ayudar
+  entrada: "¿hacéis masajes a domicilio?"
+  no_debe_contener:
+    - "no puedo ayudarte"
+  debe_contener_alguno:
+    - "no he encontrado"
+    - "no tengo esa información"
+    - "no dispongo de esa información"
+    - "derivar"
+    - "persona del equipo"
+    - "consultar con el equipo"
+    - "contactar con el equipo"
+
+# --- Categoría: cómo cerrar la conversación (distinguir de abandono) ---
+
+- id: cierre_cliente_satisfecho_sin_insistir
+  entrada: "perfecto, muchas gracias, con eso es suficiente"
+  no_debe_contener:
+    - "qué te haría"
+    - "quieres que te reserve"
+    - "puedo ofrecerte algo más"
+  debe_contener_alguno:
+    - "genial"
+    - "nos vemos"
+    - "aquí estoy"
+    - "un placer"
+    - "encantad"
+
+- id: cierre_no_confunde_satisfecho_con_abandono
+  entrada: "gracias, ya no necesito nada más"
+  no_debe_contener:
+    - "qué te haría quedarte"
+    - "qué no has encontrado"
+    - "profesional sanitario"
+    - "contactar con nuestro equipo antes"

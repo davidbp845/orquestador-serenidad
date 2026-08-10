@@ -61,6 +61,10 @@ edita el código, no para leerse de un tirón):
 9. **[009-errores-conocidos.md](009-errores-conocidos.md)** — avisos y
    errores que vas a ver corriendo el sistema o la CI que ya están
    diagnosticados y no son bugs.
+10. **[010-prompt-engineering.md](010-prompt-engineering.md)** — dónde y
+    cuándo se construye el prompt del asistente, qué superficies existen
+    para tocar la calidad de sus respuestas, y el método para mejorarlas y
+    verificarlas sin regresiones (#21, #22, #31, #32).
 
 Para poner el sistema en marcha en local, el punto de partida sigue siendo el
 [`README.md`](../README.md) de la raíz del repo.
