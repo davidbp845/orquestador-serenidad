@@ -1,0 +1,237 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1250 1303" width="1250" height="1303" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1250" height="1303" fill="#ffffff"/>
+<defs><marker id="arrow-fk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f6feb"/></marker></defs>
+<text x="625.0" y="34" font-size="22" font-weight="700" text-anchor="middle" fill="#0d1117">Modelo de datos — orquestador agéntico</text>
+<text x="625.0" y="56" font-size="13" text-anchor="middle" fill="#57606a">Entidades de dominio, columnas y claves reales de Postgres (adapters/out/db_models.py) — snapshot 2026-08-10</text>
+<rect x="40" y="90" width="1170" height="300" rx="14" fill="none" stroke="#57606a" stroke-width="1.4" stroke-dasharray="3,5"/><rect x="54" y="77" width="660" height="22" fill="#ffffff"/><text x="62" y="92" font-size="13" font-weight="700" fill="#57606a">Memoria (RAM) — catálogo derivado de config/business.yaml en cada arranque, nunca persistido</text>
+<rect x="40" y="405" width="800" height="591" rx="14" fill="none" stroke="#1f6feb" stroke-width="1.4" stroke-dasharray="3,5"/><rect x="54" y="392" width="779" height="22" fill="#ffffff"/><text x="62" y="407" font-size="13" font-weight="700" fill="#1f6feb">Postgres — activo solo si DATABASE_URL está definido (si no, mismas 4 entidades en RAM, sin cambiar de forma)</text>
+<rect x="870" y="405" width="340" height="341" rx="14" fill="none" stroke="#8250df" stroke-width="1.4" stroke-dasharray="3,5"/><rect x="884" y="392" width="338" height="22" fill="#ffffff"/><text x="892" y="407" font-size="13" font-weight="700" fill="#8250df">Sistemas externos — solo si están configurados</text>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="70" y="130" width="300" height="201" rx="10" fill="#f6f8fa" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="6,4"/>
+<path d="M70 140 a10,10 0 0 1 10,-10 H360 a10,10 0 0 1 10,10 V198 H70 Z" fill="#57606a"/>
+<text x="84" y="153" font-size="16" font-weight="700" fill="#ffffff">Servicio</text>
+<text x="84" y="170" font-size="11" fill="#ffffff" opacity="0.85">dataclass — domain/entities.py</text>
+<text x="84" y="215" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="700" fill="#1a1a1a">id</text>
+<text x="228.0" y="215" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<rect x="330" y="202" width="30" height="17" rx="8.5" fill="#fff3c4" stroke="#e3b800" stroke-width="1"/>
+<text x="345.0" y="214.5" font-size="9.5" font-weight="700" text-anchor="middle" fill="#8a6d00">PK</text>
+<line x1="70" y1="223" x2="370" y2="223" stroke="#8b949e" stroke-width="0.6" opacity="0.35"/>
+<rect x="70" y="223" width="300" height="25" fill="#00000006"/>
+<text x="84" y="240" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">nombre</text>
+<text x="228.0" y="240" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<line x1="70" y1="248" x2="370" y2="248" stroke="#8b949e" stroke-width="0.6" opacity="0.35"/>
+<text x="84" y="265" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">duracion_minutos</text>
+<text x="228.0" y="265" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">int</text>
+<line x1="70" y1="273" x2="370" y2="273" stroke="#8b949e" stroke-width="0.6" opacity="0.35"/>
+<rect x="70" y="273" width="300" height="25" fill="#00000006"/>
+<text x="84" y="290" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">precio</text>
+<text x="228.0" y="290" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">float</text>
+<line x1="70" y1="298" x2="370" y2="298" stroke="#8b949e" stroke-width="0.6" opacity="0.35"/>
+<text x="84" y="315" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">descripcion</text>
+<text x="228.0" y="315" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str = ""</text>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="430" y="130" width="340" height="176" rx="10" fill="#f6f8fa" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="6,4"/>
+<path d="M430 140 a10,10 0 0 1 10,-10 H760 a10,10 0 0 1 10,10 V198 H430 Z" fill="#57606a"/>
+<text x="444" y="153" font-size="16" font-weight="700" fill="#ffffff">Profesional</text>
+<text x="444" y="170" font-size="11" fill="#ffffff" opacity="0.85">dataclass — domain/entities.py</text>
+<text x="444" y="215" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="700" fill="#1a1a1a">id</text>
+<text x="580.0" y="215" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<rect x="730" y="202" width="30" height="17" rx="8.5" fill="#fff3c4" stroke="#e3b800" stroke-width="1"/>
+<text x="745.0" y="214.5" font-size="9.5" font-weight="700" text-anchor="middle" fill="#8a6d00">PK</text>
+<line x1="430" y1="223" x2="770" y2="223" stroke="#8b949e" stroke-width="0.6" opacity="0.35"/>
+<rect x="430" y="223" width="340" height="25" fill="#00000006"/>
+<text x="444" y="240" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">nombre</text>
+<text x="580.0" y="240" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<line x1="430" y1="248" x2="770" y2="248" stroke="#8b949e" stroke-width="0.6" opacity="0.35"/>
+<text x="444" y="265" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">servicios_ids</text>
+<text x="580.0" y="265" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">list[str]</text>
+<line x1="430" y1="273" x2="770" y2="273" stroke="#8b949e" stroke-width="0.6" opacity="0.35"/>
+<rect x="430" y="273" width="340" height="25" fill="#00000006"/>
+<text x="444" y="290" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">horario_semanal</text>
+<text x="580.0" y="290" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">dict[str, tuple]</text>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="70" y="430" width="300" height="226" rx="10" fill="#eef4ff" stroke="#1f6feb" stroke-width="1.5"/>
+<path d="M70 440 a10,10 0 0 1 10,-10 H360 a10,10 0 0 1 10,10 V498 H70 Z" fill="#1f6feb"/>
+<text x="84" y="453" font-size="16" font-weight="700" fill="#ffffff">Cliente</text>
+<text x="84" y="470" font-size="11" fill="#ffffff" opacity="0.85">tabla clientes — ClienteDB</text>
+<text x="84" y="515" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="700" fill="#1a1a1a">id</text>
+<text x="228.0" y="515" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<rect x="330" y="502" width="30" height="17" rx="8.5" fill="#fff3c4" stroke="#e3b800" stroke-width="1"/>
+<text x="345.0" y="514.5" font-size="9.5" font-weight="700" text-anchor="middle" fill="#8a6d00">PK</text>
+<line x1="70" y1="523" x2="370" y2="523" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="70" y="523" width="300" height="25" fill="#00000006"/>
+<text x="84" y="540" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">nombre</text>
+<text x="228.0" y="540" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<line x1="70" y1="548" x2="370" y2="548" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<text x="84" y="565" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">telefono</text>
+<text x="228.0" y="565" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str | None</text>
+<rect x="326" y="552" width="34" height="17" rx="8.5" fill="#d7f7ee" stroke="#0f9d81" stroke-width="1"/>
+<text x="343.0" y="564.5" font-size="9.5" font-weight="700" text-anchor="middle" fill="#046656">IDX</text>
+<line x1="70" y1="573" x2="370" y2="573" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="70" y="573" width="300" height="25" fill="#00000006"/>
+<text x="84" y="590" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">email</text>
+<text x="228.0" y="590" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str | None</text>
+<line x1="70" y1="598" x2="370" y2="598" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<text x="84" y="615" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">notas</text>
+<text x="228.0" y="615" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str = ""</text>
+<line x1="70" y1="623" x2="370" y2="623" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="70" y="623" width="300" height="25" fill="#00000006"/>
+<text x="84" y="640" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">telegram_chat_id</text>
+<text x="228.0" y="640" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str | None</text>
+<text x="301.0" y="635" font-size="10" font-weight="700" fill="#bf3989">5</text>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="430" y="430" width="340" height="276" rx="10" fill="#eef4ff" stroke="#1f6feb" stroke-width="1.5"/>
+<path d="M430 440 a10,10 0 0 1 10,-10 H760 a10,10 0 0 1 10,10 V498 H430 Z" fill="#1f6feb"/>
+<text x="444" y="453" font-size="16" font-weight="700" fill="#ffffff">Cita</text>
+<text x="444" y="470" font-size="11" fill="#ffffff" opacity="0.85">tabla citas — CitaDB</text>
+<text x="444" y="515" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="700" fill="#1a1a1a">id</text>
+<text x="620.0" y="515" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">UUID</text>
+<rect x="730" y="502" width="30" height="17" rx="8.5" fill="#fff3c4" stroke="#e3b800" stroke-width="1"/>
+<text x="745.0" y="514.5" font-size="9.5" font-weight="700" text-anchor="middle" fill="#8a6d00">PK</text>
+<line x1="430" y1="523" x2="770" y2="523" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="430" y="523" width="340" height="25" fill="#00000006"/>
+<text x="444" y="540" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">servicio_id</text>
+<text x="620.0" y="540" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<text x="644.0" y="535" font-size="10" font-weight="700" fill="#bf3989">1</text>
+<line x1="430" y1="548" x2="770" y2="548" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<text x="444" y="565" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">profesional_id</text>
+<text x="620.0" y="565" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<text x="644.0" y="560" font-size="10" font-weight="700" fill="#bf3989">2</text>
+<rect x="726" y="552" width="34" height="17" rx="8.5" fill="#d7f7ee" stroke="#0f9d81" stroke-width="1"/>
+<text x="743.0" y="564.5" font-size="9.5" font-weight="700" text-anchor="middle" fill="#046656">IDX</text>
+<line x1="430" y1="573" x2="770" y2="573" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="430" y="573" width="340" height="25" fill="#00000006"/>
+<text x="444" y="590" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">cliente_id</text>
+<text x="620.0" y="590" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<text x="644.0" y="585" font-size="10" font-weight="700" fill="#bf3989">3</text>
+<line x1="430" y1="598" x2="770" y2="598" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<text x="444" y="615" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">inicio</text>
+<text x="620.0" y="615" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">datetime</text>
+<line x1="430" y1="623" x2="770" y2="623" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="430" y="623" width="340" height="25" fill="#00000006"/>
+<text x="444" y="640" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">fin</text>
+<text x="620.0" y="640" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">datetime</text>
+<line x1="430" y1="648" x2="770" y2="648" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<text x="444" y="665" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">estado</text>
+<text x="620.0" y="665" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<line x1="430" y1="673" x2="770" y2="673" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="430" y="673" width="340" height="25" fill="#00000006"/>
+<text x="444" y="690" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">evento_calendario_id</text>
+<text x="620.0" y="690" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str | None</text>
+<text x="693.0" y="685" font-size="10" font-weight="700" fill="#bf3989">4</text>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="70" y="770" width="300" height="176" rx="10" fill="#eef4ff" stroke="#1f6feb" stroke-width="1.5"/>
+<path d="M70 780 a10,10 0 0 1 10,-10 H360 a10,10 0 0 1 10,10 V838 H70 Z" fill="#1f6feb"/>
+<text x="84" y="793" font-size="16" font-weight="700" fill="#ffffff">Pedido</text>
+<text x="84" y="810" font-size="11" fill="#ffffff" opacity="0.85">tabla pedidos — PedidoDB</text>
+<text x="84" y="855" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="700" fill="#1a1a1a">id</text>
+<text x="180.0" y="855" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">UUID</text>
+<rect x="330" y="842" width="30" height="17" rx="8.5" fill="#fff3c4" stroke="#e3b800" stroke-width="1"/>
+<text x="345.0" y="854.5" font-size="9.5" font-weight="700" text-anchor="middle" fill="#8a6d00">PK</text>
+<line x1="70" y1="863" x2="370" y2="863" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="70" y="863" width="300" height="25" fill="#00000006"/>
+<text x="84" y="880" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">cliente_id</text>
+<text x="180.0" y="880" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<text x="204.0" y="875" font-size="10" font-weight="700" fill="#bf3989">3</text>
+<line x1="70" y1="888" x2="370" y2="888" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<text x="84" y="905" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">estado</text>
+<text x="180.0" y="905" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<line x1="70" y1="913" x2="370" y2="913" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="70" y="913" width="300" height="25" fill="#00000006"/>
+<text x="84" y="930" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">creado_en</text>
+<text x="180.0" y="930" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">datetime</text>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="430" y="770" width="340" height="201" rx="10" fill="#eef4ff" stroke="#1f6feb" stroke-width="1.5"/>
+<path d="M430 780 a10,10 0 0 1 10,-10 H760 a10,10 0 0 1 10,10 V838 H430 Z" fill="#1f6feb"/>
+<text x="444" y="793" font-size="16" font-weight="700" fill="#ffffff">LineaPedido</text>
+<text x="444" y="810" font-size="11" fill="#ffffff" opacity="0.85">tabla pedido_lineas — LineaPedidoDB</text>
+<text x="444" y="855" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="700" fill="#1a1a1a">id</text>
+<text x="548.0" y="855" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">int | None</text>
+<rect x="730" y="842" width="30" height="17" rx="8.5" fill="#fff3c4" stroke="#e3b800" stroke-width="1"/>
+<text x="745.0" y="854.5" font-size="9.5" font-weight="700" text-anchor="middle" fill="#8a6d00">PK</text>
+<line x1="430" y1="863" x2="770" y2="863" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="430" y="863" width="340" height="25" fill="#00000006"/>
+<text x="444" y="880" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">pedido_id</text>
+<text x="548.0" y="880" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">UUID</text>
+<rect x="730" y="867" width="30" height="17" rx="8.5" fill="#d7e8ff" stroke="#1f6feb" stroke-width="1"/>
+<text x="745.0" y="879.5" font-size="9.5" font-weight="700" text-anchor="middle" fill="#0b4a91">FK</text>
+<line x1="430" y1="888" x2="770" y2="888" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<text x="444" y="905" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">servicio_id</text>
+<text x="548.0" y="905" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<text x="572.0" y="900" font-size="10" font-weight="700" fill="#bf3989">1</text>
+<line x1="430" y1="913" x2="770" y2="913" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<rect x="430" y="913" width="340" height="25" fill="#00000006"/>
+<text x="444" y="930" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">cantidad</text>
+<text x="548.0" y="930" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">int</text>
+<line x1="430" y1="938" x2="770" y2="938" stroke="#1f6feb" stroke-width="0.6" opacity="0.35"/>
+<text x="444" y="955" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">notas</text>
+<text x="548.0" y="955" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str = ""</text>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="900" y="430" width="280" height="126" rx="10" fill="#f8f3ff" stroke="#8250df" stroke-width="1.5" stroke-dasharray="6,4"/>
+<path d="M900 440 a10,10 0 0 1 10,-10 H1170 a10,10 0 0 1 10,10 V498 H900 Z" fill="#8250df"/>
+<text x="914" y="453" font-size="16" font-weight="700" fill="#ffffff">Google Calendar</text>
+<text x="914" y="470" font-size="11" fill="#ffffff" opacity="0.85">sistema externo, opcional</text>
+<text x="914" y="515" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">event.id</text>
+<text x="1098.0" y="515" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+<line x1="900" y1="523" x2="1180" y2="523" stroke="#8250df" stroke-width="0.6" opacity="0.35"/>
+<rect x="900" y="523" width="280" height="25" fill="#00000006"/>
+<text x="914" y="540" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">summary / start / end</text>
+<text x="1098.0" y="540" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">…</text>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="900" y="620" width="280" height="101" rx="10" fill="#fff0f7" stroke="#bf3989" stroke-width="1.5" stroke-dasharray="6,4"/>
+<path d="M900 630 a10,10 0 0 1 10,-10 H1170 a10,10 0 0 1 10,10 V688 H900 Z" fill="#bf3989"/>
+<text x="914" y="643" font-size="16" font-weight="700" fill="#ffffff">Telegram</text>
+<text x="914" y="660" font-size="11" fill="#ffffff" opacity="0.85">sistema externo, opcional</text>
+<text x="914" y="705" font-size="12.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-weight="400" fill="#1a1a1a">chat.id</text>
+<text x="986.0" y="705" font-size="12" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#6a6a6a">str</text>
+</g>
+<path d="M430,875.5 C400.0,875.5 400.0,850.5 370,850.5" fill="none" stroke="#1f6feb" stroke-width="2" marker-end="url(#arrow-fk)"/>
+<rect x="282.0" y="741" width="236" height="17" rx="4" fill="#ffffff"/><text x="400.0" y="754" font-size="10.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#1f6feb">FK real · pedido_lineas.pedido_id → pedidos.id</text>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<text x="40" y="1021" font-size="14" font-weight="700" fill="#0d1117">Referencias sin FK (string suelto, coherencia solo por convención de aplicación)</text>
+<circle cx="48" cy="1041" r="8" fill="#fff0f7" stroke="#bf3989"/>
+<text x="48" y="1045" font-size="10" font-weight="700" text-anchor="middle" fill="#bf3989">1</text>
+<text x="66" y="1045" font-size="11.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#1a1a1a">Cita, LineaPedido.servicio_id</text>
+<text x="420" y="1045" font-size="11.5" fill="#57606a">→ Servicio.id — catálogo en RAM derivado de business.yaml — nunca hay tabla servicios en Postgres</text>
+<circle cx="48" cy="1061" r="8" fill="#fff0f7" stroke="#bf3989"/>
+<text x="48" y="1065" font-size="10" font-weight="700" text-anchor="middle" fill="#bf3989">2</text>
+<text x="66" y="1065" font-size="11.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#1a1a1a">Cita.profesional_id</text>
+<text x="420" y="1065" font-size="11.5" fill="#57606a">→ Profesional.id — catálogo en RAM derivado de business.yaml — nunca hay tabla profesionales en Postgres</text>
+<circle cx="48" cy="1081" r="8" fill="#fff0f7" stroke="#bf3989"/>
+<text x="48" y="1085" font-size="10" font-weight="700" text-anchor="middle" fill="#bf3989">3</text>
+<text x="66" y="1085" font-size="11.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#1a1a1a">Cita, Pedido.cliente_id</text>
+<text x="420" y="1085" font-size="11.5" fill="#57606a">→ Cliente.id — string suelto, sin ForeignKeyConstraint en el esquema (ver issue #52)</text>
+<circle cx="48" cy="1101" r="8" fill="#fff0f7" stroke="#bf3989"/>
+<text x="48" y="1105" font-size="10" font-weight="700" text-anchor="middle" fill="#bf3989">4</text>
+<text x="66" y="1105" font-size="11.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#1a1a1a">Cita.evento_calendario_id</text>
+<text x="420" y="1105" font-size="11.5" fill="#57606a">→ id de evento en Google Calendar — solo si GOOGLE_CALENDAR_CREDENTIALS_JSON + GOOGLE_CALENDAR_ID están configurados</text>
+<circle cx="48" cy="1121" r="8" fill="#fff0f7" stroke="#bf3989"/>
+<text x="48" y="1125" font-size="10" font-weight="700" text-anchor="middle" fill="#bf3989">5</text>
+<text x="66" y="1125" font-size="11.5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" fill="#1a1a1a">Cliente.telegram_chat_id</text>
+<text x="420" y="1125" font-size="11.5" fill="#57606a">→ chat_id de Telegram — solo si el cliente reservó alguna vez por ese canal</text>
+</g>
+<g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<text x="40" y="1203" font-size="14" font-weight="700" fill="#0d1117">Leyenda</text>
+<rect x="40" y="1214" width="34" height="17" rx="8.5" fill="#fff3c4" stroke="#e3b800"/>
+<text x="57" y="1226" font-size="9.5" font-weight="700" text-anchor="middle" fill="#8a6d00">PK</text>
+<text x="84" y="1226" font-size="11.5" fill="#3a3a3a">clave primaria</text>
+<rect x="216" y="1214" width="34" height="17" rx="8.5" fill="#d7e8ff" stroke="#1f6feb"/>
+<text x="233" y="1226" font-size="9.5" font-weight="700" text-anchor="middle" fill="#0b4a91">FK</text>
+<text x="260" y="1226" font-size="11.5" fill="#3a3a3a">clave foránea con ForeignKeyConstraint real</text>
+<rect x="595" y="1214" width="34" height="17" rx="8.5" fill="#d7f7ee" stroke="#0f9d81"/>
+<text x="612" y="1226" font-size="9.5" font-weight="700" text-anchor="middle" fill="#046656">IDX</text>
+<text x="639" y="1226" font-size="11.5" fill="#3a3a3a">columna indexada (Field(index=True))</text>
+<line x1="40" y1="1251" x2="76" y2="1251" stroke="#1f6feb" stroke-width="2"/>
+<text x="84" y="1255" font-size="11.5" fill="#3a3a3a">línea continua = FK real en el esquema (única del proyecto hoy)</text>
+<text x="40" y="1275" font-size="11.5" fill="#3a3a3a">Valores de <tspan font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">estado</tspan> (EstadoCita): pendiente · confirmada · en_curso · finalizada · cancelada · no_show</text>
+<text x="40" y="1294" font-size="11.5" fill="#3a3a3a">Valores de <tspan font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">estado</tspan> (EstadoPedido): recibido · en_preparacion · listo · entregado · cancelado</text>
+<text x="40" y="1316" font-size="11" fill="#8b949e">Sin DATABASE_URL, las cuatro entidades de Postgres viven igual en RAM (RepositorioXMemoria) — mismas columnas, sin persistencia entre reinicios ni FK real posible.</text>
+</g>
+</svg>

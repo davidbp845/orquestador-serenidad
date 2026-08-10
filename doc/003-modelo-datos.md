@@ -58,6 +58,37 @@ siquiera un repositorio formal (dos `dict` sueltos en `fastapi_app.py` y
 `telegram_bot.py`) y no existía la fila de Telegram como destino de
 notificación. Las dos secciones siguientes explican qué cambió y por qué.
 
+## Diagrama entidad-relación (Postgres)
+
+<img src="assets/modelo-datos-erd.svg" alt="Diagrama entidad-relación: Servicio y Profesional en memoria; Cliente, Cita, Pedido y LineaPedido en Postgres con sus claves primarias, la única FK real (pedido_lineas.pedido_id → pedidos.id) y las referencias sueltas sin FK hacia Cliente, Servicio, Profesional, Google Calendar y Telegram" width="100%" />
+
+Diagrama generado a partir del estado real de `adapters/out/db_models.py` —
+columnas, tipos y claves tal cual están hoy, no una representación
+aspiracional. Además de las cuatro tablas Postgres (`clientes`, `citas`,
+`pedidos`, `pedido_lineas`), incluye `Servicio`/`Profesional` (solo en
+memoria, nunca persistidas) y los dos sistemas externos opcionales que se
+referencian desde `Cita`/`Cliente` (Google Calendar, Telegram), para dar la
+foto completa de dónde vive cada dato y no solo lo que hay en Postgres.
+
+Dos cosas que vale la pena leer directamente del diagrama:
+
+- La única `ForeignKeyConstraint` real de todo el esquema es
+  `pedido_lineas.pedido_id → pedidos.id`. Todas las demás relaciones
+  (`cliente_id` en `citas`/`pedidos`, `servicio_id`/`profesional_id` en
+  `citas`, `servicio_id` en `pedido_lineas`) son strings sueltos sin
+  integridad referencial a nivel de base de datos — ver #52 para el caso
+  concreto en que eso produjo una cita "huérfana" (un `cliente_id` sin
+  `Cliente` asociado).
+- `evento_calendario_id` (en `citas`) y `telegram_chat_id` (en `clientes`)
+  son los dos únicos puentes hacia sistemas externos que persiste el propio
+  esquema, y ambos son opcionales por diseño (columnas `str | None`,
+  poblados solo si el sistema correspondiente está configurado).
+
+SVG estático en `doc/assets/modelo-datos-erd.svg`, generado con un script de
+un solo uso (no versionado) a partir de las columnas de `db_models.py` —
+regenerar a mano la próxima vez que el esquema cambie; no hay generador
+automático corriendo en CI todavía.
+
 ## Qué se resolvió desde la última foto
 
 **Sesiones de conversación pasan a tener un puerto propio (#18, cerrado).**
