@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import secrets
 import sys
+import urllib.parse
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -227,6 +228,15 @@ with st.sidebar:
 
 # ---------- Agenda ----------
 if opcion == "📅 Agenda":
+    # Solo si hay un calendario configurado (GOOGLE_CALENDAR_ID) — sin
+    # sincronización activa no hay nada que enlazar. No hace falta
+    # GOOGLE_CALENDAR_CREDENTIALS_JSON aquí: el enlace solo abre la
+    # interfaz web de Google Calendar, no llama a la API.
+    _calendar_id = os.environ.get("GOOGLE_CALENDAR_ID")
+    if _calendar_id:
+        _url_calendario = f"https://calendar.google.com/calendar/u/0/r?cid={urllib.parse.quote(_calendar_id)}"
+        st.link_button("Acceder al Calendario", _url_calendario)
+
     if "agenda_ancla" not in st.session_state:
         st.session_state["agenda_ancla"] = date.today()  # arranca en hoy
 
