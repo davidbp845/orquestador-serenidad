@@ -892,24 +892,36 @@ class TestEliminarTestimonio:
 
 
 class TestCrearCliente:
-    def test_crea_y_guarda_cliente_valido(self):
+    def test_crea_y_guarda_cliente_con_id_generado_por_contador(self):
         repo = FakeRepoClientes()
-        caso = CrearCliente(repo)
+        caso = CrearCliente(repo, FakeRepoContadores())
 
-        cliente = caso.ejecutar("c1", "Juan", telefono="600111222")
+        cliente = caso.ejecutar("Juan", telefono="600111222")
 
-        assert cliente.id == "c1"
+        assert cliente.id == "1"
         assert cliente.nombre == "Juan"
         assert cliente.telefono == "600111222"
-        assert repo.obtener("c1") is cliente
+        assert repo.obtener("1") is cliente
 
-    def test_lanza_si_id_ya_existe(self):
+    def test_genera_ids_crecientes_vía_contador(self):
         repo = FakeRepoClientes()
-        repo.guardar(Cliente(id="c1", nombre="Juan"))
-        caso = CrearCliente(repo)
+        caso = CrearCliente(repo, FakeRepoContadores())
+
+        c1 = caso.ejecutar("Juan")
+        c2 = caso.ejecutar("Ana")
+
+        assert (c1.id, c2.id) == ("1", "2")
+
+    def test_lanza_si_el_id_generado_ya_existe(self):
+        # Salvaguarda para clientes ya existentes con id manual (de
+        # antes de este cambio, o vía CrearReserva) que coincidan con
+        # un valor futuro del contador.
+        repo = FakeRepoClientes()
+        repo.guardar(Cliente(id="1", nombre="Cliente antiguo"))
+        caso = CrearCliente(repo, FakeRepoContadores())
 
         with pytest.raises(ClienteYaExiste):
-            caso.ejecutar("c1", "Otro nombre")
+            caso.ejecutar("Juan")
 
 
 class TestEditarCliente:

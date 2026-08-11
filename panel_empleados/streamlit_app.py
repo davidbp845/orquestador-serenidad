@@ -237,7 +237,7 @@ cambiar_estado_cita = CambiarEstadoCita(repo_citas, repo_clientes, notificador)
 crear_testimonio = CrearTestimonio(repo_testimonios, repo_contadores)
 editar_testimonio = EditarTestimonio(repo_testimonios)
 eliminar_testimonio = EliminarTestimonio(repo_testimonios)
-crear_cliente = CrearCliente(repo_clientes)
+crear_cliente = CrearCliente(repo_clientes, repo_contadores)
 editar_cliente = EditarCliente(repo_clientes)
 eliminar_cliente = EliminarCliente(repo_clientes)
 
@@ -345,27 +345,27 @@ elif opcion == "📦 Pedidos":
 # ---------- Clientes ----------
 elif opcion == "👤 Clientes":
     st.subheader("Nuevo cliente")
+    st.caption("El ID se genera automáticamente al crear — no se escribe a mano.")
     # st.form: mismo motivo que en Testimonios — evita envíos con campos
     # a medio sincronizar, y clear_on_submit vacía el formulario tras
     # crear en vez de dejar el cliente anterior a medio rellenar.
     with st.form("form_nuevo_cliente", clear_on_submit=True):
-        cliente_id_nuevo = st.text_input("ID")
         nombre_nuevo = st.text_input("Nombre")
         telefono_nuevo = st.text_input("Teléfono (opcional)")
         email_nuevo = st.text_input("Email (opcional)")
         notas_nuevas = st.text_area("Notas (opcional)")
         crear = st.form_submit_button("Crear cliente")
     if crear:
-        if not cliente_id_nuevo.strip() or not nombre_nuevo.strip():
-            st.error("Rellena ID y nombre.")
+        if not nombre_nuevo.strip():
+            st.error("Rellena el nombre.")
         else:
             try:
-                crear_cliente.ejecutar(
-                    cliente_id_nuevo, nombre_nuevo,
+                nuevo = crear_cliente.ejecutar(
+                    nombre_nuevo,
                     telefono=telefono_nuevo or None, email=email_nuevo or None,
                     notas=notas_nuevas,
                 )
-                st.success("Cliente creado.")
+                st.success(f"Cliente creado con id {nuevo.id}.")
                 st.rerun()
             except ClienteYaExiste as exc:
                 st.error(str(exc))

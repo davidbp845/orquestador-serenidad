@@ -450,16 +450,25 @@ class EliminarTestimonio:
 
 
 class CrearCliente:
-    def __init__(self, clientes: RepositorioClientes):
+    """El id no lo decide el llamador: se genera con el contador
+    ('cliente'), igual que CrearTestimonio con 'testimonio'. La
+    comprobación de colisión se mantiene como salvaguarda para
+    clientes ya existentes con id manual (de antes de este cambio, o
+    creados vía CrearReserva con el id que decide el LLM) que pudieran
+    coincidir con un valor futuro del contador."""
+
+    def __init__(self, clientes: RepositorioClientes, contadores: RepositorioContadores):
         self._clientes = clientes
+        self._contadores = contadores
 
     def ejecutar(
-        self, cliente_id: str, nombre: str,
+        self, nombre: str,
         telefono: str | None = None, email: str | None = None, notas: str = "",
     ) -> Cliente:
-        if self._clientes.obtener(cliente_id) is not None:
-            raise ClienteYaExiste(cliente_id)
-        cliente = Cliente(id=cliente_id, nombre=nombre, telefono=telefono, email=email, notas=notas)
+        nuevo_id = str(self._contadores.siguiente_valor("cliente"))
+        if self._clientes.obtener(nuevo_id) is not None:
+            raise ClienteYaExiste(nuevo_id)
+        cliente = Cliente(id=nuevo_id, nombre=nombre, telefono=telefono, email=email, notas=notas)
         self._clientes.guardar(cliente)
         return cliente
 
