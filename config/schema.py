@@ -52,6 +52,7 @@ class ConfigNegocio(BaseModel):
     logo_url: str | None = None
     hero_titulo: str | None = None
     hero_subtitulo: str = "Escríbenos y te ayudamos al momento."
+    imagen_fondo_url: str | None = None
     canales: CanalesConfig = Field(default_factory=CanalesConfig)
     servicios: list[ServicioConfig] = Field(default_factory=list)
     profesionales: list[ProfesionalConfig] = Field(default_factory=list)

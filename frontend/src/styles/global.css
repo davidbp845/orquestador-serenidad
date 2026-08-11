@@ -46,6 +46,24 @@ body {
   color: var(--color-texto);
 }
 
+/* Imagen de fondo fija, solo si el negocio define imagen_fondo_url
+   (config/business.yaml -> --fondo-imagen inline en LayoutBase.astro).
+   position: fixed (no background-attachment: fixed, peor soporte en
+   móvil) + z-index negativo: queda detrás de cabecera/tarjetas/chat,
+   que ya son opacos, sin necesidad de tocarlos. Sin la clase
+   .tiene-fondo (negocio sin imagen configurada) esta regla no se
+   activa — no hay ::before, no hay imagen. */
+body.tiene-fondo::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--fondo-imagen);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.12;
+}
+
 /* Estilos del Markdown renderizado de una nota del vault (sin plugin de
    tipografía de Tailwind, no está instalado). Compartido entre el
    lightbox de TarjetaContenido.astro y la página propia de cada nota

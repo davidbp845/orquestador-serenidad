@@ -26,6 +26,7 @@ interface ConfigNegocio {
   logo_url?: string;
   hero_titulo?: string;
   hero_subtitulo: string;
+  imagen_fondo_url?: string;
 }
 
 const rutaConfig = resolve(process.cwd(), '../config/business.yaml');

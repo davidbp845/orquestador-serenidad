@@ -1,6 +1,7 @@
 ---
 import Cabecera from '../components/Cabecera.astro';
 import Pie from '../components/Pie.astro';
+import { negocio } from '../lib/negocio';
 import '../styles/global.css';
 
 interface Props {
@@ -33,7 +34,13 @@ const { titulo, descripcion } = Astro.props;
 
     <slot name="head" />
   </head>
-  <body class="flex min-h-screen flex-col bg-(--color-fondo) text-(--color-texto)">
+  <body
+    class:list={[
+      'flex min-h-screen flex-col bg-(--color-fondo) text-(--color-texto)',
+      { 'tiene-fondo': negocio.imagen_fondo_url },
+    ]}
+    style={negocio.imagen_fondo_url ? { '--fondo-imagen': `url(${negocio.imagen_fondo_url})` } : undefined}
+  >
     <Cabecera />
     <main class="flex-1">
       <slot />
