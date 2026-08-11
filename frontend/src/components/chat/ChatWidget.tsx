@@ -254,13 +254,9 @@ export default function ChatWidget({ apiBaseUrl, ctaMensaje }: Props) {
             stroke-linecap="round"
             stroke-linejoin="round"
             class="transition-transform duration-300 ease-in-out"
-            style={{ transform: expandido ? 'scale(1)' : 'scale(0.9)' }}
+            style={{ transform: expandido ? 'rotate(180deg)' : 'rotate(0deg)' }}
           >
-            {expandido ? (
-              <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
-            ) : (
-              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-            )}
+            <path d="M6 9l6 6 6-6" />
           </svg>
         </button>
       </form>
