@@ -7,9 +7,9 @@ const apiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8000
 
 <section class="mx-auto max-w-3xl px-(--spacing-fluid-s) py-(--spacing-fluid-l)">
   <div class="text-center">
-    <h1 class="text-3xl font-bold text-(--color-texto)">{negocio.nombre}</h1>
+    <h1 class="text-3xl font-bold text-(--color-texto)">{negocio.hero_titulo ?? negocio.nombre}</h1>
     <p class="mt-(--spacing-fluid-2xs) text-(--color-texto-suave)">
-      Escríbenos y te ayudamos al momento.
+      {negocio.hero_subtitulo}
     </p>
   </div>
   <div class="mt-(--spacing-fluid-s)">

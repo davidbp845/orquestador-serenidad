@@ -50,6 +50,8 @@ class ConfigNegocio(BaseModel):
     instrucciones_comerciales: str = ""
     vault_obsidian: str = "./vault_negocio"
     logo_url: str | None = None
+    hero_titulo: str | None = None
+    hero_subtitulo: str = "Escríbenos y te ayudamos al momento."
     canales: CanalesConfig = Field(default_factory=CanalesConfig)
     servicios: list[ServicioConfig] = Field(default_factory=list)
     profesionales: list[ProfesionalConfig] = Field(default_factory=list)
