@@ -249,6 +249,20 @@ def test_repositorio_contadores_es_independiente_por_tipo_entidad():
     assert repo.siguiente_valor("testimonio") == 2
 
 
+def test_repositorio_contadores_listar_no_incrementa():
+    repo = RepositorioContadoresMemoria()
+    repo.siguiente_valor("testimonio")
+    repo.siguiente_valor("testimonio")
+    repo.siguiente_valor("cliente")
+
+    assert repo.listar() == {"testimonio": 2, "cliente": 1}
+    assert repo.listar() == {"testimonio": 2, "cliente": 1}  # llamarlo dos veces no cambia nada
+
+
+def test_repositorio_contadores_listar_vacio_por_defecto():
+    assert RepositorioContadoresMemoria().listar() == {}
+
+
 def test_repositorio_contadores_borrar_todo():
     repo = RepositorioContadoresMemoria()
     repo.siguiente_valor("testimonio")

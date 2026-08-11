@@ -37,6 +37,7 @@ from adapters.out.obsidian_ingest import procesar_vault
 from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
     RepositorioClientesMemoria,
+    RepositorioContadoresMemoria,
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
     RepositorioServiciosMemoria,
@@ -75,6 +76,7 @@ def _construir_repos():
         from adapters.out.repositorios_postgres import (
             RepositorioCitasPostgres,
             RepositorioClientesPostgres,
+            RepositorioContadoresPostgres,
             RepositorioPedidosPostgres,
             RepositorioTestimoniosPostgres,
             crear_engine,
@@ -84,15 +86,17 @@ def _construir_repos():
         repo_clientes = RepositorioClientesPostgres(engine)
         repo_pedidos = RepositorioPedidosPostgres(engine)
         repo_testimonios = RepositorioTestimoniosPostgres(engine)
+        repo_contadores = RepositorioContadoresPostgres(engine)
     else:
         repo_citas = RepositorioCitasMemoria()
         repo_clientes = RepositorioClientesMemoria()
         repo_pedidos = RepositorioPedidosMemoria()
         repo_testimonios = RepositorioTestimoniosMemoria()
+        repo_contadores = RepositorioContadoresMemoria()
 
     return (
         config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos,
-        repo_testimonios,
+        repo_testimonios, repo_contadores,
     )
 
 
@@ -222,7 +226,7 @@ if _clave_panel and not st.session_state.get("autenticado"):
 
 (
     config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos,
-    repo_testimonios,
+    repo_testimonios, repo_contadores,
 ) = _construir_repos()
 notificador = _construir_notificador()
 cambiar_estado_pedido = CambiarEstadoPedido(repo_pedidos)
@@ -242,7 +246,10 @@ st.caption(f"{_DIAS_SEMANA_ES[_hoy.weekday()].capitalize()}, {_hoy:%d/%m/%Y}")
 with st.sidebar:
     opcion = st.radio(
         "Menú",
-        ["📅 Agenda", "📦 Pedidos", "👤 Clientes", "⭐ Testimonios", "🚦 Rate limiting", "🛠️ Herramientas"],
+        [
+            "📅 Agenda", "📦 Pedidos", "👤 Clientes", "⭐ Testimonios",
+            "🔢 Contadores", "🚦 Rate limiting", "🛠️ Herramientas",
+        ],
     )
 
 # ---------- Agenda ----------
@@ -426,6 +433,19 @@ elif opcion == "⭐ Testimonios":
                     st.session_state[clave_editando] = False
                     st.rerun()
 
+# ---------- Contadores ----------
+elif opcion == "🔢 Contadores":
+    st.caption("Vista de solo lectura — consultar no incrementa ningún contador.")
+    contadores = repo_contadores.listar()
+
+    if not contadores:
+        st.info("No hay contadores todavía (se crean al usarse por primera vez).")
+
+    for tipo_entidad, valor in sorted(contadores.items()):
+        with st.container(border=True):
+            st.markdown(f"**{tipo_entidad}**")
+            st.write(valor)
+
 # ---------- Rate limiting ----------
 elif opcion == "🚦 Rate limiting":
     limitador_consumo = _construir_limitador_consumo()
@@ -482,8 +502,9 @@ elif opcion == "🛠️ Herramientas":
     else:
         st.warning(
             "Borra TODAS las citas, clientes, pedidos y líneas de pedido, y "
-            "testimonios, y cancela los eventos de Google Calendar asociados "
-            "(si hay uno configurado). Acción irreversible."
+            "testimonios, reinicia todos los contadores, y cancela los "
+            "eventos de Google Calendar asociados (si hay uno configurado). "
+            "Acción irreversible."
         )
         confirmar = st.checkbox("Sí, quiero borrar todos los datos")
         if st.button("Borrar todos los datos", type="primary", disabled=not confirmar):
@@ -505,10 +526,12 @@ elif opcion == "🛠️ Herramientas":
                 n_clientes = repo_clientes.borrar_todo()
                 n_pedidos = repo_pedidos.borrar_todo()
                 n_testimonios = repo_testimonios.borrar_todo()
+                n_contadores = repo_contadores.borrar_todo()
 
             st.success(
                 f"Borrado: {n_citas} citas, {n_clientes} clientes, "
-                f"{n_pedidos} pedidos (con sus líneas), {n_testimonios} testimonios."
+                f"{n_pedidos} pedidos (con sus líneas), {n_testimonios} testimonios, "
+                f"{n_contadores} contadores reiniciados."
             )
             if calendario is not None:
                 st.caption(

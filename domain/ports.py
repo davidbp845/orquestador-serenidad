@@ -158,6 +158,13 @@ class RepositorioContadores(ABC):
         ...
 
     @abstractmethod
+    def listar(self) -> dict[str, int]:
+        """Lectura pura {tipo_entidad: valor actual} — a diferencia de
+        siguiente_valor(), no incrementa nada. Pensado para una vista de
+        solo lectura (ej. panel interno), no para generar ids."""
+        ...
+
+    @abstractmethod
     def borrar_todo(self) -> int:
         """Ver RepositorioCitas.borrar_todo — misma herramienta de
         panel, mismo alcance de "solo entorno local". Reinicia todos

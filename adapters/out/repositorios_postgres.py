@@ -257,6 +257,11 @@ class RepositorioContadoresPostgres(RepositorioContadores):
             sesion.commit()
             return valor
 
+    def listar(self) -> dict[str, int]:
+        with Session(self._engine) as sesion:
+            filas = sesion.exec(select(ContadorDB)).all()
+            return {fila.tipo_entidad: fila.valor for fila in filas}
+
     def borrar_todo(self) -> int:
         with Session(self._engine) as sesion:
             n = sesion.execute(delete(ContadorDB)).rowcount

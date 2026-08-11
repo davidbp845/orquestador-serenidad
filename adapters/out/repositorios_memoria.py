@@ -133,6 +133,10 @@ class RepositorioContadoresMemoria(RepositorioContadores):
             self._data[tipo_entidad] = nuevo_valor
             return nuevo_valor
 
+    def listar(self) -> dict[str, int]:
+        with self._lock:
+            return dict(self._data)
+
     def borrar_todo(self) -> int:
         with self._lock:
             n = len(self._data)
