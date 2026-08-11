@@ -203,8 +203,8 @@ def test_repositorio_pedidos_borrar_todo():
 
 def test_repositorio_testimonios_guardar_obtener_listar():
     repo = RepositorioTestimoniosMemoria()
-    t1 = Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5)
-    t2 = Testimonio.nuevo("Ana", "Bien", "Correcto", 4)
+    t1 = Testimonio.nuevo("Juan", "Muy recomendable", 5, titulo="Genial")
+    t2 = Testimonio.nuevo("Ana", "Correcto", 4, titulo="Bien")
     repo.guardar(t1)
     repo.guardar(t2)
 
@@ -215,7 +215,7 @@ def test_repositorio_testimonios_guardar_obtener_listar():
 
 def test_repositorio_testimonios_eliminar():
     repo = RepositorioTestimoniosMemoria()
-    t1 = Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5)
+    t1 = Testimonio.nuevo("Juan", "Muy recomendable", 5, titulo="Genial")
     repo.guardar(t1)
 
     repo.eliminar(t1.id)
@@ -226,8 +226,8 @@ def test_repositorio_testimonios_eliminar():
 
 def test_repositorio_testimonios_borrar_todo():
     repo = RepositorioTestimoniosMemoria()
-    repo.guardar(Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5))
-    repo.guardar(Testimonio.nuevo("Ana", "Bien", "Correcto", 4))
+    repo.guardar(Testimonio.nuevo("Juan", "Muy recomendable", 5, titulo="Genial"))
+    repo.guardar(Testimonio.nuevo("Ana", "Correcto", 4, titulo="Bien"))
 
     assert repo.borrar_todo() == 2
     assert repo.listar() == []

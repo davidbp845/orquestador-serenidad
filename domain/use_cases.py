@@ -407,9 +407,9 @@ class CrearTestimonio:
     def __init__(self, testimonios: RepositorioTestimonios):
         self._testimonios = testimonios
 
-    def ejecutar(self, nombre: str, titulo: str, descripcion: str, valoracion: int) -> Testimonio:
+    def ejecutar(self, nombre: str, descripcion: str, valoracion: int, titulo: str = "") -> Testimonio:
         _validar_valoracion(valoracion)
-        testimonio = Testimonio.nuevo(nombre, titulo, descripcion, valoracion)
+        testimonio = Testimonio.nuevo(nombre, descripcion, valoracion, titulo)
         self._testimonios.guardar(testimonio)
         return testimonio
 
@@ -419,7 +419,7 @@ class EditarTestimonio:
         self._testimonios = testimonios
 
     def ejecutar(
-        self, testimonio_id: UUID, nombre: str, titulo: str, descripcion: str, valoracion: int,
+        self, testimonio_id: UUID, nombre: str, descripcion: str, valoracion: int, titulo: str = "",
     ) -> Testimonio:
         testimonio = self._testimonios.obtener(testimonio_id)
         if testimonio is None:

@@ -230,7 +230,7 @@ def test_pedidos_borrar_todo_incluye_las_lineas():
 
 def test_testimonios_guardar_y_obtener():
     repo = RepositorioTestimoniosPostgres(_engine())
-    testimonio = Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5)
+    testimonio = Testimonio.nuevo("Juan", "Muy recomendable", 5, titulo="Genial")
 
     repo.guardar(testimonio)
     obtenido = repo.obtener(testimonio.id)
@@ -242,8 +242,8 @@ def test_testimonios_guardar_y_obtener():
 
 def test_testimonios_listar():
     repo = RepositorioTestimoniosPostgres(_engine())
-    t1 = Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5)
-    t2 = Testimonio.nuevo("Ana", "Bien", "Correcto", 4)
+    t1 = Testimonio.nuevo("Juan", "Muy recomendable", 5, titulo="Genial")
+    t2 = Testimonio.nuevo("Ana", "Correcto", 4, titulo="Bien")
     repo.guardar(t1)
     repo.guardar(t2)
 
@@ -253,7 +253,7 @@ def test_testimonios_listar():
 def test_testimonios_eliminar():
     engine = _engine()
     repo = RepositorioTestimoniosPostgres(engine)
-    testimonio = Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5)
+    testimonio = Testimonio.nuevo("Juan", "Muy recomendable", 5, titulo="Genial")
     repo.guardar(testimonio)
 
     repo.eliminar(testimonio.id)
@@ -264,8 +264,8 @@ def test_testimonios_eliminar():
 
 def test_testimonios_borrar_todo():
     repo = RepositorioTestimoniosPostgres(_engine())
-    repo.guardar(Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5))
-    repo.guardar(Testimonio.nuevo("Ana", "Bien", "Correcto", 4))
+    repo.guardar(Testimonio.nuevo("Juan", "Muy recomendable", 5, titulo="Genial"))
+    repo.guardar(Testimonio.nuevo("Ana", "Correcto", 4, titulo="Bien"))
 
     assert repo.borrar_todo() == 2
     assert repo.listar() == []

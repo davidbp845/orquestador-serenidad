@@ -362,16 +362,16 @@ elif opcion == "⭐ Testimonios":
     # crear en vez de dejar el testimonio anterior a medio rellenar.
     with st.form("form_nuevo_testimonio", clear_on_submit=True):
         nombre = st.text_input("Nombre")
-        titulo = st.text_input("Título")
+        titulo = st.text_input("Título (opcional)")
         descripcion = st.text_area("Descripción")
         valoracion = st.slider("Valoración", 1, 5, 5, format="%d ⭐")
         crear = st.form_submit_button("Crear testimonio")
     if crear:
-        if not nombre.strip() or not titulo.strip() or not descripcion.strip():
-            st.error("Rellena nombre, título y descripción.")
+        if not nombre.strip() or not descripcion.strip():
+            st.error("Rellena nombre y descripción.")
         else:
             try:
-                crear_testimonio.ejecutar(nombre, titulo, descripcion, valoracion)
+                crear_testimonio.ejecutar(nombre, descripcion, valoracion, titulo=titulo)
                 st.success("Testimonio creado.")
                 st.rerun()
             except ValoracionInvalida as exc:
@@ -388,7 +388,8 @@ elif opcion == "⭐ Testimonios":
         with st.container(border=True):
             if not st.session_state.get(clave_editando):
                 st.markdown(f"**{testimonio.nombre}** — {'⭐' * testimonio.valoracion}")
-                st.write(testimonio.titulo)
+                if testimonio.titulo:
+                    st.write(testimonio.titulo)
                 st.caption(testimonio.descripcion)
                 col_editar, col_eliminar = st.columns(2)
                 if col_editar.button("Editar", key=f"btn_editar_{testimonio.id}", use_container_width=True):
@@ -400,7 +401,7 @@ elif opcion == "⭐ Testimonios":
             else:
                 with st.form(f"form_editar_testimonio_{testimonio.id}"):
                     nombre_editado = st.text_input("Nombre", value=testimonio.nombre)
-                    titulo_editado = st.text_input("Título", value=testimonio.titulo)
+                    titulo_editado = st.text_input("Título (opcional)", value=testimonio.titulo)
                     descripcion_editada = st.text_area("Descripción", value=testimonio.descripcion)
                     valoracion_editada = st.slider(
                         "Valoración", 1, 5, testimonio.valoracion, format="%d ⭐",
@@ -409,13 +410,13 @@ elif opcion == "⭐ Testimonios":
                     guardar = col_guardar.form_submit_button("Guardar", use_container_width=True)
                     cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
                 if guardar:
-                    if not nombre_editado.strip() or not titulo_editado.strip() or not descripcion_editada.strip():
-                        st.error("Rellena nombre, título y descripción.")
+                    if not nombre_editado.strip() or not descripcion_editada.strip():
+                        st.error("Rellena nombre y descripción.")
                     else:
                         try:
                             editar_testimonio.ejecutar(
-                                testimonio.id, nombre_editado, titulo_editado,
-                                descripcion_editada, valoracion_editada,
+                                testimonio.id, nombre_editado,
+                                descripcion_editada, valoracion_editada, titulo=titulo_editado,
                             )
                             st.session_state[clave_editando] = False
                             st.rerun()

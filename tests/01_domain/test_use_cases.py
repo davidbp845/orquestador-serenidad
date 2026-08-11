@@ -791,7 +791,7 @@ class TestCrearTestimonio:
         repo = FakeRepoTestimonios()
         caso = CrearTestimonio(repo)
 
-        testimonio = caso.ejecutar("Juan", "Muy buena experiencia", "Repetiré seguro", 5)
+        testimonio = caso.ejecutar("Juan", "Repetiré seguro", 5, titulo="Muy buena experiencia")
 
         assert testimonio.nombre == "Juan"
         assert testimonio.valoracion == 5
@@ -801,21 +801,30 @@ class TestCrearTestimonio:
     def test_lanza_si_valoracion_fuera_de_rango(self, valoracion):
         caso = CrearTestimonio(FakeRepoTestimonios())
         with pytest.raises(ValoracionInvalida):
-            caso.ejecutar("Juan", "Título", "Descripción", valoracion)
+            caso.ejecutar("Juan", "Descripción", valoracion, titulo="Título")
+
+    def test_titulo_es_opcional(self):
+        repo = FakeRepoTestimonios()
+        caso = CrearTestimonio(repo)
+
+        testimonio = caso.ejecutar("Juan", "Repetiré seguro", 5)
+
+        assert testimonio.titulo == ""
+        assert repo.obtener(testimonio.id) is testimonio
 
 
 class TestEditarTestimonio:
     def test_lanza_si_testimonio_no_existe(self):
         caso = EditarTestimonio(FakeRepoTestimonios())
         with pytest.raises(TestimonioNoExiste):
-            caso.ejecutar("no_existe", "Juan", "Título", "Desc", 4)
+            caso.ejecutar("no_existe", "Juan", "Desc", 4, titulo="Título")
 
     def test_edita_campos_y_guarda(self):
-        testimonio = Testimonio.nuevo("Juan", "Título viejo", "Desc vieja", 3)
+        testimonio = Testimonio.nuevo("Juan", "Desc vieja", 3, titulo="Título viejo")
         repo = FakeRepoTestimonios([testimonio])
         caso = EditarTestimonio(repo)
 
-        actualizado = caso.ejecutar(testimonio.id, "Juana", "Título nuevo", "Desc nueva", 5)
+        actualizado = caso.ejecutar(testimonio.id, "Juana", "Desc nueva", 5, titulo="Título nuevo")
 
         assert actualizado.nombre == "Juana"
         assert actualizado.titulo == "Título nuevo"
@@ -823,12 +832,12 @@ class TestEditarTestimonio:
         assert repo.obtener(testimonio.id).nombre == "Juana"
 
     def test_lanza_si_nueva_valoracion_fuera_de_rango(self):
-        testimonio = Testimonio.nuevo("Juan", "Título", "Desc", 3)
+        testimonio = Testimonio.nuevo("Juan", "Desc", 3, titulo="Título")
         repo = FakeRepoTestimonios([testimonio])
         caso = EditarTestimonio(repo)
 
         with pytest.raises(ValoracionInvalida):
-            caso.ejecutar(testimonio.id, "Juan", "Título", "Desc", 7)
+            caso.ejecutar(testimonio.id, "Juan", "Desc", 7, titulo="Título")
 
 
 class TestEliminarTestimonio:
@@ -838,7 +847,7 @@ class TestEliminarTestimonio:
             caso.ejecutar("no_existe")
 
     def test_elimina_testimonio_existente(self):
-        testimonio = Testimonio.nuevo("Juan", "Título", "Desc", 4)
+        testimonio = Testimonio.nuevo("Juan", "Desc", 4, titulo="Título")
         repo = FakeRepoTestimonios([testimonio])
         caso = EliminarTestimonio(repo)
 

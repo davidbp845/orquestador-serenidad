@@ -122,14 +122,14 @@ class Testimonio:
     reseñas)."""
     id: UUID
     nombre: str
-    titulo: str
     descripcion: str
     valoracion: int
+    titulo: str = ""
     creado_en: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @staticmethod
-    def nuevo(nombre: str, titulo: str, descripcion: str, valoracion: int) -> Testimonio:
+    def nuevo(nombre: str, descripcion: str, valoracion: int, titulo: str = "") -> Testimonio:
         return Testimonio(
-            id=uuid4(), nombre=nombre, titulo=titulo,
-            descripcion=descripcion, valoracion=valoracion,
+            id=uuid4(), nombre=nombre, descripcion=descripcion,
+            valoracion=valoracion, titulo=titulo,
         )
