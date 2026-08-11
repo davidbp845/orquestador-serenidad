@@ -465,6 +465,16 @@ class EliminarTestimonio:
         self._testimonios.eliminar(testimonio_id)
 
 
+class ListarTestimoniosRecientes:
+    """Lectura pública (issue #61): los testimonios más recientes para
+    el carrusel del frontend, sin exponer el CRUD completo del panel."""
+    def __init__(self, testimonios: RepositorioTestimonios):
+        self._testimonios = testimonios
+
+    def ejecutar(self, limite: int = 5) -> list[Testimonio]:
+        return sorted(self._testimonios.listar(), key=lambda t: t.creado_en, reverse=True)[:limite]
+
+
 class CrearCliente:
     """El id no lo decide el llamador: se genera con el contador
     ('cliente'), igual que CrearTestimonio con 'testimonio'. La

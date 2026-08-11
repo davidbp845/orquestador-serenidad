@@ -232,3 +232,27 @@ def test_construir_repositorio_sesiones_usa_redis_si_hay_redis_url(monkeypatch):
         repo = main.construir_repositorio_sesiones()
 
     assert isinstance(repo, RepositorioSesionesRedis)
+
+
+def test_construir_listar_testimonios_recientes_usa_memoria_sin_database_url(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    import main
+    from adapters.out.repositorios_memoria import RepositorioTestimoniosMemoria
+    from domain.use_cases import ListarTestimoniosRecientes
+
+    caso = main.construir_listar_testimonios_recientes()
+
+    assert isinstance(caso, ListarTestimoniosRecientes)
+    assert isinstance(caso._testimonios, RepositorioTestimoniosMemoria)
+
+
+def test_construir_listar_testimonios_recientes_usa_postgres_si_hay_database_url(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "sqlite://")
+
+    import main
+    from adapters.out.repositorios_postgres import RepositorioTestimoniosPostgres
+
+    caso = main.construir_listar_testimonios_recientes()
+
+    assert isinstance(caso._testimonios, RepositorioTestimoniosPostgres)

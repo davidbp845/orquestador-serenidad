@@ -1,7 +1,7 @@
 """Tests de casos de uso de dominio usando fakes en memoria que
 implementan los puertos de domain/ports.py — sin mocks pesados, tal
 y como sugiere el README."""
-from datetime import date, datetime, time
+from datetime import UTC, date, datetime, time
 
 import pytest
 
@@ -43,6 +43,7 @@ from domain.use_cases import (
     EliminarCliente,
     EliminarTestimonio,
     FusionarClientes,
+    ListarTestimoniosRecientes,
     RegistrarPedido,
 )
 
@@ -952,6 +953,38 @@ class TestEliminarTestimonio:
         caso.ejecutar(testimonio.id)
 
         assert repo.obtener(testimonio.id) is None
+
+
+class TestListarTestimoniosRecientes:
+    def _testimonio(self, id_, dia):
+        return Testimonio(
+            id=id_, nombre=f"Cliente {id_}", descripcion="Desc", valoracion=5,
+            creado_en=datetime(2026, 1, dia, tzinfo=UTC),
+        )
+
+    def test_devuelve_los_mas_recientes_primero(self):
+        antiguo = self._testimonio(1, 1)
+        reciente = self._testimonio(2, 10)
+        repo = FakeRepoTestimonios([antiguo, reciente])
+        caso = ListarTestimoniosRecientes(repo)
+
+        resultado = caso.ejecutar()
+
+        assert [t.id for t in resultado] == [2, 1]
+
+    def test_limita_al_numero_indicado(self):
+        testimonios = [self._testimonio(i, i) for i in range(1, 8)]
+        repo = FakeRepoTestimonios(testimonios)
+        caso = ListarTestimoniosRecientes(repo)
+
+        resultado = caso.ejecutar(limite=5)
+
+        assert len(resultado) == 5
+        assert [t.id for t in resultado] == [7, 6, 5, 4, 3]
+
+    def test_lista_vacia_si_no_hay_testimonios(self):
+        caso = ListarTestimoniosRecientes(FakeRepoTestimonios())
+        assert caso.ejecutar() == []
 
 
 class TestCrearCliente:

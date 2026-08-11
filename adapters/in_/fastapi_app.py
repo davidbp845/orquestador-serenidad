@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from application.orchestrator import OrquestadorAgente, SesionConversacion
 from application.ports import RepositorioSesiones
+from domain.use_cases import ListarTestimoniosRecientes
 
 from .rate_limit import (
     LIMITE_PETICIONES_DEFECTO,
@@ -60,12 +61,21 @@ class RespuestaAgente(BaseModel):
     respuesta: str
 
 
+class TestimonioSalida(BaseModel):
+    id: int
+    nombre: str
+    titulo: str
+    descripcion: str
+    valoracion: int
+
+
 def crear_router(
     orquestador: OrquestadorAgente,
     repositorio_sesiones: RepositorioSesiones,
     limitador: LimitadorPeticiones | None = None,
     limite_peticiones: int = LIMITE_PETICIONES_DEFECTO,
     ventana_segundos: int = VENTANA_SEGUNDOS_DEFECTO,
+    listar_testimonios_recientes: ListarTestimoniosRecientes | None = None,
 ) -> FastAPI:
     limitador = limitador or LimitadorPeticionesMemoria()
 
@@ -119,6 +129,18 @@ def crear_router(
                 "X-Accel-Buffering": "no",
             },
         )
+
+    @app.get("/testimonios", response_model=list[TestimonioSalida])
+    def testimonios():
+        if listar_testimonios_recientes is None:
+            return []
+        return [
+            TestimonioSalida(
+                id=t.id, nombre=t.nombre, titulo=t.titulo,
+                descripcion=t.descripcion, valoracion=t.valoracion,
+            )
+            for t in listar_testimonios_recientes.ejecutar()
+        ]
 
     @app.get("/health")
     def health():

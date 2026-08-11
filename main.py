@@ -41,6 +41,7 @@ from adapters.out.repositorios_memoria import (
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
     RepositorioServiciosMemoria,
+    RepositorioTestimoniosMemoria,
 )
 from adapters.out.vector_store import RepositorioConocimientoChroma
 from application.orchestrator import OrquestadorAgente
@@ -53,6 +54,7 @@ from domain.use_cases import (
     ComprobarDisponibilidad,
     ConsultarConocimientoNegocio,
     CrearReserva,
+    ListarTestimoniosRecientes,
     RegistrarPedido,
 )
 
@@ -167,6 +169,20 @@ def construir_repositorio_sesiones() -> RepositorioSesiones:
     return RepositorioSesionesMemoria()
 
 
+def construir_listar_testimonios_recientes() -> ListarTestimoniosRecientes:
+    # Mismo condicional DATABASE_URL que construir_sistema(): el panel
+    # ya lee/escribe Testimonios contra Postgres si está configurado
+    # (#60), y el endpoint público de solo lectura (#61) debe ver los
+    # mismos datos, no una copia en memoria aparte.
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        from adapters.out.repositorios_postgres import RepositorioTestimoniosPostgres, crear_engine
+        repo_testimonios = RepositorioTestimoniosPostgres(crear_engine(database_url))
+    else:
+        repo_testimonios = RepositorioTestimoniosMemoria()
+    return ListarTestimoniosRecientes(repo_testimonios)
+
+
 def construir_limitador_peticiones() -> LimitadorPeticiones:
     # Mismo condicional que construir_repositorio_sesiones() (#49): sin
     # REDIS_URL, cada proceso lleva su propio contador en memoria — un
@@ -182,6 +198,7 @@ def main():
     orquestador, config = construir_sistema()
     repositorio_sesiones = construir_repositorio_sesiones()
     limitador_peticiones = construir_limitador_peticiones()
+    listar_testimonios_recientes = construir_listar_testimonios_recientes()
     # `or` en vez de un default en .get(): si .env define la variable
     # vacía (RATE_LIMIT_CHAT_MAX_PETICIONES=, como queda tras copiar
     # .env.example sin rellenarla), .get() devuelve "" en vez del
@@ -194,6 +211,7 @@ def main():
         limitador=limitador_peticiones,
         limite_peticiones=limite_chat,
         ventana_segundos=ventana_chat,
+        listar_testimonios_recientes=listar_testimonios_recientes,
     )
 
     if config.get("canales", {}).get("whatsapp"):

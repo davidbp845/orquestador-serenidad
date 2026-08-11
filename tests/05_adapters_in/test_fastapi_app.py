@@ -229,3 +229,38 @@ def test_chat_stream_tambien_respeta_el_limite_de_peticiones(cliente_con_limite)
     respuesta = client.post("/chat/stream", json={"usuario_id": "u1", "mensaje": "hola"})
 
     assert respuesta.status_code == 429
+
+
+class FakeListarTestimoniosRecientes:
+    def __init__(self, testimonios):
+        self.testimonios = testimonios
+
+    def ejecutar(self, limite=5):
+        return self.testimonios[:limite]
+
+
+def test_testimonios_devuelve_vacio_si_no_hay_caso_de_uso_configurado(cliente):
+    client, _, _ = cliente
+    respuesta = client.get("/testimonios")
+    assert respuesta.status_code == 200
+    assert respuesta.json() == []
+
+
+def test_testimonios_devuelve_los_del_caso_de_uso(modulo):
+    from domain.entities import Testimonio
+
+    orquestador = FakeOrquestador()
+    repositorio_sesiones = RepositorioSesionesMemoria()
+    testimonio = Testimonio.nuevo(1, "Juan", "Repetiré seguro", 5, titulo="Genial")
+    app = modulo.crear_router(
+        orquestador, repositorio_sesiones,
+        listar_testimonios_recientes=FakeListarTestimoniosRecientes([testimonio]),
+    )
+    client = TestClient(app)
+
+    respuesta = client.get("/testimonios")
+
+    assert respuesta.status_code == 200
+    assert respuesta.json() == [
+        {"id": 1, "nombre": "Juan", "titulo": "Genial", "descripcion": "Repetiré seguro", "valoracion": 5}
+    ]
