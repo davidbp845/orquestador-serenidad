@@ -54,10 +54,13 @@ from domain.use_cases import (
     CambiarEstadoPedido,
     CrearCliente,
     CrearTestimonio,
+    DetectarClientesDuplicados,
     EditarCliente,
     EditarTestimonio,
     EliminarCliente,
     EliminarTestimonio,
+    FusionarClientes,
+    _clave_orden_fusion,
 )
 
 load_dotenv()
@@ -240,6 +243,8 @@ eliminar_testimonio = EliminarTestimonio(repo_testimonios)
 crear_cliente = CrearCliente(repo_clientes, repo_contadores)
 editar_cliente = EditarCliente(repo_clientes)
 eliminar_cliente = EliminarCliente(repo_clientes)
+detectar_clientes_duplicados = DetectarClientesDuplicados(repo_clientes)
+fusionar_clientes = FusionarClientes(repo_clientes, repo_citas, repo_pedidos)
 
 # ---------- Cabecera ----------
 _hoy = date.today()
@@ -371,18 +376,36 @@ elif opcion == "👤 Clientes":
                 st.error(str(exc))
 
     st.divider()
-    busqueda = st.text_input("Buscar por nombre o teléfono").strip().lower()
+    ver_duplicados = st.checkbox("Ver solo duplicados (mismo nombre y teléfono)")
 
-    clientes = repo_clientes.listar()
-    if busqueda:
-        clientes = [
-            c for c in clientes
-            if busqueda in c.nombre.lower() or busqueda in (c.telefono or "").lower()
-        ]
-    clientes.sort(key=lambda c: c.nombre.lower())
+    if ver_duplicados:
+        grupos = detectar_clientes_duplicados.ejecutar()
+        if not grupos:
+            st.info("No se han detectado clientes duplicados.")
+        for grupo in grupos:
+            with st.container(border=True):
+                st.markdown(f"**{grupo[0].nombre}** · {grupo[0].telefono}")
+                ids_ordenados = sorted(grupo, key=lambda c: _clave_orden_fusion(c.id))
+                for cliente in ids_ordenados:
+                    st.caption(f"`{cliente.id}`" + (" (más antiguo)" if cliente is ids_ordenados[0] else ""))
+                if st.button("Fusionar en el más antiguo", key=f"btn_fusionar_{grupo[0].id}"):
+                    superviviente = fusionar_clientes.ejecutar([c.id for c in grupo])
+                    st.success(f"Fusionados en `{superviviente.id}`.")
+                    st.rerun()
+        clientes = []
+    else:
+        busqueda = st.text_input("Buscar por nombre o teléfono").strip().lower()
 
-    if not clientes:
-        st.info("Sin clientes que coincidan con la búsqueda." if busqueda else "No hay clientes registrados.")
+        clientes = repo_clientes.listar()
+        if busqueda:
+            clientes = [
+                c for c in clientes
+                if busqueda in c.nombre.lower() or busqueda in (c.telefono or "").lower()
+            ]
+        clientes.sort(key=lambda c: c.nombre.lower())
+
+        if not clientes:
+            st.info("Sin clientes que coincidan con la búsqueda." if busqueda else "No hay clientes registrados.")
 
     for cliente in clientes:
         clave_editando = f"editando_cliente_{cliente.id}"

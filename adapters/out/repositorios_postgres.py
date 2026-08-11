@@ -14,7 +14,7 @@ import os
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import delete, text
+from sqlalchemy import delete, text, update
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, Testimonio
@@ -121,6 +121,14 @@ class RepositorioCitasPostgres(RepositorioCitas):
                 sesion.add(fila)
                 sesion.commit()
 
+    def reasignar_cliente(self, id_antiguo: str, id_nuevo: str) -> int:
+        with Session(self._engine) as sesion:
+            n = sesion.execute(
+                update(CitaDB).where(CitaDB.cliente_id == id_antiguo).values(cliente_id=id_nuevo)
+            ).rowcount
+            sesion.commit()
+            return n
+
     def borrar_todo(self) -> int:
         with Session(self._engine) as sesion:
             n = sesion.execute(delete(CitaDB)).rowcount
@@ -159,19 +167,20 @@ class RepositorioClientesPostgres(RepositorioClientes):
                 email=cliente.email,
                 notas=cliente.notas,
                 telegram_chat_id=cliente.telegram_chat_id,
+                borrado=cliente.borrado,
             ))
             sesion.commit()
 
     def buscar_por_telefono(self, telefono: str) -> Cliente | None:
         with Session(self._engine) as sesion:
             fila = sesion.exec(
-                select(ClienteDB).where(ClienteDB.telefono == telefono)
+                select(ClienteDB).where(ClienteDB.telefono == telefono, ClienteDB.borrado.is_(False))
             ).first()
             return self._a_entidad(fila) if fila else None
 
     def listar(self) -> list[Cliente]:
         with Session(self._engine) as sesion:
-            filas = sesion.exec(select(ClienteDB)).all()
+            filas = sesion.exec(select(ClienteDB).where(ClienteDB.borrado.is_(False))).all()
             return [self._a_entidad(fila) for fila in filas]
 
     def eliminar(self, cliente_id: str) -> None:
@@ -179,6 +188,14 @@ class RepositorioClientesPostgres(RepositorioClientes):
             fila = sesion.get(ClienteDB, cliente_id)
             if fila is not None:
                 sesion.delete(fila)
+                sesion.commit()
+
+    def marcar_borrado(self, cliente_id: str) -> None:
+        with Session(self._engine) as sesion:
+            fila = sesion.get(ClienteDB, cliente_id)
+            if fila is not None:
+                fila.borrado = True
+                sesion.add(fila)
                 sesion.commit()
 
     def borrar_todo(self) -> int:
@@ -192,7 +209,7 @@ class RepositorioClientesPostgres(RepositorioClientes):
         return Cliente(
             id=fila.id, nombre=fila.nombre, telefono=fila.telefono,
             email=fila.email, notas=fila.notas,
-            telegram_chat_id=fila.telegram_chat_id,
+            telegram_chat_id=fila.telegram_chat_id, borrado=fila.borrado,
         )
 
 
@@ -338,6 +355,14 @@ class RepositorioPedidosPostgres(RepositorioPedidos):
                 select(PedidoDB).where(PedidoDB.estado.not_in(estados_terminales))
             ).all()
             return [self._a_entidad(sesion, c) for c in cabeceras]
+
+    def reasignar_cliente(self, id_antiguo: str, id_nuevo: str) -> int:
+        with Session(self._engine) as sesion:
+            n = sesion.execute(
+                update(PedidoDB).where(PedidoDB.cliente_id == id_antiguo).values(cliente_id=id_nuevo)
+            ).rowcount
+            sesion.commit()
+            return n
 
     def borrar_todo(self) -> int:
         # pedido_lineas antes que pedidos: es la única FK real del

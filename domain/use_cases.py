@@ -518,3 +518,69 @@ class EliminarCliente:
         if self._clientes.obtener(cliente_id) is None:
             raise ClienteNoExiste(cliente_id)
         self._clientes.eliminar(cliente_id)
+
+
+class DetectarClientesDuplicados:
+    """Agrupa clientes con el mismo nombre y teléfono (coincidencia
+    exacta, no fuzzy matching) — el criterio de duplicidad tal como se
+    definió: 'dos clientes con el mismo nombre y teléfono son una
+    duplicidad'. Clientes sin teléfono no entran en la comparación
+    (un teléfono ausente no es una señal de identidad fiable — dos
+    clientes distintos con el mismo nombre pero sin teléfono ninguno
+    no deberían fusionarse a ciegas)."""
+
+    def __init__(self, clientes: RepositorioClientes):
+        self._clientes = clientes
+
+    def ejecutar(self) -> list[list[Cliente]]:
+        grupos: dict[tuple[str, str], list[Cliente]] = {}
+        for cliente in self._clientes.listar():
+            if not cliente.telefono:
+                continue
+            clave = (cliente.nombre.strip().lower(), cliente.telefono.strip())
+            grupos.setdefault(clave, []).append(cliente)
+        return [grupo for grupo in grupos.values() if len(grupo) >= 2]
+
+
+def _clave_orden_fusion(cliente_id: str) -> tuple[int, str]:
+    """El superviviente de una fusión es el id 'más bajo' del grupo,
+    asumiendo ids generados por el contador (tras #69/#67): un id
+    numérico bajo significa creado antes, sin necesitar ningún campo
+    creado_en en Cliente. Ids no numéricos (manuales, de antes de esa
+    migración) ordenan después de cualquier id numérico, y entre sí
+    alfabéticamente — mejor esfuerzo, ese caso no tiene garantía real
+    de orden de creación."""
+    if cliente_id.isdigit():
+        return (0, cliente_id.zfill(20))
+    return (1, cliente_id)
+
+
+class FusionarClientes:
+    """Fusiona un grupo de Cliente duplicados en uno solo: reasigna
+    todas sus citas y pedidos al superviviente, y marca los demás
+    como borrado=True (borrado lógico, nunca eliminar() físico — ver
+    RepositorioClientes.marcar_borrado)."""
+
+    def __init__(self, clientes: RepositorioClientes, citas: RepositorioCitas, pedidos: RepositorioPedidos):
+        self._clientes = clientes
+        self._citas = citas
+        self._pedidos = pedidos
+
+    def ejecutar(self, ids: list[str]) -> Cliente:
+        clientes = []
+        for cliente_id in ids:
+            cliente = self._clientes.obtener(cliente_id)
+            if cliente is None:
+                raise ClienteNoExiste(cliente_id)
+            clientes.append(cliente)
+
+        superviviente = min(clientes, key=lambda c: _clave_orden_fusion(c.id))
+
+        for cliente in clientes:
+            if cliente.id == superviviente.id:
+                continue
+            self._citas.reasignar_cliente(cliente.id, superviviente.id)
+            self._pedidos.reasignar_cliente(cliente.id, superviviente.id)
+            self._clientes.marcar_borrado(cliente.id)
+
+        return superviviente

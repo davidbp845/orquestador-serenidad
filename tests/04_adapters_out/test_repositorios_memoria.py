@@ -183,6 +183,20 @@ def test_repositorio_citas_borrar_todo():
     assert repo.borrar_todo() == 0
 
 
+def test_repositorio_citas_reasignar_cliente():
+    repo = RepositorioCitasMemoria()
+    cita1 = Cita.nueva(1, "s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    cita2 = Cita.nueva(2, "s1", "ana", "c2", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0))
+    repo.guardar(cita1)
+    repo.guardar(cita2)
+
+    n = repo.reasignar_cliente("c1", "c_final")
+
+    assert n == 1
+    assert repo.obtener(1).cliente_id == "c_final"
+    assert repo.obtener(2).cliente_id == "c2"
+
+
 def test_repositorio_clientes_borrar_todo():
     repo = RepositorioClientesMemoria()
     repo.guardar(Cliente(id="c1", nombre="Juan"))
@@ -202,6 +216,17 @@ def test_repositorio_clientes_eliminar():
     repo.eliminar("c1")  # repetirlo sobre uno ya borrado no lanza
 
 
+def test_repositorio_clientes_marcar_borrado_no_elimina_la_fila():
+    repo = RepositorioClientesMemoria()
+    repo.guardar(Cliente(id="c1", nombre="Juan", telefono="600111222"))
+
+    repo.marcar_borrado("c1")
+
+    assert repo.obtener("c1").borrado is True
+    assert repo.listar() == []
+    assert repo.buscar_por_telefono("600111222") is None
+
+
 def test_repositorio_pedidos_borrar_todo():
     repo = RepositorioPedidosMemoria()
     repo.guardar(Pedido.nuevo("c1", [LineaPedido(servicio_id="s1", cantidad=1)]))
@@ -209,6 +234,20 @@ def test_repositorio_pedidos_borrar_todo():
 
     assert repo.borrar_todo() == 2
     assert repo.listar_pendientes() == []
+
+
+def test_repositorio_pedidos_reasignar_cliente():
+    repo = RepositorioPedidosMemoria()
+    pedido1 = Pedido.nuevo("c1", [LineaPedido(servicio_id="s1", cantidad=1)])
+    pedido2 = Pedido.nuevo("c2", [LineaPedido(servicio_id="s2", cantidad=1)])
+    repo.guardar(pedido1)
+    repo.guardar(pedido2)
+
+    n = repo.reasignar_cliente("c1", "c_final")
+
+    assert n == 1
+    assert repo.obtener(pedido1.id).cliente_id == "c_final"
+    assert repo.obtener(pedido2.id).cliente_id == "c2"
 
 
 def test_repositorio_testimonios_guardar_obtener_listar():

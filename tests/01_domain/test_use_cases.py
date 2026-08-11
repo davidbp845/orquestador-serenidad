@@ -37,10 +37,12 @@ from domain.use_cases import (
     CrearCliente,
     CrearReserva,
     CrearTestimonio,
+    DetectarClientesDuplicados,
     EditarCliente,
     EditarTestimonio,
     EliminarCliente,
     EliminarTestimonio,
+    FusionarClientes,
     RegistrarPedido,
 )
 
@@ -128,10 +130,18 @@ class FakeRepoCitas:
     def cancelar(self, cita_id):
         self.canceladas.append(cita_id)
 
+    def reasignar_cliente(self, id_antiguo, id_nuevo):
+        n = 0
+        for cita in self._data.values():
+            if cita.cliente_id == id_antiguo:
+                cita.cliente_id = id_nuevo
+                n += 1
+        return n
+
 
 class FakeRepoClientes:
-    def __init__(self):
-        self._data = {}
+    def __init__(self, clientes=None):
+        self._data = {c.id: c for c in (clientes or [])}
 
     def obtener(self, cliente_id):
         return self._data.get(cliente_id)
@@ -140,10 +150,19 @@ class FakeRepoClientes:
         self._data[cliente.id] = cliente
 
     def buscar_por_telefono(self, telefono):
-        return next((c for c in self._data.values() if c.telefono == telefono), None)
+        return next(
+            (c for c in self._data.values() if c.telefono == telefono and not c.borrado), None
+        )
+
+    def listar(self):
+        return [c for c in self._data.values() if not c.borrado]
 
     def eliminar(self, cliente_id):
         self._data.pop(cliente_id, None)
+
+    def marcar_borrado(self, cliente_id):
+        if cliente_id in self._data:
+            self._data[cliente_id].borrado = True
 
 
 class FakeRepoPedidos:
@@ -161,6 +180,14 @@ class FakeRepoPedidos:
             p for p in self._data.values()
             if p.estado not in (EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO)
         ]
+
+    def reasignar_cliente(self, id_antiguo, id_nuevo):
+        n = 0
+        for pedido in self._data.values():
+            if pedido.cliente_id == id_antiguo:
+                pedido.cliente_id = id_nuevo
+                n += 1
+        return n
 
 
 class FakeRepoTestimonios:
@@ -977,3 +1004,86 @@ class TestEliminarCliente:
         caso.ejecutar("c1")
 
         assert repo.obtener("c1") is None
+
+
+class TestDetectarClientesDuplicados:
+    def test_agrupa_clientes_con_mismo_nombre_y_telefono(self):
+        repo = FakeRepoClientes()
+        repo.guardar(Cliente(id="1", nombre="Juan Pérez", telefono="600111222"))
+        repo.guardar(Cliente(id="2", nombre="juan pérez", telefono="600111222"))
+        repo.guardar(Cliente(id="3", nombre="Ana", telefono="600999888"))
+        caso = DetectarClientesDuplicados(repo)
+
+        grupos = caso.ejecutar()
+
+        assert len(grupos) == 1
+        assert {c.id for c in grupos[0]} == {"1", "2"}
+
+    def test_ignora_clientes_sin_telefono(self):
+        repo = FakeRepoClientes()
+        repo.guardar(Cliente(id="1", nombre="Juan", telefono=None))
+        repo.guardar(Cliente(id="2", nombre="Juan", telefono=None))
+        caso = DetectarClientesDuplicados(repo)
+
+        assert caso.ejecutar() == []
+
+    def test_no_agrupa_si_no_hay_duplicados(self):
+        repo = FakeRepoClientes()
+        repo.guardar(Cliente(id="1", nombre="Juan", telefono="600111222"))
+        repo.guardar(Cliente(id="2", nombre="Ana", telefono="600999888"))
+        caso = DetectarClientesDuplicados(repo)
+
+        assert caso.ejecutar() == []
+
+
+class TestFusionarClientes:
+    def test_lanza_si_algun_id_no_existe(self):
+        repo = FakeRepoClientes()
+        repo.guardar(Cliente(id="1", nombre="Juan", telefono="600111222"))
+        caso = FusionarClientes(repo, FakeRepoCitas(), FakeRepoPedidos())
+
+        with pytest.raises(ClienteNoExiste):
+            caso.ejecutar(["1", "no_existe"])
+
+    def test_el_superviviente_es_el_id_mas_bajo(self):
+        repo = FakeRepoClientes()
+        repo.guardar(Cliente(id="5", nombre="Juan", telefono="600111222"))
+        repo.guardar(Cliente(id="2", nombre="Juan", telefono="600111222"))
+        repo.guardar(Cliente(id="9", nombre="Juan", telefono="600111222"))
+        caso = FusionarClientes(repo, FakeRepoCitas(), FakeRepoPedidos())
+
+        superviviente = caso.ejecutar(["5", "2", "9"])
+
+        assert superviviente.id == "2"
+
+    def test_marca_borrado_a_los_no_supervivientes_sin_eliminarlos(self):
+        repo = FakeRepoClientes()
+        repo.guardar(Cliente(id="1", nombre="Juan", telefono="600111222"))
+        repo.guardar(Cliente(id="2", nombre="Juan", telefono="600111222"))
+        caso = FusionarClientes(repo, FakeRepoCitas(), FakeRepoPedidos())
+
+        caso.ejecutar(["1", "2"])
+
+        # marcar_borrado, no eliminar(): la fila sigue estando en el
+        # repo (obtener la sigue encontrando), pero listar() ya no la
+        # devuelve.
+        fusionado = repo.obtener("2")
+        assert fusionado is not None
+        assert fusionado.borrado is True
+        assert repo.obtener("1").borrado is False
+        assert [c.id for c in repo.listar()] == ["1"]
+
+    def test_reasigna_citas_y_pedidos_al_superviviente(self):
+        repo_clientes = FakeRepoClientes()
+        repo_clientes.guardar(Cliente(id="1", nombre="Juan", telefono="600111222"))
+        repo_clientes.guardar(Cliente(id="2", nombre="Juan", telefono="600111222"))
+        cita = Cita.nueva(1, "masaje", "ana", "2", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+        repo_citas = FakeRepoCitas([cita])
+        pedido = Pedido.nuevo("2", [LineaPedido(servicio_id="masaje", cantidad=1)])
+        repo_pedidos = FakeRepoPedidos([pedido])
+        caso = FusionarClientes(repo_clientes, repo_citas, repo_pedidos)
+
+        caso.ejecutar(["1", "2"])
+
+        assert repo_citas.obtener(cita.id).cliente_id == "1"
+        assert repo_pedidos.obtener(pedido.id).cliente_id == "1"

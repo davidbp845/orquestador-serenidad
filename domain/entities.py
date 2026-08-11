@@ -51,6 +51,10 @@ class Cliente:
     # canal — lo que permite mandarle una notificación proactiva (ver
     # NotificadorMensajes) sin depender de una sesión de conversación activa.
     telegram_chat_id: str | None = None
+    # Borrado lógico: True tras fusionar este cliente en otro (ver
+    # FusionarClientes) — nunca se borra físicamente en ese caso, para
+    # no perder el rastro de qué cliente absorbió sus citas/pedidos.
+    borrado: bool = False
 
 
 @dataclass

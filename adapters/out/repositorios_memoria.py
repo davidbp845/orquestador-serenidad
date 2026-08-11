@@ -68,6 +68,14 @@ class RepositorioCitasMemoria(RepositorioCitas):
             from domain.entities import EstadoCita
             self._data[cita_id].estado = EstadoCita.CANCELADA
 
+    def reasignar_cliente(self, id_antiguo: str, id_nuevo: str) -> int:
+        n = 0
+        for cita in self._data.values():
+            if cita.cliente_id == id_antiguo:
+                cita.cliente_id = id_nuevo
+                n += 1
+        return n
+
     def borrar_todo(self) -> int:
         n = len(self._data)
         self._data.clear()
@@ -85,13 +93,19 @@ class RepositorioClientesMemoria(RepositorioClientes):
         self._data[cliente.id] = cliente
 
     def buscar_por_telefono(self, telefono: str) -> Cliente | None:
-        return next((c for c in self._data.values() if c.telefono == telefono), None)
+        return next(
+            (c for c in self._data.values() if c.telefono == telefono and not c.borrado), None
+        )
 
     def listar(self) -> list[Cliente]:
-        return list(self._data.values())
+        return [c for c in self._data.values() if not c.borrado]
 
     def eliminar(self, cliente_id: str) -> None:
         self._data.pop(cliente_id, None)
+
+    def marcar_borrado(self, cliente_id: str) -> None:
+        if cliente_id in self._data:
+            self._data[cliente_id].borrado = True
 
     def borrar_todo(self) -> int:
         n = len(self._data)
@@ -162,6 +176,14 @@ class RepositorioPedidosMemoria(RepositorioPedidos):
             p for p in self._data.values()
             if p.estado not in (EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO)
         ]
+
+    def reasignar_cliente(self, id_antiguo: str, id_nuevo: str) -> int:
+        n = 0
+        for pedido in self._data.values():
+            if pedido.cliente_id == id_antiguo:
+                pedido.cliente_id = id_nuevo
+                n += 1
+        return n
 
     def borrar_todo(self) -> int:
         n = len(self._data)

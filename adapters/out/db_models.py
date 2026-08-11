@@ -19,6 +19,7 @@ class ClienteDB(SQLModel, table=True):
     email: str | None = None
     notas: str = ""
     telegram_chat_id: str | None = None
+    borrado: bool = False
 
 
 class CitaDB(SQLModel, table=True):

@@ -68,6 +68,15 @@ class RepositorioCitas(ABC):
     def cancelar(self, cita_id: int) -> None: ...
 
     @abstractmethod
+    def reasignar_cliente(self, id_antiguo: str, id_nuevo: str) -> int:
+        """Reasigna todas las citas de id_antiguo a id_nuevo (ej. al
+        fusionar dos Cliente duplicados, ver FusionarClientes en
+        domain/use_cases.py) — UPDATE a nivel de repositorio, no
+        enumerando citas una a una desde el dominio. Devuelve cuántas
+        citas se reasignaron."""
+        ...
+
+    @abstractmethod
     def borrar_todo(self) -> int:
         """Vacía el repositorio entero. Solo lo usa la herramienta de
         borrado de datos del panel interno (entorno local/desarrollo,
@@ -87,13 +96,25 @@ class RepositorioClientes(ABC):
     def buscar_por_telefono(self, telefono: str) -> Cliente | None: ...
 
     @abstractmethod
-    def listar(self) -> list[Cliente]: ...
+    def listar(self) -> list[Cliente]:
+        """No incluye los clientes marcados borrado=True (ver
+        marcar_borrado) — un cliente fusionado en otro no debe volver
+        a aparecer en listados/búsquedas normales."""
+        ...
 
     @abstractmethod
     def eliminar(self, cliente_id: str) -> None:
-        """Borrado unitario, a diferencia de borrar_todo() (vaciado
-        masivo, solo entorno local) — mismo patrón introducido por
-        RepositorioTestimonios."""
+        """Borrado unitario **físico**, a diferencia de borrar_todo()
+        (vaciado masivo, solo entorno local) — mismo patrón introducido
+        por RepositorioTestimonios. Distinto de marcar_borrado() (borrado
+        lógico, usado por la fusión de duplicados)."""
+        ...
+
+    @abstractmethod
+    def marcar_borrado(self, cliente_id: str) -> None:
+        """Borrado lógico: pone borrado=True sin eliminar la fila. Lo
+        usa FusionarClientes sobre los clientes absorbidos — nunca
+        eliminar(), para no perder el id como referencia histórica."""
         ...
 
     @abstractmethod
@@ -115,6 +136,12 @@ class RepositorioPedidos(ABC):
         """Pedidos que aún no han llegado a un estado terminal
         (ni entregados ni cancelados) — lo que el panel interno
         necesita gestionar activamente."""
+        ...
+
+    @abstractmethod
+    def reasignar_cliente(self, id_antiguo: str, id_nuevo: str) -> int:
+        """Ver RepositorioCitas.reasignar_cliente — mismo propósito,
+        para pedidos."""
         ...
 
     @abstractmethod
