@@ -475,6 +475,26 @@ de Telegram nunca impide crear o cancelar una reserva en el sistema propio.
 está definido. Email como canal de notificación quedó fuera de alcance (ver
 #12), descartado por ahora sin un caso de uso claro que lo dispare.
 
+**Roadmap no construido — autoedición del vault por el propietario (#25):**
+al analizar #25 se detectó que el flujo actual de contenido (propietario edita
+`.md` en Obsidian → ingesta RAG + build de Astro leen el mismo archivo) exige
+manejar markdown, frontmatter YAML y git — no es realista pedírselo a un
+dueño de negocio no técnico. La recomendación del propio análisis, nunca
+construida, era separar dos audiencias sobre el mismo vault: developer sigue
+editando en Obsidian para contenido rico/estructural, y al propietario se le
+da en su lugar el panel (formularios específicos por tipo de dato — precio de
+un servicio, texto de una promoción, horario de un día, FAQ nueva — que
+escriben el `.md` con el frontmatter correcto generado por código, y disparan
+la reindexación en RAG). Se decidió conscientemente no construirlo en Fase I
+(no forma parte del flujo crítico reserva-de-principio-a-fin): el vault sigue
+siendo developer-only, y el panel solo tiene un botón "Reindexar RAG" para
+cuando el propio developer edita a mano. Si se retoma, el patrón
+formulario-específico-por-tipo-de-contenido (no un editor de markdown libre)
+es la parte del análisis que hace esto viable para alguien no técnico; para
+producción además haría falta un webhook que dispare un rebuild de Astro
+(deploy hook de Cloudflare Pages/Vercel/Netlify) cuando el vault cambie, ya
+que hoy el sitio solo se actualiza en el siguiente build manual.
+
 **Ciclo de vida de la Cita completado (#43, cerrado):** `EstadoCita` pasó de
 cuatro valores con solo dos transiciones reales (creación en `PENDIENTE`,
 cancelación a `CANCELADA`; `CONFIRMADA`/`COMPLETADA` nunca se asignaban en
