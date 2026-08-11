@@ -1,6 +1,8 @@
 ---
 import { negocio } from '../lib/negocio';
 const anio = new Date().getFullYear();
+const mostrarPanel = import.meta.env.PUBLIC_MOSTRAR_PANEL === 'true';
+const panelUrl = import.meta.env.PUBLIC_PANEL_URL ?? 'http://localhost:8501';
 ---
 
 <footer class="border-t border-(--color-borde) py-(--spacing-fluid-s)">
@@ -8,5 +10,13 @@ const anio = new Date().getFullYear();
     class="mx-auto max-w-3xl px-(--spacing-fluid-s) text-center text-xs text-(--color-texto-suave) md:max-w-none md:px-(--spacing-fluid-m)"
   >
     © {anio} {negocio.nombre}
+    {mostrarPanel && (
+      <>
+        {' · '}
+        <a href={panelUrl} target="_blank" rel="noopener noreferrer" class="underline hover:text-(--color-texto)">
+          Panel interno
+        </a>
+      </>
+    )}
   </div>
 </footer>
