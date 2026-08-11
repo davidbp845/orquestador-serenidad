@@ -227,26 +227,26 @@ sobre todo — más fácil de razonar sobre lo que hace realmente, que
 delegarla en un framework de terceros para un problema que hoy no lo
 necesita.
 
-## Aplicado a Fase II: qué es más probable que cambie primero
+## Si el sistema creciera: qué es más probable que cambie primero
 
 Las tres condiciones de la sección anterior no tienen todas la misma
 probabilidad de darse según crezca la aplicación, vale la pena ordenarlas 
 por lo plausible que es cada una, en vez de tratarlas como igual de lejanas:
 
-- **Lo más probable: un LangGraph-shaped need.** Si Fase II añade workflows
-  que no caben en un único turno de chat — escalado a una persona del
-  equipo con pausa hasta que responde, aprobación de un pedido grande antes
-  de confirmarlo, cualquier flujo que necesite sobrevivir a que el proceso
-  se reinicie entre medias — el bucle plano de `orchestrator.py` empieza a
-  quedarse corto. Eso es exactamente lo que LangGraph formaliza
+- **Lo más probable: un LangGraph-shaped need.** Si el sistema añadiera
+  workflows que no caben en un único turno de chat — escalado a una persona
+  del equipo con pausa hasta que responde, aprobación de un pedido grande
+  antes de confirmarlo, cualquier flujo que necesite sobrevivir a que el
+  proceso se reinicie entre medias — el bucle plano de `orchestrator.py`
+  empieza a quedarse corto. Eso es exactamente lo que LangGraph formaliza
   (checkpoints, pausa/reanudación, grafo de estados) y es, de las tres
-  condiciones, la que un producto SaaS de atención al cliente real tiene
+  condiciones, la que un producto de atención al cliente de este tipo tiene
   más papeletas de necesitar tarde o temprano.
 - **Posible, pero probablemente resoluble sin adoptar un vendor nuevo: un
-  Pinecone-shaped need.** Si la SaaS pasa a alojar "muchos negocios, muchos
-  vaults" en la misma infraestructura, el volumen de contenido vectorial
-  crece — pero el primer paso razonable no es Pinecone, es escalar lo que
-  ya hay: Chroma en modo servidor, o incluso `pgvector` sobre el mismo
+  Pinecone-shaped need.** Si el sistema pasara a alojar "muchos negocios,
+  muchos vaults" en la misma infraestructura, el volumen de contenido
+  vectorial crece — pero el primer paso razonable no es Pinecone, es escalar
+  lo que ya hay: Chroma en modo servidor, o incluso `pgvector` sobre el mismo
   Postgres que ya gestiona citas/clientes/pedidos, evitando sumar un
   proveedor gestionado nuevo solo porque el volumen ha crecido. Pinecone
   entraría en juego si ese escalado propio dejara de ser operable, no antes.
@@ -262,11 +262,11 @@ por lo plausible que es cada una, en vez de tratarlas como igual de lejanas:
   de arriba, precisamente porque no exige tocar el orquestador — se añadiría
   *encima* del bucle actual (instrumentando `responder()`/
   `responder_stream()`), no en sustitución. Es la pieza de esta lista con
-  mejor relación entre valor para operar varios negocios/tenants a la vez y
-  coste de adopción.
+  mejor relación entre valor para operar varios negocios a la vez y coste de
+  adopción.
 
 El patrón común a las cuatro es que ninguna implica sustituir de golpe la
 arquitectura descrita en este documento por un framework — cada una es una
 pieza que se añadiría de forma acotada, cuando (y solo cuando) el problema
-concreto que resuelve aparezca de verdad en el crecimiento de la SaaS, no
+concreto que resuelve aparezca de verdad en el crecimiento del producto, no
 por adelantado.

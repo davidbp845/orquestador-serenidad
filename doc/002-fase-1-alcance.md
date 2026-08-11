@@ -562,7 +562,7 @@ para desarrollo que no deberían llegar tal cual a producción.
 | Estado | Issues |
 |---|---|
 | **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #20, #23 (cerrado sin implementar — signup de Hugging Face bloqueado, aviso cosmético, ver sección 3), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #37 (movido a `doc/007-despliegue.md`), #38, #39, #40, #41, #43, #46 |
-| **Listo para empezar (Ready)** | #17 (movido de Fase II — canal de entrada más, no integración comercial, ver el propio issue) |
+| **Listo para empezar (Ready)** | #17 (reclasificado — canal de entrada más, no integración comercial, ver el propio issue) |
 | **Backlog** | #21, #22 |
 
 De 37 issues etiquetados `Fase I`, 34 están cerrados. Lo único que queda por
