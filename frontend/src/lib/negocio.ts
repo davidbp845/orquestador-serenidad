@@ -19,6 +19,12 @@ interface ServicioNegocio {
   precio: number;
 }
 
+interface CtaCitaConfig {
+  texto_corto: string;
+  texto_largo: string;
+  mensaje: string;
+}
+
 interface ConfigNegocio {
   nombre: string;
   tono?: string;
@@ -27,6 +33,7 @@ interface ConfigNegocio {
   hero_titulo?: string;
   hero_subtitulo: string;
   imagen_fondo_url?: string;
+  cta_cita?: CtaCitaConfig;
 }
 
 const rutaConfig = resolve(process.cwd(), '../config/business.yaml');

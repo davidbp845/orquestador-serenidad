@@ -1,10 +1,21 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import BurbujaMensaje from './BurbujaMensaje';
 import IndicadorEscribiendo from './IndicadorEscribiendo';
 import { useChatStream } from './useChatStream';
 
 interface Props {
   apiBaseUrl: string;
+  // Mensaje del botón CTA de la cabecera (issue #56) — configurable
+  // por negocio, ver config/business.yaml::cta_cita.mensaje.
+  ctaMensaje: string;
+}
+
+// Cadencia del efecto "como si fuese streaming" al escribir el mensaje
+// del CTA letra a letra en el campo de texto, antes de enviarlo solo.
+const MS_POR_CARACTER_CTA = 35;
+
+function esperar(ms: number): Promise<void> {
+  return new Promise((resolver) => setTimeout(resolver, ms));
 }
 
 // Ejemplos de preguntas que cubren lo que el asistente sabe hacer hoy
@@ -24,10 +35,27 @@ const SUGERENCIAS = [
   'Quiero reservar un masaje descontracturante',
 ];
 
-export default function ChatWidget({ apiBaseUrl }: Props) {
+export default function ChatWidget({ apiBaseUrl, ctaMensaje }: Props) {
   const { mensajes, enviando, enviarMensaje } = useChatStream(apiBaseUrl);
   const [texto, setTexto] = useState('');
   const [expandido, setExpandido] = useState(true);
+  // Dispara el flujo del CTA de la cabecera (issue #56): escribe el
+  // mensaje letra a letra en el campo (efecto "streaming" del propio
+  // mensaje del usuario, no de la respuesta), luego lo envía solo —
+  // mismo camino que enviarMensaje ya usa para las sugerencias.
+  const dispararCtaCita = useCallback(
+    async (mensaje: string) => {
+      if (!mensaje.trim() || enviando) return;
+      setExpandido(true);
+      for (let i = 1; i <= mensaje.length; i++) {
+        setTexto(mensaje.slice(0, i));
+        await esperar(MS_POR_CARACTER_CTA);
+      }
+      enviarMensaje(mensaje);
+      setTexto('');
+    },
+    [enviando, enviarMensaje],
+  );
   const finRef = useRef<HTMLDivElement>(null);
   const medidorRef = useRef<HTMLDivElement>(null);
   // Altura real de "sugerencias comprimidas" (intro + 1 fila de 2
@@ -62,6 +90,29 @@ export default function ChatWidget({ apiBaseUrl }: Props) {
     window.addEventListener('resize', medir);
     return () => window.removeEventListener('resize', medir);
   }, []);
+
+  // Llegada desde otra página vía Cabecera.astro navegando a
+  // "/?cta=cita" (issue #56): dispara el CTA al montar y limpia el
+  // parámetro de la URL — eso mismo evita que el efecto se dispare de
+  // nuevo si sus dependencias cambian, o al refrescar la página.
+  useEffect(() => {
+    const parametros = new URLSearchParams(window.location.search);
+    if (parametros.get('cta') === 'cita') {
+      window.history.replaceState(null, '', window.location.pathname);
+      dispararCtaCita(ctaMensaje);
+    }
+  }, [ctaMensaje, dispararCtaCita]);
+
+  // Clic en el CTA de la cabecera estando ya en la home: Cabecera.astro
+  // despacha este evento directamente, sin navegar.
+  useEffect(() => {
+    const manejarAbrirChat = (evento: Event) => {
+      const detalle = (evento as CustomEvent<{ mensaje: string }>).detail;
+      if (detalle?.mensaje) dispararCtaCita(detalle.mensaje);
+    };
+    window.addEventListener('orquestador:abrir-chat', manejarAbrirChat);
+    return () => window.removeEventListener('orquestador:abrir-chat', manejarAbrirChat);
+  }, [dispararCtaCita]);
 
   const manejarEnvio = (evento: Event) => {
     evento.preventDefault();

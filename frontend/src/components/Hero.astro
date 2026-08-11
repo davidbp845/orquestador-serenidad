@@ -3,9 +3,10 @@ import ChatWidget from './chat/ChatWidget';
 import { negocio } from '../lib/negocio';
 
 const apiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+const ctaMensaje = negocio.cta_cita?.mensaje ?? 'Quiero reservar una cita';
 ---
 
-<section class="mx-auto max-w-3xl px-(--spacing-fluid-s) py-(--spacing-fluid-l)">
+<section id="seccion-hero" class="mx-auto max-w-3xl px-(--spacing-fluid-s) py-(--spacing-fluid-l)">
   <div class="text-center">
     <h1 class="text-3xl font-bold text-(--color-texto)">{negocio.hero_titulo ?? negocio.nombre}</h1>
     <p class="mt-(--spacing-fluid-2xs) text-(--color-texto-suave)">
@@ -13,6 +14,6 @@ const apiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8000
     </p>
   </div>
   <div class="mt-(--spacing-fluid-s)">
-    <ChatWidget apiBaseUrl={apiBaseUrl} client:load />
+    <ChatWidget apiBaseUrl={apiBaseUrl} ctaMensaje={ctaMensaje} client:load />
   </div>
 </section>

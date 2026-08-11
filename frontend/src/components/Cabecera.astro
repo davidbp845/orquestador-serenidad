@@ -1,15 +1,49 @@
 ---
 import { negocio } from '../lib/negocio';
+
+const ctaCita = negocio.cta_cita ?? {
+  texto_corto: 'Pedir cita',
+  texto_largo: 'Reservar una cita',
+  mensaje: 'Quiero reservar una cita',
+};
 ---
 
 <header
   class="sticky top-0 z-10 border-b border-(--color-borde) bg-(--color-superficie)/90 backdrop-blur-sm"
 >
-  <div class="mx-auto flex max-w-3xl items-center px-(--spacing-fluid-s) py-(--spacing-fluid-xs) md:max-w-none md:px-(--spacing-fluid-m)">
+  <div class="mx-auto flex max-w-3xl items-center justify-between px-(--spacing-fluid-s) py-(--spacing-fluid-xs) md:max-w-none md:px-(--spacing-fluid-m)">
     <a href="/" class="text-base font-semibold tracking-tight text-(--color-texto)">
       {negocio.logo_url
         ? <img src={negocio.logo_url} alt={negocio.nombre} class="h-7 w-auto" />
         : negocio.nombre}
     </a>
+    <button
+      type="button"
+      id="cta-cita-header"
+      data-mensaje={ctaCita.mensaje}
+      class="rounded-full bg-(--color-acento) px-(--spacing-fluid-s) py-(--spacing-fluid-3xs) text-sm font-medium text-white transition-opacity hover:opacity-90"
+    >
+      <span class="sm:hidden">{ctaCita.texto_corto}</span>
+      <span class="hidden sm:inline">{ctaCita.texto_largo}</span>
+    </button>
   </div>
 </header>
+
+<script>
+  // El chat (isla Preact, ver ChatWidget.tsx) solo vive en la home
+  // (Hero.astro) — si ya estamos ahí, basta con despachar el evento
+  // que escucha; si no, navegamos primero a "/?cta=cita" y es la
+  // propia home (Hero.astro) la que, al detectar ese parámetro,
+  // dispara el mismo flujo una vez el chat esté montado.
+  const boton = document.getElementById('cta-cita-header');
+
+  boton?.addEventListener('click', () => {
+    const mensaje = boton.dataset.mensaje ?? '';
+    if (window.location.pathname === '/') {
+      window.dispatchEvent(new CustomEvent('orquestador:abrir-chat', { detail: { mensaje } }));
+      document.getElementById('seccion-hero')?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      window.location.href = '/?cta=cita';
+    }
+  });
+</script>

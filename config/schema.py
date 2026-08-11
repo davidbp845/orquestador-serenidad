@@ -43,6 +43,17 @@ class CanalesConfig(BaseModel):
     whatsapp: bool = False
 
 
+class CtaCitaConfig(BaseModel):
+    """Botón CTA de la cabecera (frontend/src/components/Cabecera.astro)
+    que escribe un mensaje predefinido en el chat — ver issue #56.
+    texto_corto/texto_largo son la etiqueta visible del botón (según
+    hueco disponible); mensaje es el texto literal que se envía al
+    chat al pulsarlo, independiente de la etiqueta."""
+    texto_corto: str = "Pedir cita"
+    texto_largo: str = "Reservar una cita"
+    mensaje: str = "Quiero reservar una cita"
+
+
 class ConfigNegocio(BaseModel):
     nombre: str
     tono: str = "cercano y profesional"
@@ -53,6 +64,7 @@ class ConfigNegocio(BaseModel):
     hero_titulo: str | None = None
     hero_subtitulo: str = "Escríbenos y te ayudamos al momento."
     imagen_fondo_url: str | None = None
+    cta_cita: CtaCitaConfig = Field(default_factory=CtaCitaConfig)
     canales: CanalesConfig = Field(default_factory=CanalesConfig)
     servicios: list[ServicioConfig] = Field(default_factory=list)
     profesionales: list[ProfesionalConfig] = Field(default_factory=list)

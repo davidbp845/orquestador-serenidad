@@ -12,6 +12,12 @@ logo_url: "/logo.svg"
 # hero_titulo es opcional: sin él, el frontend usa "nombre" como título.
 hero_titulo: "Masajes y experiencias de lujo"
 hero_subtitulo: "Escríbenos y te ayudamos al momento."
+
+# Botón CTA de la cabecera que escribe un mensaje predefinido en el chat.
+cta_cita:
+  texto_corto: "Pedir cita"
+  texto_largo: "Reservar una cita"
+  mensaje: "Quiero reservar una cita"
 # Cajón general para instrucciones que no encajen en instrucciones_comerciales
 # (legal, accesibilidad, peculiaridades puntuales del negocio...). Vacío por
 # defecto: el aviso médico que llevaba antes quedó duplicado y superado por el
