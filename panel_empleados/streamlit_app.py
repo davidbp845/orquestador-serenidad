@@ -179,14 +179,16 @@ def _desplazar_ancla(ancla: date, vista: str, direccion: int) -> date:
     return ancla + timedelta(days=direccion)  # Día
 
 
-def _tarjeta_cita(cita, repo_servicios, repo_profesionales, cambiar_estado_cita) -> None:
+def _tarjeta_cita(cita, repo_servicios, repo_profesionales, repo_clientes, cambiar_estado_cita) -> None:
     servicio = repo_servicios.obtener(cita.servicio_id)
     profesional = repo_profesionales.obtener(cita.profesional_id)
+    cliente = repo_clientes.obtener(cita.cliente_id)
     with st.container(border=True):
         st.markdown(f"**{cita.inicio:%H:%M} – {cita.fin:%H:%M}** · `{cita.id_visible}`")
         st.write(f"{servicio.nombre if servicio else cita.servicio_id} · "
                  f"{profesional.nombre if profesional else cita.profesional_id}")
-        st.caption(f"Cliente: {cita.cliente_id} · Estado: {cita.estado.value}")
+        nombre_cliente = cliente.nombre if cliente else cita.cliente_id
+        st.caption(f"Cliente: {nombre_cliente} ({cita.cliente_id}) · Estado: {cita.estado.value}")
 
         # Solo confirmar/en curso/finalizar/no-show: cancelar sigue su
         # propio camino (CancelarReserva), no pasa por aquí — por eso no
@@ -305,7 +307,7 @@ if opcion == "📅 Agenda":
 
     if vista == "Día":
         for cita in citas:
-            _tarjeta_cita(cita, repo_servicios, repo_profesionales, cambiar_estado_cita)
+            _tarjeta_cita(cita, repo_servicios, repo_profesionales, repo_clientes, cambiar_estado_cita)
     else:
         # Agrupadas por día (subcabecera), no una lista plana — sigue
         # siendo tarjetas apiladas, legible en móvil.
@@ -315,7 +317,7 @@ if opcion == "📅 Agenda":
         for dia_grupo in sorted(citas_por_dia):
             st.markdown(f"**{_DIAS_SEMANA_ES[dia_grupo.weekday()].capitalize()} {dia_grupo:%d/%m}**")
             for cita in citas_por_dia[dia_grupo]:
-                _tarjeta_cita(cita, repo_servicios, repo_profesionales, cambiar_estado_cita)
+                _tarjeta_cita(cita, repo_servicios, repo_profesionales, repo_clientes, cambiar_estado_cita)
 
 # ---------- Pedidos pendientes ----------
 elif opcion == "📦 Pedidos":
