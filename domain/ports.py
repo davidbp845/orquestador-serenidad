@@ -90,6 +90,13 @@ class RepositorioClientes(ABC):
     def listar(self) -> list[Cliente]: ...
 
     @abstractmethod
+    def eliminar(self, cliente_id: str) -> None:
+        """Borrado unitario, a diferencia de borrar_todo() (vaciado
+        masivo, solo entorno local) — mismo patrón introducido por
+        RepositorioTestimonios."""
+        ...
+
+    @abstractmethod
     def borrar_todo(self) -> int:
         """Ver RepositorioCitas.borrar_todo — misma herramienta de
         panel, mismo alcance de "solo entorno local"."""

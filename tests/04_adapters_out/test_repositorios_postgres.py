@@ -214,6 +214,16 @@ def test_clientes_borrar_todo():
     assert repo.listar() == []
 
 
+def test_clientes_eliminar():
+    repo = RepositorioClientesPostgres(_engine())
+    repo.guardar(Cliente(id="c1", nombre="Juan"))
+
+    repo.eliminar("c1")
+
+    assert repo.obtener("c1") is None
+    repo.eliminar("c1")  # repetirlo sobre uno ya borrado no lanza
+
+
 def test_pedidos_borrar_todo_incluye_las_lineas():
     engine = _engine()
     repo = RepositorioPedidosPostgres(engine)

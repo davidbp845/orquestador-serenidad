@@ -18,6 +18,8 @@ from domain.entities import (
 )
 from domain.exceptions import (
     CitaNoExiste,
+    ClienteNoExiste,
+    ClienteYaExiste,
     PedidoNoExiste,
     ProfesionalNoDisponible,
     ServicioNoExiste,
@@ -32,9 +34,12 @@ from domain.use_cases import (
     CancelarReserva,
     ComprobarDisponibilidad,
     ConsultarConocimientoNegocio,
+    CrearCliente,
     CrearReserva,
     CrearTestimonio,
+    EditarCliente,
     EditarTestimonio,
+    EliminarCliente,
     EliminarTestimonio,
     RegistrarPedido,
 )
@@ -136,6 +141,9 @@ class FakeRepoClientes:
 
     def buscar_por_telefono(self, telefono):
         return next((c for c in self._data.values() if c.telefono == telefono), None)
+
+    def eliminar(self, cliente_id):
+        self._data.pop(cliente_id, None)
 
 
 class FakeRepoPedidos:
@@ -854,3 +862,71 @@ class TestEliminarTestimonio:
         caso.ejecutar(testimonio.id)
 
         assert repo.obtener(testimonio.id) is None
+
+
+class TestCrearCliente:
+    def test_crea_y_guarda_cliente_valido(self):
+        repo = FakeRepoClientes()
+        caso = CrearCliente(repo)
+
+        cliente = caso.ejecutar("c1", "Juan", telefono="600111222")
+
+        assert cliente.id == "c1"
+        assert cliente.nombre == "Juan"
+        assert cliente.telefono == "600111222"
+        assert repo.obtener("c1") is cliente
+
+    def test_lanza_si_id_ya_existe(self):
+        repo = FakeRepoClientes()
+        repo.guardar(Cliente(id="c1", nombre="Juan"))
+        caso = CrearCliente(repo)
+
+        with pytest.raises(ClienteYaExiste):
+            caso.ejecutar("c1", "Otro nombre")
+
+
+class TestEditarCliente:
+    def test_lanza_si_cliente_no_existe(self):
+        caso = EditarCliente(FakeRepoClientes())
+        with pytest.raises(ClienteNoExiste):
+            caso.ejecutar("no_existe", "Juan", None, None, "")
+
+    def test_edita_campos_pero_no_el_id(self):
+        cliente = Cliente(id="c1", nombre="Juan", telefono="600111222")
+        repo = FakeRepoClientes()
+        repo.guardar(cliente)
+        caso = EditarCliente(repo)
+
+        actualizado = caso.ejecutar("c1", "Juana", "600999888", "juana@example.com", "vip")
+
+        assert actualizado.id == "c1"
+        assert actualizado.nombre == "Juana"
+        assert actualizado.telefono == "600999888"
+        assert actualizado.email == "juana@example.com"
+        assert actualizado.notas == "vip"
+
+    def test_no_toca_telegram_chat_id(self):
+        cliente = Cliente(id="c1", nombre="Juan", telegram_chat_id="tg-123")
+        repo = FakeRepoClientes()
+        repo.guardar(cliente)
+        caso = EditarCliente(repo)
+
+        actualizado = caso.ejecutar("c1", "Juana", None, None, "")
+
+        assert actualizado.telegram_chat_id == "tg-123"
+
+
+class TestEliminarCliente:
+    def test_lanza_si_cliente_no_existe(self):
+        caso = EliminarCliente(FakeRepoClientes())
+        with pytest.raises(ClienteNoExiste):
+            caso.ejecutar("no_existe")
+
+    def test_elimina_cliente_existente(self):
+        repo = FakeRepoClientes()
+        repo.guardar(Cliente(id="c1", nombre="Juan"))
+        caso = EliminarCliente(repo)
+
+        caso.ejecutar("c1")
+
+        assert repo.obtener("c1") is None

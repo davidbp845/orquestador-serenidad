@@ -35,6 +35,18 @@ class CitaNoExiste(DominioError):
         self.cita_id = cita_id
 
 
+class ClienteNoExiste(DominioError):
+    def __init__(self, cliente_id: str) -> None:
+        super().__init__(f"El cliente '{cliente_id}' no existe.")
+        self.cliente_id = cliente_id
+
+
+class ClienteYaExiste(DominioError):
+    def __init__(self, cliente_id: str) -> None:
+        super().__init__(f"Ya existe un cliente con id '{cliente_id}'.")
+        self.cliente_id = cliente_id
+
+
 class TestimonioNoExiste(DominioError):
     def __init__(self, testimonio_id: UUID) -> None:
         super().__init__(f"El testimonio '{testimonio_id}' no existe.")

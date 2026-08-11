@@ -46,14 +46,17 @@ from adapters.out.repositorios_memoria import (
 from adapters.out.vector_store import RepositorioConocimientoChroma
 from config.loader import cargar_config, construir_profesionales, construir_servicios
 from domain.entities import EstadoPedido
-from domain.exceptions import TransicionEstadoInvalida, ValoracionInvalida
+from domain.exceptions import ClienteYaExiste, TransicionEstadoInvalida, ValoracionInvalida
 from domain.use_cases import (
     _DIAS_SEMANA_ES,
     _TRANSICIONES_CITA_VALIDAS,
     CambiarEstadoCita,
     CambiarEstadoPedido,
+    CrearCliente,
     CrearTestimonio,
+    EditarCliente,
     EditarTestimonio,
+    EliminarCliente,
     EliminarTestimonio,
 )
 
@@ -234,6 +237,9 @@ cambiar_estado_cita = CambiarEstadoCita(repo_citas, repo_clientes, notificador)
 crear_testimonio = CrearTestimonio(repo_testimonios)
 editar_testimonio = EditarTestimonio(repo_testimonios)
 eliminar_testimonio = EliminarTestimonio(repo_testimonios)
+crear_cliente = CrearCliente(repo_clientes)
+editar_cliente = EditarCliente(repo_clientes)
+eliminar_cliente = EliminarCliente(repo_clientes)
 
 # ---------- Cabecera ----------
 _hoy = date.today()
@@ -338,6 +344,33 @@ elif opcion == "📦 Pedidos":
 
 # ---------- Clientes ----------
 elif opcion == "👤 Clientes":
+    st.subheader("Nuevo cliente")
+    # st.form: mismo motivo que en Testimonios — evita envíos con campos
+    # a medio sincronizar, y clear_on_submit vacía el formulario tras
+    # crear en vez de dejar el cliente anterior a medio rellenar.
+    with st.form("form_nuevo_cliente", clear_on_submit=True):
+        cliente_id_nuevo = st.text_input("ID")
+        nombre_nuevo = st.text_input("Nombre")
+        telefono_nuevo = st.text_input("Teléfono (opcional)")
+        email_nuevo = st.text_input("Email (opcional)")
+        notas_nuevas = st.text_area("Notas (opcional)")
+        crear = st.form_submit_button("Crear cliente")
+    if crear:
+        if not cliente_id_nuevo.strip() or not nombre_nuevo.strip():
+            st.error("Rellena ID y nombre.")
+        else:
+            try:
+                crear_cliente.ejecutar(
+                    cliente_id_nuevo, nombre_nuevo,
+                    telefono=telefono_nuevo or None, email=email_nuevo or None,
+                    notas=notas_nuevas,
+                )
+                st.success("Cliente creado.")
+                st.rerun()
+            except ClienteYaExiste as exc:
+                st.error(str(exc))
+
+    st.divider()
     busqueda = st.text_input("Buscar por nombre o teléfono").strip().lower()
 
     clientes = repo_clientes.listar()
@@ -352,13 +385,45 @@ elif opcion == "👤 Clientes":
         st.info("Sin clientes que coincidan con la búsqueda." if busqueda else "No hay clientes registrados.")
 
     for cliente in clientes:
+        clave_editando = f"editando_cliente_{cliente.id}"
         with st.container(border=True):
-            st.markdown(f"**{cliente.nombre}**")
-            st.write(cliente.telefono or "Sin teléfono")
-            st.write(cliente.email or "Sin email")
-            if cliente.notas:
-                st.caption(cliente.notas)
-            st.caption("📱 Telegram vinculado" if cliente.telegram_chat_id else "📱 Sin Telegram vinculado")
+            if not st.session_state.get(clave_editando):
+                st.markdown(f"**{cliente.nombre}** · `{cliente.id}`")
+                st.write(cliente.telefono or "Sin teléfono")
+                st.write(cliente.email or "Sin email")
+                if cliente.notas:
+                    st.caption(cliente.notas)
+                st.caption("📱 Telegram vinculado" if cliente.telegram_chat_id else "📱 Sin Telegram vinculado")
+                col_editar, col_eliminar = st.columns(2)
+                if col_editar.button("Editar", key=f"btn_editar_cliente_{cliente.id}", use_container_width=True):
+                    st.session_state[clave_editando] = True
+                    st.rerun()
+                if col_eliminar.button("Eliminar", key=f"btn_eliminar_cliente_{cliente.id}", use_container_width=True):
+                    eliminar_cliente.ejecutar(cliente.id)
+                    st.rerun()
+            else:
+                with st.form(f"form_editar_cliente_{cliente.id}"):
+                    st.text_input("ID", value=cliente.id, disabled=True)
+                    nombre_editado = st.text_input("Nombre", value=cliente.nombre)
+                    telefono_editado = st.text_input("Teléfono", value=cliente.telefono or "")
+                    email_editado = st.text_input("Email", value=cliente.email or "")
+                    notas_editadas = st.text_area("Notas", value=cliente.notas)
+                    col_guardar, col_cancelar = st.columns(2)
+                    guardar = col_guardar.form_submit_button("Guardar", use_container_width=True)
+                    cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
+                if guardar:
+                    if not nombre_editado.strip():
+                        st.error("Rellena el nombre.")
+                    else:
+                        editar_cliente.ejecutar(
+                            cliente.id, nombre_editado,
+                            telefono_editado or None, email_editado or None, notas_editadas,
+                        )
+                        st.session_state[clave_editando] = False
+                        st.rerun()
+                if cancelar:
+                    st.session_state[clave_editando] = False
+                    st.rerun()
 
 # ---------- Testimonios ----------
 elif opcion == "⭐ Testimonios":

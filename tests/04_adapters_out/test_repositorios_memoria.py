@@ -192,6 +192,16 @@ def test_repositorio_clientes_borrar_todo():
     assert repo.listar() == []
 
 
+def test_repositorio_clientes_eliminar():
+    repo = RepositorioClientesMemoria()
+    repo.guardar(Cliente(id="c1", nombre="Juan"))
+
+    repo.eliminar("c1")
+
+    assert repo.obtener("c1") is None
+    repo.eliminar("c1")  # repetirlo sobre uno ya borrado no lanza
+
+
 def test_repositorio_pedidos_borrar_todo():
     repo = RepositorioPedidosMemoria()
     repo.guardar(Pedido.nuevo("c1", [LineaPedido(servicio_id="s1", cantidad=1)]))

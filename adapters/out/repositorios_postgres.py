@@ -158,6 +158,13 @@ class RepositorioClientesPostgres(RepositorioClientes):
             filas = sesion.exec(select(ClienteDB)).all()
             return [self._a_entidad(fila) for fila in filas]
 
+    def eliminar(self, cliente_id: str) -> None:
+        with Session(self._engine) as sesion:
+            fila = sesion.get(ClienteDB, cliente_id)
+            if fila is not None:
+                sesion.delete(fila)
+                sesion.commit()
+
     def borrar_todo(self) -> int:
         with Session(self._engine) as sesion:
             n = sesion.execute(delete(ClienteDB)).rowcount

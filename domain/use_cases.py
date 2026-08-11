@@ -22,6 +22,8 @@ from .entities import (
 )
 from .exceptions import (
     CitaNoExiste,
+    ClienteNoExiste,
+    ClienteYaExiste,
     PedidoNoExiste,
     ProfesionalNoDisponible,
     ServicioNoExiste,
@@ -442,3 +444,52 @@ class EliminarTestimonio:
         if self._testimonios.obtener(testimonio_id) is None:
             raise TestimonioNoExiste(testimonio_id)
         self._testimonios.eliminar(testimonio_id)
+
+
+class CrearCliente:
+    def __init__(self, clientes: RepositorioClientes):
+        self._clientes = clientes
+
+    def ejecutar(
+        self, cliente_id: str, nombre: str,
+        telefono: str | None = None, email: str | None = None, notas: str = "",
+    ) -> Cliente:
+        if self._clientes.obtener(cliente_id) is not None:
+            raise ClienteYaExiste(cliente_id)
+        cliente = Cliente(id=cliente_id, nombre=nombre, telefono=telefono, email=email, notas=notas)
+        self._clientes.guardar(cliente)
+        return cliente
+
+
+class EditarCliente:
+    """El id no se toca: es la clave del cliente, inmutable una vez
+    asignada. telegram_chat_id tampoco: se rellena solo vía el flujo de
+    reservas por Telegram (#38), no es un campo de este formulario."""
+
+    def __init__(self, clientes: RepositorioClientes):
+        self._clientes = clientes
+
+    def ejecutar(
+        self, cliente_id: str, nombre: str,
+        telefono: str | None, email: str | None, notas: str,
+    ) -> Cliente:
+        cliente = self._clientes.obtener(cliente_id)
+        if cliente is None:
+            raise ClienteNoExiste(cliente_id)
+
+        cliente.nombre = nombre
+        cliente.telefono = telefono
+        cliente.email = email
+        cliente.notas = notas
+        self._clientes.guardar(cliente)
+        return cliente
+
+
+class EliminarCliente:
+    def __init__(self, clientes: RepositorioClientes):
+        self._clientes = clientes
+
+    def ejecutar(self, cliente_id: str) -> None:
+        if self._clientes.obtener(cliente_id) is None:
+            raise ClienteNoExiste(cliente_id)
+        self._clientes.eliminar(cliente_id)

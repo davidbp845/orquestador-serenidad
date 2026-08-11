@@ -90,6 +90,9 @@ class RepositorioClientesMemoria(RepositorioClientes):
     def listar(self) -> list[Cliente]:
         return list(self._data.values())
 
+    def eliminar(self, cliente_id: str) -> None:
+        self._data.pop(cliente_id, None)
+
     def borrar_todo(self) -> int:
         n = len(self._data)
         self._data.clear()
