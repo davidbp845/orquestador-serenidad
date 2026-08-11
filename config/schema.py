@@ -61,6 +61,11 @@ class ConfigNegocio(BaseModel):
     instrucciones_comerciales: str = ""
     vault_obsidian: str = "./vault_negocio"
     logo_url: str | None = None
+    # Variante compacta (solo icono, sin texto) mostrada en móvil cuando
+    # el logo principal (logo_url) es demasiado ancho para el hueco —
+    # ver frontend/src/components/Cabecera.astro. Opcional: sin este
+    # campo, la cabecera usa logo_url en todos los tamaños.
+    logo_compacto_url: str | None = None
     hero_titulo: str | None = None
     hero_subtitulo: str = "Escríbenos y te ayudamos al momento."
     imagen_fondo_url: str | None = None

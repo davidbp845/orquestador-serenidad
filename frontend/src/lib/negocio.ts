@@ -30,6 +30,7 @@ interface ConfigNegocio {
   tono?: string;
   servicios?: ServicioNegocio[];
   logo_url?: string;
+  logo_compacto_url?: string;
   hero_titulo?: string;
   hero_subtitulo: string;
   imagen_fondo_url?: string;

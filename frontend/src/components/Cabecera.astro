@@ -13,9 +13,16 @@ const ctaCita = negocio.cta_cita ?? {
 >
   <div class="mx-auto flex max-w-3xl items-center justify-between px-(--spacing-fluid-s) py-(--spacing-fluid-xs) md:max-w-none md:px-(--spacing-fluid-m)">
     <a href="/" class="text-base font-semibold tracking-tight text-(--color-texto)">
-      {negocio.logo_url
-        ? <img src={negocio.logo_url} alt={negocio.nombre} class="h-7 w-auto" />
-        : negocio.nombre}
+      {negocio.logo_url && negocio.logo_compacto_url ? (
+        <>
+          <img src={negocio.logo_compacto_url} alt={negocio.nombre} class="h-7 w-auto sm:hidden" />
+          <img src={negocio.logo_url} alt={negocio.nombre} class="hidden h-7 w-auto sm:inline" />
+        </>
+      ) : negocio.logo_url ? (
+        <img src={negocio.logo_url} alt={negocio.nombre} class="h-7 w-auto" />
+      ) : (
+        negocio.nombre
+      )}
     </a>
     <button
       type="button"

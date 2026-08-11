@@ -7,6 +7,9 @@ tono: "cercano, profesional y relajado"
 # Logo mostrado en la cabecera del frontend público (frontend/src/components/Cabecera.astro).
 # Opcional: sin este campo, la cabecera sigue mostrando el nombre en texto.
 logo_url: "/logo.svg"
+# Variante compacta (solo icono) mostrada en móvil, donde el logo
+# principal (más ancho al incluir texto) no cabe cómodamente.
+logo_compacto_url: "/logo-compacto.svg"
 
 # Título y subtítulo de la sección del chat en la home (frontend/src/components/Hero.astro).
 # hero_titulo es opcional: sin él, el frontend usa "nombre" como título.
