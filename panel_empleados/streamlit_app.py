@@ -73,7 +73,7 @@ def _construir_repos():
     """Cacheado a nivel de proceso: Streamlit re-ejecuta todo el script
     en cada interacción, así que sin cache los repos en memoria (sin
     DATABASE_URL) perderían las citas/pedidos en cada clic."""
-    config = cargar_config("config/business.yaml")
+    config = cargar_config(os.environ.get("CONFIG_PATH", "config/business.yaml"))
     repo_servicios = RepositorioServiciosMemoria(construir_servicios(config))
     repo_profesionales = RepositorioProfesionalesMemoria(construir_profesionales(config))
 

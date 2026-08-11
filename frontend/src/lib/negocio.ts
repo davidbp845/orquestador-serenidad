@@ -12,6 +12,12 @@ import { load } from 'js-yaml';
 // tras el bundling de producción, el chunk final vive en una
 // profundidad de directorios distinta a la del fichero fuente, así
 // que una ruta relativa a import.meta.url se rompe en `astro build`.
+//
+// CONFIG_PATH (opcional, #73) sobreescribe qué business.yaml se lee —
+// para desplegar con datos de negocio reales sin forkear el repo ni
+// commitearlos encima del business.yaml de demo. Sin ella, mismo
+// comportamiento de siempre. No lleva prefijo PUBLIC_: este módulo
+// solo corre en Node (build-time), nunca llega al navegador.
 interface ServicioNegocio {
   id: string;
   nombre: string;
@@ -37,6 +43,6 @@ interface ConfigNegocio {
   cta_cita?: CtaCitaConfig;
 }
 
-const rutaConfig = resolve(process.cwd(), '../config/business.yaml');
+const rutaConfig = resolve(process.cwd(), process.env.CONFIG_PATH ?? '../config/business.yaml');
 
 export const negocio = load(readFileSync(rutaConfig, 'utf-8')) as ConfigNegocio;

@@ -73,7 +73,12 @@ for _nombre_ruidoso in ("httpx", "httpcore", "urllib3", "huggingface_hub"):
 logger = logging.getLogger(__name__)
 
 
-def construir_sistema(ruta_config: str = "config/business.yaml") -> OrquestadorAgente:
+def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
+    # CONFIG_PATH permite desplegar con un business.yaml real fuera del
+    # repo (#73) sin forkear el código ni commitear esos datos encima
+    # del business.yaml de demo — mismo patrón "opcional, degrada al
+    # comportamiento de hoy" que DATABASE_URL/REDIS_URL.
+    ruta_config = ruta_config or os.environ.get("CONFIG_PATH", "config/business.yaml")
     config = cargar_config(ruta_config)
 
     # --- Repositorios (adaptadores de salida) ---
