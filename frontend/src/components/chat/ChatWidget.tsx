@@ -82,6 +82,14 @@ export default function ChatWidget({ apiBaseUrl, ctaMensaje }: Props) {
     finRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [mensajes, expandido]);
 
+  // Avisa a otros widgets del Hero (Testimonios) de si el chat está
+  // expandido o comprimido, ya que cada isla Preact vive aislada y esto
+  // condiciona el espacio vertical/horizontal que les queda — mismo
+  // patrón de CustomEvent en window que orquestador:fuentes.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('orquestador:chat-expandido', { detail: { expandido } }));
+  }, [expandido]);
+
   useLayoutEffect(() => {
     const medir = () => {
       if (medidorRef.current) setAltoComprimido(medidorRef.current.offsetHeight);
