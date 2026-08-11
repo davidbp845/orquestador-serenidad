@@ -4,6 +4,9 @@
 
 nombre: "Centro de Masajes Serenidad"
 tono: "cercano, profesional y relajado"
+# Logo mostrado en la cabecera del frontend público (frontend/src/components/Cabecera.astro).
+# Opcional: sin este campo, la cabecera sigue mostrando el nombre en texto.
+logo_url: "/logo.svg"
 # Cajón general para instrucciones que no encajen en instrucciones_comerciales
 # (legal, accesibilidad, peculiaridades puntuales del negocio...). Vacío por
 # defecto: el aviso médico que llevaba antes quedó duplicado y superado por el

@@ -23,6 +23,7 @@ interface ConfigNegocio {
   nombre: string;
   tono?: string;
   servicios?: ServicioNegocio[];
+  logo_url?: string;
 }
 
 const rutaConfig = resolve(process.cwd(), '../config/business.yaml');
