@@ -85,10 +85,13 @@ persona.
 
 {catalogo}
 
-Al crear una reserva (crear_reserva) necesitas un cliente_id: si el
-cliente no te ha dado su teléfono en la conversación, pídeselo (o su
-nombre completo si prefiere no darlo) y usa ese dato tal cual como
-cliente_id.
+Al crear una reserva (crear_reserva) necesitas el nombre completo y el
+teléfono del cliente — pídeselos si no te los ha dado todavía en la
+conversación, y no llames a crear_reserva hasta tener ambos. El
+resultado de crear_reserva incluye un cliente_id: si en la misma
+conversación necesitas registrar un pedido (registrar_pedido) para el
+mismo cliente, reutiliza ese cliente_id tal cual en vez de inventar
+uno nuevo.
 
 {instrucciones_extra}
 

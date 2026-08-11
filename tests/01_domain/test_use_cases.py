@@ -338,13 +338,13 @@ class TestCrearReserva:
     def test_lanza_si_servicio_no_existe(self):
         caso, _ = self._construir()
         with pytest.raises(ServicioNoExiste):
-            caso.ejecutar("no_existe", "ana", "cliente1", datetime.combine(_LUNES, time(9, 0)))
+            caso.ejecutar("no_existe", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)))
 
     def test_crea_reserva_en_hueco_libre(self):
         caso, repo_citas = self._construir()
         inicio = datetime.combine(_LUNES, time(9, 0))
 
-        cita = caso.ejecutar("masaje", "ana", "cliente1", inicio)
+        cita = caso.ejecutar("masaje", "ana", "Juan", "600111222", inicio)
 
         assert cita.inicio == inicio
         assert cita.fin == datetime.combine(_LUNES, time(9, 30))
@@ -355,7 +355,7 @@ class TestCrearReserva:
         # Fuera del horario laboral (09:00-10:00).
         inicio = datetime.combine(_LUNES, time(11, 0))
         with pytest.raises(ProfesionalNoDisponible):
-            caso.ejecutar("masaje", "ana", "cliente1", inicio)
+            caso.ejecutar("masaje", "ana", "Juan", "600111222", inicio)
 
     def test_lanza_si_solapa_con_cita_existente(self):
         cita_existente = Cita.nueva(
@@ -365,14 +365,14 @@ class TestCrearReserva:
         )
         caso, _ = self._construir(citas=[cita_existente])
         with pytest.raises(ProfesionalNoDisponible):
-            caso.ejecutar("masaje", "ana", "cliente1", datetime.combine(_LUNES, time(9, 0)))
+            caso.ejecutar("masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)))
 
     def test_sincroniza_con_el_calendario_si_esta_configurado(self):
         calendario = FakeSincronizadorCalendario(id_evento="evento-abc")
         caso, _ = self._construir(calendario=calendario)
         inicio = datetime.combine(_LUNES, time(9, 0))
 
-        cita = caso.ejecutar("masaje", "ana", "cliente1", inicio)
+        cita = caso.ejecutar("masaje", "ana", "Juan", "600111222", inicio)
 
         assert cita.evento_calendario_id == "evento-abc"
         assert len(calendario.eventos_creados) == 1
@@ -382,7 +382,7 @@ class TestCrearReserva:
         caso, repo_citas = self._construir(calendario=calendario)
         inicio = datetime.combine(_LUNES, time(9, 0))
 
-        cita = caso.ejecutar("masaje", "ana", "cliente1", inicio)
+        cita = caso.ejecutar("masaje", "ana", "Juan", "600111222", inicio)
 
         assert cita.evento_calendario_id is None
         assert repo_citas._data[cita.id] is cita
@@ -401,10 +401,14 @@ class TestCrearReserva:
             FakeRepoContadores(),
         )
 
-        caso.ejecutar("masaje", "ana", "cliente1", datetime.combine(_LUNES, time(9, 0)))
+        cita = caso.ejecutar(
+            "masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)),
+        )
 
-        cliente = repo_clientes.obtener("cliente1")
+        cliente = repo_clientes.obtener(cita.cliente_id)
         assert cliente is not None
+        assert cliente.nombre == "Juan"
+        assert cliente.telefono == "600111222"
         assert cliente.telegram_chat_id is None
 
     def test_con_telegram_chat_id_crea_cliente_nuevo(self):
@@ -418,16 +422,19 @@ class TestCrearReserva:
             FakeRepoContadores(),
         )
 
-        caso.ejecutar(
-            "masaje", "ana", "cliente1", datetime.combine(_LUNES, time(9, 0)),
+        cita = caso.ejecutar(
+            "masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)),
             telegram_chat_id="chat123",
         )
 
-        cliente = repo_clientes.obtener("cliente1")
+        cliente = repo_clientes.obtener(cita.cliente_id)
         assert cliente is not None
         assert cliente.telegram_chat_id == "chat123"
 
     def test_con_telegram_chat_id_actualiza_cliente_existente(self):
+        # El teléfono es la clave de búsqueda (no un cliente_id libre):
+        # un cliente ya existente con ese teléfono se reutiliza, no se
+        # duplica.
         repo_servicios = FakeRepoServicios([_servicio(duracion=30)])
         repo_profesionales = FakeRepoProfesionales([_profesional()])
         repo_citas = FakeRepoCitas()
@@ -440,7 +447,7 @@ class TestCrearReserva:
         )
 
         caso.ejecutar(
-            "masaje", "ana", "cliente1", datetime.combine(_LUNES, time(9, 0)),
+            "masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)),
             telegram_chat_id="chat123",
         )
 
@@ -448,10 +455,27 @@ class TestCrearReserva:
         assert cliente.nombre == "Juan"
         assert cliente.telefono == "600111222"
         assert cliente.telegram_chat_id == "chat123"
+        assert len(repo_clientes.listar()) == 1  # no se duplicó
+
+    def test_actualiza_el_nombre_si_cambia_para_un_telefono_ya_conocido(self):
+        repo_servicios = FakeRepoServicios([_servicio(duracion=30)])
+        repo_profesionales = FakeRepoProfesionales([_profesional()])
+        repo_citas = FakeRepoCitas()
+        repo_clientes = FakeRepoClientes()
+        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan", telefono="600111222"))
+        disponibilidad = ComprobarDisponibilidad(repo_servicios, repo_profesionales, repo_citas)
+        caso = CrearReserva(
+            repo_servicios, repo_profesionales, repo_citas, repo_clientes, disponibilidad,
+            FakeRepoContadores(),
+        )
+
+        caso.ejecutar("masaje", "ana", "Juan Pérez", "600111222", datetime.combine(_LUNES, time(9, 0)))
+
+        assert repo_clientes.obtener("cliente1").nombre == "Juan Pérez"
 
     def test_sin_calendario_configurado_no_intenta_sincronizar(self):
         caso, _ = self._construir(calendario=None)
-        cita = caso.ejecutar("masaje", "ana", "cliente1", datetime.combine(_LUNES, time(9, 0)))
+        cita = caso.ejecutar("masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)))
         assert cita.evento_calendario_id is None
 
     def test_notifica_confirmacion_si_el_cliente_tiene_telegram_chat_id(self):
@@ -459,7 +483,9 @@ class TestCrearReserva:
         repo_profesionales = FakeRepoProfesionales([_profesional()])
         repo_citas = FakeRepoCitas()
         repo_clientes = FakeRepoClientes()
-        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan", telegram_chat_id="chat123"))
+        repo_clientes.guardar(
+            Cliente(id="cliente1", nombre="Juan", telefono="600111222", telegram_chat_id="chat123")
+        )
         notificador = FakeNotificadorMensajes()
         disponibilidad = ComprobarDisponibilidad(repo_servicios, repo_profesionales, repo_citas)
         caso = CrearReserva(
@@ -467,7 +493,7 @@ class TestCrearReserva:
             FakeRepoContadores(), notificador=notificador,
         )
 
-        caso.ejecutar("masaje", "ana", "cliente1", datetime.combine(_LUNES, time(9, 0)))
+        caso.ejecutar("masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)))
 
         assert len(notificador.enviados) == 1
         destinatario, texto = notificador.enviados[0]
@@ -487,7 +513,7 @@ class TestCrearReserva:
         )
 
         caso.ejecutar(
-            "masaje", "ana", "cliente1", datetime.combine(_LUNES, time(9, 0)),
+            "masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)),
             telegram_chat_id="chat123",
         )
 
@@ -499,7 +525,7 @@ class TestCrearReserva:
         repo_profesionales = FakeRepoProfesionales([_profesional()])
         repo_citas = FakeRepoCitas()
         repo_clientes = FakeRepoClientes()
-        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan"))
+        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan", telefono="600111222"))
         notificador = FakeNotificadorMensajes()
         disponibilidad = ComprobarDisponibilidad(repo_servicios, repo_profesionales, repo_citas)
         caso = CrearReserva(
@@ -507,7 +533,7 @@ class TestCrearReserva:
             FakeRepoContadores(), notificador=notificador,
         )
 
-        caso.ejecutar("masaje", "ana", "cliente1", datetime.combine(_LUNES, time(9, 0)))
+        caso.ejecutar("masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)))
 
         assert notificador.enviados == []
 
@@ -516,7 +542,9 @@ class TestCrearReserva:
         repo_profesionales = FakeRepoProfesionales([_profesional()])
         repo_citas = FakeRepoCitas()
         repo_clientes = FakeRepoClientes()
-        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan", telegram_chat_id="chat123"))
+        repo_clientes.guardar(
+            Cliente(id="cliente1", nombre="Juan", telefono="600111222", telegram_chat_id="chat123")
+        )
         notificador = FakeNotificadorMensajes(lanza=True)
         disponibilidad = ComprobarDisponibilidad(repo_servicios, repo_profesionales, repo_citas)
         caso = CrearReserva(
@@ -524,7 +552,7 @@ class TestCrearReserva:
             FakeRepoContadores(), notificador=notificador,
         )
 
-        cita = caso.ejecutar("masaje", "ana", "cliente1", datetime.combine(_LUNES, time(9, 0)))
+        cita = caso.ejecutar("masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)))
 
         assert repo_citas._data[cita.id] is cita
 

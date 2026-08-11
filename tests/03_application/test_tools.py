@@ -57,7 +57,7 @@ def test_comprobar_disponibilidad_sin_profesional_id():
     )
 
 
-def test_crear_reserva_devuelve_cita_id_y_estado():
+def test_crear_reserva_devuelve_cita_id_cliente_id_y_estado():
     cita = Cita.nueva(1, "masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
     caso = Mock()
     caso.ejecutar.return_value = cita
@@ -66,15 +66,18 @@ def test_crear_reserva_devuelve_cita_id_y_estado():
     resultado = ejecutor.ejecutar("crear_reserva", {
         "servicio_id": "masaje",
         "profesional_id": "ana",
-        "cliente_id": "cliente1",
+        "nombre": "Juan",
+        "telefono": "600111222",
         "inicio": "2026-08-03T09:00:00",
     })
 
     caso.ejecutar.assert_called_once_with(
-        servicio_id="masaje", profesional_id="ana", cliente_id="cliente1",
+        servicio_id="masaje", profesional_id="ana", nombre="Juan", telefono="600111222",
         inicio=datetime(2026, 8, 3, 9, 0),
     )
-    assert resultado == {"cita_id": cita.id_visible, "estado": EstadoCita.PENDIENTE.value}
+    assert resultado == {
+        "cita_id": cita.id_visible, "cliente_id": cita.cliente_id, "estado": EstadoCita.PENDIENTE.value,
+    }
 
 
 def test_crear_reserva_por_telegram_pasa_telegram_chat_id():
@@ -88,7 +91,8 @@ def test_crear_reserva_por_telegram_pasa_telegram_chat_id():
         {
             "servicio_id": "masaje",
             "profesional_id": "ana",
-            "cliente_id": "cliente1",
+            "nombre": "Juan",
+            "telefono": "600111222",
             "inicio": "2026-08-03T09:00:00",
         },
         canal="telegram",
@@ -96,7 +100,7 @@ def test_crear_reserva_por_telegram_pasa_telegram_chat_id():
     )
 
     caso.ejecutar.assert_called_once_with(
-        servicio_id="masaje", profesional_id="ana", cliente_id="cliente1",
+        servicio_id="masaje", profesional_id="ana", nombre="Juan", telefono="600111222",
         inicio=datetime(2026, 8, 3, 9, 0), telegram_chat_id="chat123",
     )
 
@@ -112,7 +116,8 @@ def test_crear_reserva_por_web_no_pasa_telegram_chat_id():
         {
             "servicio_id": "masaje",
             "profesional_id": "ana",
-            "cliente_id": "cliente1",
+            "nombre": "Juan",
+            "telefono": "600111222",
             "inicio": "2026-08-03T09:00:00",
         },
         canal="web",
@@ -120,7 +125,7 @@ def test_crear_reserva_por_web_no_pasa_telegram_chat_id():
     )
 
     caso.ejecutar.assert_called_once_with(
-        servicio_id="masaje", profesional_id="ana", cliente_id="cliente1",
+        servicio_id="masaje", profesional_id="ana", nombre="Juan", telefono="600111222",
         inicio=datetime(2026, 8, 3, 9, 0),
     )
 

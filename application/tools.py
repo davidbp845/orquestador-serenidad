@@ -28,16 +28,21 @@ TOOLS_SCHEMA = [
     },
     {
         "name": "crear_reserva",
-        "description": "Crea una reserva/cita confirmada para un cliente.",
+        "description": (
+            "Crea una reserva/cita confirmada para un cliente. Necesita "
+            "el nombre completo y el teléfono del cliente — pídeselos "
+            "antes de llamar a esta herramienta si no los tienes."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "servicio_id": {"type": "string"},
                 "profesional_id": {"type": "string"},
-                "cliente_id": {"type": "string"},
+                "nombre": {"type": "string", "description": "Nombre completo del cliente"},
+                "telefono": {"type": "string", "description": "Teléfono del cliente"},
                 "inicio": {"type": "string", "description": "ISO 8601"},
             },
-            "required": ["servicio_id", "profesional_id", "cliente_id", "inicio"],
+            "required": ["servicio_id", "profesional_id", "nombre", "telefono", "inicio"],
         },
     },
     {
@@ -114,7 +119,8 @@ class EjecutorHerramientas:
                 kwargs = {
                     "servicio_id": entrada["servicio_id"],
                     "profesional_id": entrada["profesional_id"],
-                    "cliente_id": entrada["cliente_id"],
+                    "nombre": entrada["nombre"],
+                    "telefono": entrada["telefono"],
                     "inicio": datetime.fromisoformat(entrada["inicio"]),
                 }
                 # El chat_id de Telegram solo se conoce (y solo tiene
@@ -123,7 +129,16 @@ class EjecutorHerramientas:
                 if canal == "telegram" and usuario_id is not None:
                     kwargs["telegram_chat_id"] = usuario_id
                 cita = self._casos["crear_reserva"].ejecutar(**kwargs)
-                return {"cita_id": cita.id_visible, "estado": cita.estado.value}
+                # cliente_id va en el resultado para que el LLM lo
+                # reutilice tal cual si necesita registrar_pedido para
+                # el mismo cliente en la misma conversación — ya no lo
+                # decide el LLM libremente, lo resuelve CrearReserva
+                # (por teléfono si existe, o lo genera el contador).
+                return {
+                    "cita_id": cita.id_visible,
+                    "cliente_id": cita.cliente_id,
+                    "estado": cita.estado.value,
+                }
 
             if nombre_tool == "registrar_pedido":
                 from domain.entities import LineaPedido

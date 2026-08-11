@@ -137,7 +137,8 @@ class CrearReserva:
         self,
         servicio_id: str,
         profesional_id: str,
-        cliente_id: str,
+        nombre: str,
+        telefono: str,
         inicio: datetime,
         telegram_chat_id: str | None = None,
     ) -> Cita:
@@ -154,19 +155,21 @@ class CrearReserva:
         if not cabe:
             raise ProfesionalNoDisponible(profesional_id, inicio)
 
-        # Antes, esto solo pasaba si telegram_chat_id no era None, así
-        # que una reserva por web chat o WhatsApp nunca creaba ningún
-        # Cliente — la Cita quedaba con un cliente_id sin fila real
-        # detrás (#52, caso B: cliente huérfano). El id del Cliente
-        # sigue siendo el string que decide el LLM (sin pasar por el
-        # contador todavía) a propósito: sin un campo fiable como el
-        # teléfono para reconocer a un cliente que repite (llega en
-        # #52), generar el id aquí con el contador rompería esa
-        # detección — cada reserva crearía un Cliente nuevo en vez de
-        # reutilizar el existente.
-        cliente = self._clientes.obtener(cliente_id)
+        # Antes, el Cliente solo se creaba/actualizaba si telegram_chat_id
+        # no era None, así que una reserva por web chat o WhatsApp nunca
+        # creaba ningún Cliente — la Cita quedaba con un cliente_id sin
+        # fila real detrás (#52, caso B: cliente huérfano). Ahora corre en
+        # todos los canales, y el teléfono (obligatorio desde #52, ver
+        # application/tools.py) es la clave real para reconocer a un
+        # cliente que repite — ya no el string que antes decidía el LLM
+        # libremente (cliente_id), que #69 dejó a propósito sin conectar
+        # al contador por esto mismo.
+        cliente = self._clientes.buscar_por_telefono(telefono)
         if cliente is None:
-            cliente = Cliente(id=cliente_id, nombre=cliente_id)
+            nuevo_id_cliente = str(self._contadores.siguiente_valor("cliente"))
+            cliente = Cliente(id=nuevo_id_cliente, nombre=nombre, telefono=telefono)
+        else:
+            cliente.nombre = nombre
         if telegram_chat_id is not None:
             # Registra (o actualiza) el chat_id de Telegram del cliente para
             # poder mandarle notificaciones proactivas sin depender de que
@@ -175,7 +178,7 @@ class CrearReserva:
         self._clientes.guardar(cliente)
 
         nuevo_id_cita = self._contadores.siguiente_valor("cita")
-        cita = Cita.nueva(nuevo_id_cita, servicio_id, profesional_id, cliente_id, inicio, fin)
+        cita = Cita.nueva(nuevo_id_cita, servicio_id, profesional_id, cliente.id, inicio, fin)
 
         if self._calendario is not None:
             # Best-effort: un fallo al sincronizar con el calendario externo
