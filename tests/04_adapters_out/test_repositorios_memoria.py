@@ -1,8 +1,10 @@
+import threading
 from datetime import date, datetime
 
 from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
     RepositorioClientesMemoria,
+    RepositorioContadoresMemoria,
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
     RepositorioServiciosMemoria,
@@ -186,3 +188,51 @@ def test_repositorio_pedidos_borrar_todo():
 
     assert repo.borrar_todo() == 2
     assert repo.listar_pendientes() == []
+
+
+def test_repositorio_contadores_empieza_en_uno_e_incrementa():
+    repo = RepositorioContadoresMemoria()
+
+    assert repo.siguiente_valor("testimonio") == 1
+    assert repo.siguiente_valor("testimonio") == 2
+    assert repo.siguiente_valor("testimonio") == 3
+
+
+def test_repositorio_contadores_es_independiente_por_tipo_entidad():
+    repo = RepositorioContadoresMemoria()
+
+    assert repo.siguiente_valor("testimonio") == 1
+    assert repo.siguiente_valor("cliente") == 1
+    assert repo.siguiente_valor("testimonio") == 2
+
+
+def test_repositorio_contadores_borrar_todo():
+    repo = RepositorioContadoresMemoria()
+    repo.siguiente_valor("testimonio")
+    repo.siguiente_valor("cliente")
+
+    assert repo.borrar_todo() == 2
+    assert repo.siguiente_valor("testimonio") == 1
+
+
+def test_repositorio_contadores_es_imposible_repetir_valor_bajo_concurrencia():
+    """La garantía real que pide el issue: N hilos pidiendo
+    siguiente_valor("testimonio") a la vez nunca devuelven el mismo
+    número — sin huecos ni repeticiones."""
+    repo = RepositorioContadoresMemoria()
+    n = 200
+    resultados: list[int] = []
+    lock_resultados = threading.Lock()
+
+    def pedir_valor():
+        valor = repo.siguiente_valor("testimonio")
+        with lock_resultados:
+            resultados.append(valor)
+
+    hilos = [threading.Thread(target=pedir_valor) for _ in range(n)]
+    for hilo in hilos:
+        hilo.start()
+    for hilo in hilos:
+        hilo.join()
+
+    assert sorted(resultados) == list(range(1, n + 1))

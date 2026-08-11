@@ -117,6 +117,29 @@ class RepositorioPedidos(ABC):
         ...
 
 
+class RepositorioContadores(ABC):
+    """Contador atómico por tipo de entidad (ej. 'testimonio', 'cliente'):
+    garantiza que dos llamadas a siguiente_valor() con el mismo
+    tipo_entidad nunca devuelvan el mismo número, ni siquiera entre
+    procesos distintos escribiendo contra el mismo Postgres a la vez
+    (ver RepositorioContadoresPostgres). No decide el formato final del
+    id (numérico plano, con prefijo...) — eso es cosa de cada entidad
+    cuando adopte este mecanismo."""
+
+    @abstractmethod
+    def siguiente_valor(self, tipo_entidad: str) -> int:
+        """Incrementa y devuelve el contador de tipo_entidad, empezando
+        en 1 la primera vez que se pide ese tipo_entidad."""
+        ...
+
+    @abstractmethod
+    def borrar_todo(self) -> int:
+        """Ver RepositorioCitas.borrar_todo — misma herramienta de
+        panel, mismo alcance de "solo entorno local". Reinicia todos
+        los contadores, no solo uno."""
+        ...
+
+
 # ---------- Puertos de salida: conocimiento e IA ----------
 
 class RepositorioConocimiento(ABC):

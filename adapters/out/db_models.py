@@ -43,6 +43,13 @@ class PedidoDB(SQLModel, table=True):
     creado_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class ContadorDB(SQLModel, table=True):
+    __tablename__ = "contadores"
+
+    tipo_entidad: str = Field(primary_key=True)
+    valor: int = 0
+
+
 class LineaPedidoDB(SQLModel, table=True):
     __tablename__ = "pedido_lineas"
 

@@ -12,6 +12,7 @@ from adapters.out.db_models import LineaPedidoDB, SQLModel
 from adapters.out.repositorios_postgres import (
     RepositorioCitasPostgres,
     RepositorioClientesPostgres,
+    RepositorioContadoresPostgres,
     RepositorioPedidosPostgres,
 )
 from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido
@@ -224,3 +225,44 @@ def test_pedidos_borrar_todo_incluye_las_lineas():
     assert repo.listar_pendientes() == []
     with Session(engine) as sesion:
         assert sesion.exec(select(LineaPedidoDB)).all() == []
+
+
+def test_contadores_empieza_en_uno_e_incrementa():
+    repo = RepositorioContadoresPostgres(_engine())
+
+    assert repo.siguiente_valor("testimonio") == 1
+    assert repo.siguiente_valor("testimonio") == 2
+    assert repo.siguiente_valor("testimonio") == 3
+
+
+def test_contadores_es_independiente_por_tipo_entidad():
+    repo = RepositorioContadoresPostgres(_engine())
+
+    assert repo.siguiente_valor("testimonio") == 1
+    assert repo.siguiente_valor("cliente") == 1
+    assert repo.siguiente_valor("testimonio") == 2
+
+
+def test_contadores_borrar_todo():
+    repo = RepositorioContadoresPostgres(_engine())
+    repo.siguiente_valor("testimonio")
+    repo.siguiente_valor("cliente")
+
+    assert repo.borrar_todo() == 2
+    assert repo.siguiente_valor("testimonio") == 1
+
+
+# No hay test de concurrencia real aquí (a diferencia de
+# RepositorioContadoresMemoria en test_repositorios_memoria.py):
+# probado con un motor SQLite en memoria compartido entre hilos
+# (StaticPool + check_same_thread=False), varias llamadas concurrentes
+# a siguiente_valor() fallaban con NoResultFound — un artefacto del
+# propio modelo de concurrencia de SQLite (una única conexión de
+# verdad reutilizada por todos los hilos), no de la lógica del
+# adaptador. La garantía real que pide el issue (unicidad entre
+# procesos) depende del bloqueo de fila de Postgres sobre la sentencia
+# atómica INSERT ... ON CONFLICT ... RETURNING, que SQLite no puede
+# reproducir de forma fiel — de ahí que este repo, a diferencia del
+# resto de RepositorioXPostgres de este fichero, no tenga forma barata
+# de comprobar su promesa central sin un Postgres real (fuera del
+# alcance de esta suite, ver la cabecera del fichero).

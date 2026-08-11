@@ -14,13 +14,13 @@ import os
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import delete
+from sqlalchemy import delete, text
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido
-from domain.ports import RepositorioCitas, RepositorioClientes, RepositorioPedidos
+from domain.ports import RepositorioCitas, RepositorioClientes, RepositorioContadores, RepositorioPedidos
 
-from .db_models import CitaDB, ClienteDB, LineaPedidoDB, PedidoDB
+from .db_models import CitaDB, ClienteDB, ContadorDB, LineaPedidoDB, PedidoDB
 
 
 def _como_uuid(valor) -> UUID | None:
@@ -165,6 +165,43 @@ class RepositorioClientesPostgres(RepositorioClientes):
             email=fila.email, notas=fila.notas,
             telegram_chat_id=fila.telegram_chat_id,
         )
+
+
+class RepositorioContadoresPostgres(RepositorioContadores):
+    """A diferencia del resto de repos de este módulo (que hacen
+    sesion.merge()/sesion.get() vía el ORM), este usa una única
+    sentencia UPSERT atómica: un SELECT seguido de UPDATE tiene una
+    ventana de carrera entre ambas sentencias donde dos transacciones
+    concurrentes (ej. main.py y panel_empleados escribiendo contra el
+    mismo Postgres a la vez) podrían leer el mismo valor y devolver un
+    id duplicado. INSERT ... ON CONFLICT ... RETURNING es una sola
+    sentencia: el bloqueo de fila de Postgres serializa los incrementos
+    concurrentes sin necesidad de un lock explícito en la aplicación.
+    Sintaxis soportada también por SQLite (>=3.35, usada en los tests
+    de este módulo vía motor en memoria), no es exclusiva de Postgres."""
+
+    def __init__(self, engine):
+        self._engine = engine
+
+    def siguiente_valor(self, tipo_entidad: str) -> int:
+        with Session(self._engine) as sesion:
+            resultado = sesion.execute(
+                text(
+                    "INSERT INTO contadores (tipo_entidad, valor) VALUES (:tipo, 1) "
+                    "ON CONFLICT (tipo_entidad) DO UPDATE SET valor = contadores.valor + 1 "
+                    "RETURNING valor"
+                ),
+                {"tipo": tipo_entidad},
+            )
+            valor = resultado.scalar_one()
+            sesion.commit()
+            return valor
+
+    def borrar_todo(self) -> int:
+        with Session(self._engine) as sesion:
+            n = sesion.execute(delete(ContadorDB)).rowcount
+            sesion.commit()
+            return n
 
 
 class RepositorioPedidosPostgres(RepositorioPedidos):

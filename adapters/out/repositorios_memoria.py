@@ -6,12 +6,14 @@ el orquestador no cambian ni una línea.
 """
 from __future__ import annotations
 
+import threading
 from datetime import date
 
 from domain.entities import Cita, Cliente, EstadoPedido, Pedido, Profesional, Servicio
 from domain.ports import (
     RepositorioCitas,
     RepositorioClientes,
+    RepositorioContadores,
     RepositorioPedidos,
     RepositorioProfesionales,
     RepositorioServicios,
@@ -90,6 +92,28 @@ class RepositorioClientesMemoria(RepositorioClientes):
         n = len(self._data)
         self._data.clear()
         return n
+
+
+class RepositorioContadoresMemoria(RepositorioContadores):
+    def __init__(self):
+        self._data: dict[str, int] = {}
+        self._lock = threading.Lock()
+
+    def siguiente_valor(self, tipo_entidad: str) -> int:
+        # FastAPI ejecuta los endpoints síncronos en un threadpool real
+        # (no un único hilo con GIL cooperativo como asyncio), así que
+        # dos creaciones concurrentes del mismo tipo de entidad sí
+        # pueden entrelazarse entre el "leer" y el "escribir" sin lock.
+        with self._lock:
+            nuevo_valor = self._data.get(tipo_entidad, 0) + 1
+            self._data[tipo_entidad] = nuevo_valor
+            return nuevo_valor
+
+    def borrar_todo(self) -> int:
+        with self._lock:
+            n = len(self._data)
+            self._data.clear()
+            return n
 
 
 class RepositorioPedidosMemoria(RepositorioPedidos):
