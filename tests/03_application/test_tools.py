@@ -58,7 +58,7 @@ def test_comprobar_disponibilidad_sin_profesional_id():
 
 
 def test_crear_reserva_devuelve_cita_id_y_estado():
-    cita = Cita.nueva("masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    cita = Cita.nueva(1, "masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
     caso = Mock()
     caso.ejecutar.return_value = cita
     ejecutor = EjecutorHerramientas({"crear_reserva": caso})
@@ -74,11 +74,11 @@ def test_crear_reserva_devuelve_cita_id_y_estado():
         servicio_id="masaje", profesional_id="ana", cliente_id="cliente1",
         inicio=datetime(2026, 8, 3, 9, 0),
     )
-    assert resultado == {"cita_id": str(cita.id), "estado": EstadoCita.PENDIENTE.value}
+    assert resultado == {"cita_id": cita.id_visible, "estado": EstadoCita.PENDIENTE.value}
 
 
 def test_crear_reserva_por_telegram_pasa_telegram_chat_id():
-    cita = Cita.nueva("masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    cita = Cita.nueva(1, "masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
     caso = Mock()
     caso.ejecutar.return_value = cita
     ejecutor = EjecutorHerramientas({"crear_reserva": caso})
@@ -102,7 +102,7 @@ def test_crear_reserva_por_telegram_pasa_telegram_chat_id():
 
 
 def test_crear_reserva_por_web_no_pasa_telegram_chat_id():
-    cita = Cita.nueva("masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    cita = Cita.nueva(1, "masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
     caso = Mock()
     caso.ejecutar.return_value = cita
     ejecutor = EjecutorHerramientas({"crear_reserva": caso})

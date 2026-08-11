@@ -24,7 +24,7 @@ def _sincronizador_con_cliente_falso():
 
 def _cita():
     return Cita.nueva(
-        "masaje_relajante_60", "ana", "cliente1",
+        1, "masaje_relajante_60", "ana", "cliente1",
         datetime(2026, 8, 10, 9, 0), datetime(2026, 8, 10, 10, 0),
     )
 

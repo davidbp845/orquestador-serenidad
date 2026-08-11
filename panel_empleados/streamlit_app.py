@@ -180,7 +180,7 @@ def _tarjeta_cita(cita, repo_servicios, repo_profesionales, cambiar_estado_cita)
     servicio = repo_servicios.obtener(cita.servicio_id)
     profesional = repo_profesionales.obtener(cita.profesional_id)
     with st.container(border=True):
-        st.markdown(f"**{cita.inicio:%H:%M} – {cita.fin:%H:%M}**")
+        st.markdown(f"**{cita.inicio:%H:%M} – {cita.fin:%H:%M}** · `{cita.id_visible}`")
         st.write(f"{servicio.nombre if servicio else cita.servicio_id} · "
                  f"{profesional.nombre if profesional else cita.profesional_id}")
         st.caption(f"Cliente: {cita.cliente_id} · Estado: {cita.estado.value}")

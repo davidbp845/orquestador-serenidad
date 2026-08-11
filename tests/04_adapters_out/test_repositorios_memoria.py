@@ -48,8 +48,8 @@ def test_repositorio_profesionales_listar_por_servicio():
 
 def test_repositorio_citas_guardar_y_filtrar_por_fecha():
     repo = RepositorioCitasMemoria()
-    cita1 = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
-    cita2 = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0))
+    cita1 = Cita.nueva(1, "s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    cita2 = Cita.nueva(2, "s1", "ana", "c1", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0))
     repo.guardar(cita1)
     repo.guardar(cita2)
 
@@ -60,9 +60,9 @@ def test_repositorio_citas_guardar_y_filtrar_por_fecha():
 
 def test_repositorio_citas_en_fecha_agrega_todos_los_profesionales():
     repo = RepositorioCitasMemoria()
-    cita_ana = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
-    cita_beatriz = Cita.nueva("s1", "beatriz", "c2", datetime(2026, 8, 3, 11, 0), datetime(2026, 8, 3, 12, 0))
-    cita_otro_dia = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0))
+    cita_ana = Cita.nueva(1, "s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    cita_beatriz = Cita.nueva(2, "s1", "beatriz", "c2", datetime(2026, 8, 3, 11, 0), datetime(2026, 8, 3, 12, 0))
+    cita_otro_dia = Cita.nueva(3, "s1", "ana", "c1", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0))
     repo.guardar(cita_ana)
     repo.guardar(cita_beatriz)
     repo.guardar(cita_otro_dia)
@@ -74,11 +74,11 @@ def test_repositorio_citas_en_fecha_agrega_todos_los_profesionales():
 
 def test_repositorio_citas_en_rango_incluye_los_limites_y_excluye_fuera_de_rango():
     repo = RepositorioCitasMemoria()
-    cita_antes = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 2, 9, 0), datetime(2026, 8, 2, 10, 0))
-    cita_limite_inferior = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
-    cita_intermedia = Cita.nueva("s1", "beatriz", "c2", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0))
-    cita_limite_superior = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 5, 9, 0), datetime(2026, 8, 5, 10, 0))
-    cita_despues = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 6, 9, 0), datetime(2026, 8, 6, 10, 0))
+    cita_antes = Cita.nueva(1, "s1", "ana", "c1", datetime(2026, 8, 2, 9, 0), datetime(2026, 8, 2, 10, 0))
+    cita_limite_inferior = Cita.nueva(2, "s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    cita_intermedia = Cita.nueva(3, "s1", "beatriz", "c2", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0))
+    cita_limite_superior = Cita.nueva(4, "s1", "ana", "c1", datetime(2026, 8, 5, 9, 0), datetime(2026, 8, 5, 10, 0))
+    cita_despues = Cita.nueva(5, "s1", "ana", "c1", datetime(2026, 8, 6, 9, 0), datetime(2026, 8, 6, 10, 0))
     for cita in (cita_antes, cita_limite_inferior, cita_intermedia, cita_limite_superior, cita_despues):
         repo.guardar(cita)
 
@@ -91,14 +91,14 @@ def test_repositorio_citas_en_rango_incluye_los_limites_y_excluye_fuera_de_rango
 
 def test_repositorio_citas_en_rango_vacio_si_no_hay_citas_en_ese_rango():
     repo = RepositorioCitasMemoria()
-    repo.guardar(Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 1, 9, 0), datetime(2026, 8, 1, 10, 0)))
+    repo.guardar(Cita.nueva(1, "s1", "ana", "c1", datetime(2026, 8, 1, 9, 0), datetime(2026, 8, 1, 10, 0)))
 
     assert repo.citas_en_rango(date(2026, 8, 10), date(2026, 8, 20)) == []
 
 
 def test_repositorio_citas_cancelar():
     repo = RepositorioCitasMemoria()
-    cita = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    cita = Cita.nueva(1, "s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
     repo.guardar(cita)
 
     repo.cancelar(cita.id)
@@ -113,7 +113,7 @@ def test_repositorio_citas_cancelar_id_inexistente_no_lanza():
 
 def test_repositorio_citas_obtener():
     repo = RepositorioCitasMemoria()
-    cita = Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    cita = Cita.nueva(1, "s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
     repo.guardar(cita)
 
     assert repo.obtener(cita.id) is cita
@@ -175,8 +175,8 @@ def test_repositorio_pedidos_listar_pendientes_excluye_estados_terminales():
 
 def test_repositorio_citas_borrar_todo():
     repo = RepositorioCitasMemoria()
-    repo.guardar(Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0)))
-    repo.guardar(Cita.nueva("s1", "ana", "c1", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0)))
+    repo.guardar(Cita.nueva(1, "s1", "ana", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0)))
+    repo.guardar(Cita.nueva(2, "s1", "ana", "c1", datetime(2026, 8, 4, 9, 0), datetime(2026, 8, 4, 10, 0)))
 
     assert repo.borrar_todo() == 2
     assert repo.citas_en_rango(date(2026, 1, 1), date(2026, 12, 31)) == []

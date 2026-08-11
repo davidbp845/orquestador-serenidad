@@ -24,7 +24,7 @@ class ClienteDB(SQLModel, table=True):
 class CitaDB(SQLModel, table=True):
     __tablename__ = "citas"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    id: int = Field(primary_key=True)
     servicio_id: str
     profesional_id: str = Field(index=True)
     cliente_id: str

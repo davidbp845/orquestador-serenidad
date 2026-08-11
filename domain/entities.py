@@ -55,7 +55,10 @@ class Cliente:
 
 @dataclass
 class Cita:
-    id: UUID
+    """id: int generado por RepositorioContadores ('cita') — igual que
+    Testimonio, no se genera aquí con uuid4(), lo decide quien
+    construye el caso de uso CrearReserva."""
+    id: int
     servicio_id: str
     profesional_id: str
     cliente_id: str
@@ -65,16 +68,24 @@ class Cita:
     evento_calendario_id: str | None = None
 
     @staticmethod
-    def nueva(servicio_id: str, profesional_id: str, cliente_id: str,
+    def nueva(id: int, servicio_id: str, profesional_id: str, cliente_id: str,
               inicio: datetime, fin: datetime) -> Cita:
         return Cita(
-            id=uuid4(),
+            id=id,
             servicio_id=servicio_id,
             profesional_id=profesional_id,
             cliente_id=cliente_id,
             inicio=inicio,
             fin=fin,
         )
+
+    @property
+    def id_visible(self) -> str:
+        """Formato de visualización AAAA-00000X: año de la cita (no el
+        de creación, Cita no tiene ese campo) + id con ceros a la
+        izquierda hasta 6 dígitos. No cambia el id real, solo cómo se
+        muestra (ej. en la confirmación que ve el cliente)."""
+        return f"{self.inicio.year}-{self.id:06d}"
 
 
 @dataclass

@@ -30,7 +30,7 @@ class PedidoNoExiste(DominioError):
 
 
 class CitaNoExiste(DominioError):
-    def __init__(self, cita_id: UUID) -> None:
+    def __init__(self, cita_id: int) -> None:
         super().__init__(f"La cita '{cita_id}' no existe.")
         self.cita_id = cita_id
 

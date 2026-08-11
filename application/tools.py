@@ -123,7 +123,7 @@ class EjecutorHerramientas:
                 if canal == "telegram" and usuario_id is not None:
                     kwargs["telegram_chat_id"] = usuario_id
                 cita = self._casos["crear_reserva"].ejecutar(**kwargs)
-                return {"cita_id": str(cita.id), "estado": cita.estado.value}
+                return {"cita_id": cita.id_visible, "estado": cita.estado.value}
 
             if nombre_tool == "registrar_pedido":
                 from domain.entities import LineaPedido

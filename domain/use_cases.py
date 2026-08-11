@@ -120,6 +120,7 @@ class CrearReserva:
         citas: RepositorioCitas,
         clientes: RepositorioClientes,
         disponibilidad: ComprobarDisponibilidad,
+        contadores: RepositorioContadores,
         calendario: SincronizadorCalendario | None = None,
         notificador: NotificadorMensajes | None = None,
     ):
@@ -128,6 +129,7 @@ class CrearReserva:
         self._citas = citas
         self._clientes = clientes
         self._disponibilidad = disponibilidad
+        self._contadores = contadores
         self._calendario = calendario
         self._notificador = notificador
 
@@ -152,17 +154,28 @@ class CrearReserva:
         if not cabe:
             raise ProfesionalNoDisponible(profesional_id, inicio)
 
+        # Antes, esto solo pasaba si telegram_chat_id no era None, así
+        # que una reserva por web chat o WhatsApp nunca creaba ningún
+        # Cliente — la Cita quedaba con un cliente_id sin fila real
+        # detrás (#52, caso B: cliente huérfano). El id del Cliente
+        # sigue siendo el string que decide el LLM (sin pasar por el
+        # contador todavía) a propósito: sin un campo fiable como el
+        # teléfono para reconocer a un cliente que repite (llega en
+        # #52), generar el id aquí con el contador rompería esa
+        # detección — cada reserva crearía un Cliente nuevo en vez de
+        # reutilizar el existente.
+        cliente = self._clientes.obtener(cliente_id)
+        if cliente is None:
+            cliente = Cliente(id=cliente_id, nombre=cliente_id)
         if telegram_chat_id is not None:
             # Registra (o actualiza) el chat_id de Telegram del cliente para
             # poder mandarle notificaciones proactivas sin depender de que
             # haya una sesión de conversación activa (ver más abajo).
-            cliente = self._clientes.obtener(cliente_id)
-            if cliente is None:
-                cliente = Cliente(id=cliente_id, nombre=cliente_id)
             cliente.telegram_chat_id = telegram_chat_id
-            self._clientes.guardar(cliente)
+        self._clientes.guardar(cliente)
 
-        cita = Cita.nueva(servicio_id, profesional_id, cliente_id, inicio, fin)
+        nuevo_id_cita = self._contadores.siguiente_valor("cita")
+        cita = Cita.nueva(nuevo_id_cita, servicio_id, profesional_id, cliente_id, inicio, fin)
 
         if self._calendario is not None:
             # Best-effort: un fallo al sincronizar con el calendario externo
@@ -197,8 +210,8 @@ class CrearReserva:
         try:
             self._notificador.enviar(
                 cliente.telegram_chat_id,
-                f"Reserva confirmada: {servicio.nombre} el {cita.inicio:%d/%m/%Y} "
-                f"a las {cita.inicio:%H:%M}.",
+                f"Reserva confirmada ({cita.id_visible}): {servicio.nombre} el "
+                f"{cita.inicio:%d/%m/%Y} a las {cita.inicio:%H:%M}.",
             )
         except Exception:
             logger.exception(
@@ -219,7 +232,7 @@ class CancelarReserva:
         self._clientes = clientes
         self._notificador = notificador
 
-    def ejecutar(self, cita_id: UUID) -> None:
+    def ejecutar(self, cita_id: int) -> None:
         cita = None
         if self._calendario is not None or self._notificador is not None:
             cita = self._citas.obtener(cita_id)
@@ -249,8 +262,8 @@ class CancelarReserva:
         try:
             self._notificador.enviar(
                 cliente.telegram_chat_id,
-                f"Tu reserva del {cita.inicio:%d/%m/%Y} a las {cita.inicio:%H:%M} "
-                f"ha sido cancelada.",
+                f"Tu reserva ({cita.id_visible}) del {cita.inicio:%d/%m/%Y} a las "
+                f"{cita.inicio:%H:%M} ha sido cancelada.",
             )
         except Exception:
             logger.exception(
@@ -290,7 +303,7 @@ class CambiarEstadoCita:
         self._clientes = clientes
         self._notificador = notificador
 
-    def ejecutar(self, cita_id: UUID, nuevo_estado: EstadoCita) -> Cita:
+    def ejecutar(self, cita_id: int, nuevo_estado: EstadoCita) -> Cita:
         cita = self._citas.obtener(cita_id)
         if cita is None:
             raise CitaNoExiste(cita_id)
@@ -319,8 +332,8 @@ class CambiarEstadoCita:
         try:
             self._notificador.enviar(
                 cliente.telegram_chat_id,
-                f"Tu reserva del {cita.inicio:%d/%m/%Y} a las {cita.inicio:%H:%M} "
-                f"ha sido confirmada.",
+                f"Tu reserva ({cita.id_visible}) del {cita.inicio:%d/%m/%Y} a las "
+                f"{cita.inicio:%H:%M} ha sido confirmada.",
             )
         except Exception:
             logger.exception(

@@ -42,6 +42,22 @@ def _como_uuid(valor) -> UUID | None:
         return None
 
 
+def _como_int(valor) -> int | None:
+    """Mismo motivo que _como_uuid, para las entidades con id int
+    (Cita, Testimonio, tras #68/#69): a diferencia de SQLite (usado en
+    los tests de este módulo), Postgres es estrictamente tipado y
+    lanza DataError si se compara una columna Integer contra un valor
+    no convertible — confirmado manualmente contra el Postgres de
+    desarrollo con sesion.get(CitaDB, "no_existe"). Un id con formato
+    inválido se trata como 'no existe' en vez de propagar el error."""
+    if isinstance(valor, int):
+        return valor
+    try:
+        return int(valor)
+    except (ValueError, TypeError):
+        return None
+
+
 def crear_engine(url: str | None = None):
     url = url or os.environ["DATABASE_URL"]
     return create_engine(url)
@@ -74,8 +90,8 @@ class RepositorioCitasPostgres(RepositorioCitas):
             ))
             sesion.commit()
 
-    def obtener(self, cita_id) -> Cita | None:
-        cita_id = _como_uuid(cita_id)
+    def obtener(self, cita_id: int) -> Cita | None:
+        cita_id = _como_int(cita_id)
         if cita_id is None:
             return None
         with Session(self._engine) as sesion:
@@ -94,8 +110,8 @@ class RepositorioCitasPostgres(RepositorioCitas):
             filas = sesion.exec(select(CitaDB)).all()
             return [self._a_entidad(f) for f in filas if desde <= f.inicio.date() <= hasta]
 
-    def cancelar(self, cita_id) -> None:
-        cita_id = _como_uuid(cita_id)
+    def cancelar(self, cita_id: int) -> None:
+        cita_id = _como_int(cita_id)
         if cita_id is None:
             return
         with Session(self._engine) as sesion:
@@ -185,6 +201,9 @@ class RepositorioTestimoniosPostgres(RepositorioTestimonios):
         self._engine = engine
 
     def obtener(self, testimonio_id: int) -> Testimonio | None:
+        testimonio_id = _como_int(testimonio_id)
+        if testimonio_id is None:
+            return None
         with Session(self._engine) as sesion:
             fila = sesion.get(TestimonioDB, testimonio_id)
             return self._a_entidad(fila) if fila else None
@@ -207,6 +226,9 @@ class RepositorioTestimoniosPostgres(RepositorioTestimonios):
             return [self._a_entidad(fila) for fila in filas]
 
     def eliminar(self, testimonio_id: int) -> None:
+        testimonio_id = _como_int(testimonio_id)
+        if testimonio_id is None:
+            return
         with Session(self._engine) as sesion:
             fila = sesion.get(TestimonioDB, testimonio_id)
             if fila is not None:

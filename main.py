@@ -37,6 +37,7 @@ from adapters.out.repositorio_sesiones_memoria import RepositorioSesionesMemoria
 from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
     RepositorioClientesMemoria,
+    RepositorioContadoresMemoria,
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
     RepositorioServiciosMemoria,
@@ -87,6 +88,7 @@ def construir_sistema(ruta_config: str = "config/business.yaml") -> OrquestadorA
         from adapters.out.repositorios_postgres import (
             RepositorioCitasPostgres,
             RepositorioClientesPostgres,
+            RepositorioContadoresPostgres,
             RepositorioPedidosPostgres,
             crear_engine,
         )
@@ -94,10 +96,12 @@ def construir_sistema(ruta_config: str = "config/business.yaml") -> OrquestadorA
         repo_citas = RepositorioCitasPostgres(engine)
         repo_clientes = RepositorioClientesPostgres(engine)
         repo_pedidos = RepositorioPedidosPostgres(engine)
+        repo_contadores = RepositorioContadoresPostgres(engine)
     else:
         repo_citas = RepositorioCitasMemoria()
         repo_clientes = RepositorioClientesMemoria()
         repo_pedidos = RepositorioPedidosMemoria()
+        repo_contadores = RepositorioContadoresMemoria()
 
     conocimiento = RepositorioConocimientoChroma()
 
@@ -133,7 +137,7 @@ def construir_sistema(ruta_config: str = "config/business.yaml") -> OrquestadorA
     disponibilidad = ComprobarDisponibilidad(repo_servicios, repo_profesionales, repo_citas)
     crear_reserva = CrearReserva(
         repo_servicios, repo_profesionales, repo_citas, repo_clientes,
-        disponibilidad, calendario, notificador,
+        disponibilidad, repo_contadores, calendario, notificador,
     )
     cancelar_reserva = CancelarReserva(repo_citas, calendario, repo_clientes, notificador)
     registrar_pedido = RegistrarPedido(repo_pedidos, repo_servicios)

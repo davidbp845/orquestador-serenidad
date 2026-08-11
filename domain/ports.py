@@ -46,7 +46,7 @@ class RepositorioCitas(ABC):
     def guardar(self, cita: Cita) -> None: ...
 
     @abstractmethod
-    def obtener(self, cita_id: UUID) -> Cita | None: ...
+    def obtener(self, cita_id: int) -> Cita | None: ...
 
     @abstractmethod
     def citas_de_profesional_en_fecha(
@@ -65,7 +65,7 @@ class RepositorioCitas(ABC):
         return self.citas_en_rango(dia, dia)
 
     @abstractmethod
-    def cancelar(self, cita_id: UUID) -> None: ...
+    def cancelar(self, cita_id: int) -> None: ...
 
     @abstractmethod
     def borrar_todo(self) -> int:

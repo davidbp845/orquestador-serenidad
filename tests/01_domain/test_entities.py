@@ -45,12 +45,12 @@ def test_estado_cita_tiene_los_seis_valores_del_ciclo_de_vida():
     }
 
 
-def test_cita_nueva_genera_id_y_estado_pendiente():
+def test_cita_nueva_usa_el_id_recibido_y_estado_pendiente():
     inicio = datetime(2026, 8, 3, 9, 0)
     fin = datetime(2026, 8, 3, 10, 0)
-    cita = Cita.nueva("s1", "p1", "c1", inicio, fin)
+    cita = Cita.nueva(1, "s1", "p1", "c1", inicio, fin)
 
-    assert cita.id is not None
+    assert cita.id == 1
     assert cita.servicio_id == "s1"
     assert cita.profesional_id == "p1"
     assert cita.cliente_id == "c1"
@@ -59,12 +59,10 @@ def test_cita_nueva_genera_id_y_estado_pendiente():
     assert cita.estado == EstadoCita.PENDIENTE
 
 
-def test_dos_citas_nuevas_tienen_ids_distintos():
-    inicio = datetime(2026, 8, 3, 9, 0)
-    fin = datetime(2026, 8, 3, 10, 0)
-    cita1 = Cita.nueva("s1", "p1", "c1", inicio, fin)
-    cita2 = Cita.nueva("s1", "p1", "c1", inicio, fin)
-    assert cita1.id != cita2.id
+def test_cita_id_visible_formatea_anio_y_ceros_a_la_izquierda():
+    cita = Cita.nueva(42, "s1", "p1", "c1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+
+    assert cita.id_visible == "2026-000042"
 
 
 def test_slot_disponible():
