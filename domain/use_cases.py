@@ -36,6 +36,7 @@ from .ports import (
     RepositorioCitas,
     RepositorioClientes,
     RepositorioConocimiento,
+    RepositorioContadores,
     RepositorioPedidos,
     RepositorioProfesionales,
     RepositorioServicios,
@@ -406,12 +407,14 @@ def _validar_valoracion(valoracion: int) -> None:
 
 
 class CrearTestimonio:
-    def __init__(self, testimonios: RepositorioTestimonios):
+    def __init__(self, testimonios: RepositorioTestimonios, contadores: RepositorioContadores):
         self._testimonios = testimonios
+        self._contadores = contadores
 
     def ejecutar(self, nombre: str, descripcion: str, valoracion: int, titulo: str = "") -> Testimonio:
         _validar_valoracion(valoracion)
-        testimonio = Testimonio.nuevo(nombre, descripcion, valoracion, titulo)
+        nuevo_id = self._contadores.siguiente_valor("testimonio")
+        testimonio = Testimonio.nuevo(nuevo_id, nombre, descripcion, valoracion, titulo)
         self._testimonios.guardar(testimonio)
         return testimonio
 
@@ -421,7 +424,7 @@ class EditarTestimonio:
         self._testimonios = testimonios
 
     def ejecutar(
-        self, testimonio_id: UUID, nombre: str, descripcion: str, valoracion: int, titulo: str = "",
+        self, testimonio_id: int, nombre: str, descripcion: str, valoracion: int, titulo: str = "",
     ) -> Testimonio:
         testimonio = self._testimonios.obtener(testimonio_id)
         if testimonio is None:
@@ -440,7 +443,7 @@ class EliminarTestimonio:
     def __init__(self, testimonios: RepositorioTestimonios):
         self._testimonios = testimonios
 
-    def ejecutar(self, testimonio_id: UUID) -> None:
+    def ejecutar(self, testimonio_id: int) -> None:
         if self._testimonios.obtener(testimonio_id) is None:
             raise TestimonioNoExiste(testimonio_id)
         self._testimonios.eliminar(testimonio_id)

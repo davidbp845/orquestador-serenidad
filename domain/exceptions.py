@@ -48,7 +48,7 @@ class ClienteYaExiste(DominioError):
 
 
 class TestimonioNoExiste(DominioError):
-    def __init__(self, testimonio_id: UUID) -> None:
+    def __init__(self, testimonio_id: int) -> None:
         super().__init__(f"El testimonio '{testimonio_id}' no existe.")
         self.testimonio_id = testimonio_id
 

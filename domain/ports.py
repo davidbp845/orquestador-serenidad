@@ -127,7 +127,7 @@ class RepositorioPedidos(ABC):
 
 class RepositorioTestimonios(ABC):
     @abstractmethod
-    def obtener(self, testimonio_id: UUID) -> Testimonio | None: ...
+    def obtener(self, testimonio_id: int) -> Testimonio | None: ...
 
     @abstractmethod
     def guardar(self, testimonio: Testimonio) -> None: ...
@@ -136,7 +136,7 @@ class RepositorioTestimonios(ABC):
     def listar(self) -> list[Testimonio]: ...
 
     @abstractmethod
-    def eliminar(self, testimonio_id: UUID) -> None:
+    def eliminar(self, testimonio_id: int) -> None:
         """Borrado unitario, a diferencia de borrar_todo() (vaciado
         masivo, solo entorno local) — el panel permite eliminar un
         testimonio suelto."""

@@ -184,10 +184,7 @@ class RepositorioTestimoniosPostgres(RepositorioTestimonios):
     def __init__(self, engine):
         self._engine = engine
 
-    def obtener(self, testimonio_id) -> Testimonio | None:
-        testimonio_id = _como_uuid(testimonio_id)
-        if testimonio_id is None:
-            return None
+    def obtener(self, testimonio_id: int) -> Testimonio | None:
         with Session(self._engine) as sesion:
             fila = sesion.get(TestimonioDB, testimonio_id)
             return self._a_entidad(fila) if fila else None
@@ -209,10 +206,7 @@ class RepositorioTestimoniosPostgres(RepositorioTestimonios):
             filas = sesion.exec(select(TestimonioDB)).all()
             return [self._a_entidad(fila) for fila in filas]
 
-    def eliminar(self, testimonio_id) -> None:
-        testimonio_id = _como_uuid(testimonio_id)
-        if testimonio_id is None:
-            return
+    def eliminar(self, testimonio_id: int) -> None:
         with Session(self._engine) as sesion:
             fila = sesion.get(TestimonioDB, testimonio_id)
             if fila is not None:

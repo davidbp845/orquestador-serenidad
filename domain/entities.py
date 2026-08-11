@@ -119,8 +119,10 @@ class Pedido:
 class Testimonio:
     """Reseña/valoración del negocio, gestionada manualmente desde el
     panel interno (sin integración con ningún proveedor externo de
-    reseñas)."""
-    id: UUID
+    reseñas). id: int generado por RepositorioContadores
+    ('testimonio') — a diferencia de Cita/Pedido, no se genera aquí
+    con uuid4(), lo decide quien construye el caso de uso CrearTestimonio."""
+    id: int
     nombre: str
     descripcion: str
     valoracion: int
@@ -128,8 +130,8 @@ class Testimonio:
     creado_en: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @staticmethod
-    def nuevo(nombre: str, descripcion: str, valoracion: int, titulo: str = "") -> Testimonio:
+    def nuevo(id: int, nombre: str, descripcion: str, valoracion: int, titulo: str = "") -> Testimonio:
         return Testimonio(
-            id=uuid4(), nombre=nombre, descripcion=descripcion,
+            id=id, nombre=nombre, descripcion=descripcion,
             valoracion=valoracion, titulo=titulo,
         )

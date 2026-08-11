@@ -46,7 +46,7 @@ class PedidoDB(SQLModel, table=True):
 class TestimonioDB(SQLModel, table=True):
     __tablename__ = "testimonios"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    id: int = Field(primary_key=True)
     nombre: str
     titulo: str
     descripcion: str

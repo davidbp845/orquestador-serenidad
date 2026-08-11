@@ -234,7 +234,7 @@ if _clave_panel and not st.session_state.get("autenticado"):
 notificador = _construir_notificador()
 cambiar_estado_pedido = CambiarEstadoPedido(repo_pedidos)
 cambiar_estado_cita = CambiarEstadoCita(repo_citas, repo_clientes, notificador)
-crear_testimonio = CrearTestimonio(repo_testimonios)
+crear_testimonio = CrearTestimonio(repo_testimonios, repo_contadores)
 editar_testimonio = EditarTestimonio(repo_testimonios)
 eliminar_testimonio = EliminarTestimonio(repo_testimonios)
 crear_cliente = CrearCliente(repo_clientes)
