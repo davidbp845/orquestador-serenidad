@@ -376,7 +376,7 @@ elif opcion == "👤 Clientes":
                 st.error(str(exc))
 
     st.divider()
-    ver_duplicados = st.checkbox("Ver solo duplicados (mismo nombre y teléfono)")
+    ver_duplicados = st.checkbox("Ver solo duplicados (mismo nombre y teléfono)", key="ver_clientes_duplicados")
 
     if ver_duplicados:
         grupos = detectar_clientes_duplicados.ejecutar()
@@ -391,6 +391,7 @@ elif opcion == "👤 Clientes":
                 if st.button("Fusionar en el más antiguo", key=f"btn_fusionar_{grupo[0].id}"):
                     superviviente = fusionar_clientes.ejecutar([c.id for c in grupo])
                     st.success(f"Fusionados en `{superviviente.id}`.")
+                    st.session_state["ver_clientes_duplicados"] = False
                     st.rerun()
         clientes = []
     else:
