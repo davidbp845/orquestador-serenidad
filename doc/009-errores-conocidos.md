@@ -76,6 +76,41 @@ Si tocas algo en `adapters/` o `main.py`, no te sorprendas si `mypy .`
 (a diferencia del `mypy domain application` que corre en CI) saca errores
 preexistentes que no tienen que ver con tu cambio.
 
+## Panel: el botón "Acceder al Calendario" sigue exigiendo sesión de Google
+
+La sección Agenda del panel (`panel_empleados/streamlit_app.py`) tiene un
+botón `st.link_button("Acceder al Calendario", ...)` que abre
+`https://calendar.google.com/calendar/u/0/r?cid=...` — esa URL siempre
+exige que quien la abra tenga sesión iniciada en una cuenta de Google con
+acceso compartido al calendario del negocio, aunque el propio panel ya
+esté protegido por `PANEL_EMPLEADOS_PASSWORD`.
+
+**Por qué se deja así — [#63](https://github.com/davidbp845/orquestador-serenidad/issues/63)
+(cerrado sin implementar, por tiempo):** técnicamente es abordable sin
+credenciales nuevas — `SincronizadorCalendarioGoogle`
+(`adapters/out/calendario_google.py`) ya se autentica con una cuenta de
+servicio con scope de lectura+escritura sobre el calendario, solo que hoy
+únicamente implementa `crear_evento`/`cancelar_evento`, sin ningún método
+de listado. El issue deja documentado el plan completo para cuando se
+retome:
+
+1. Añadir un método de lectura al adaptador (ej. `listar_eventos(desde,
+   hasta)` vía `events().list(...)`).
+2. Decidir el puerto: ampliar `SincronizadorCalendario` (hoy documentado
+   explícitamente como escritura *best-effort* — mezclar lectura ahí
+   podría confundir esa semántica) o crear uno nuevo y separado (ej.
+   `LectorCalendario`).
+3. En el panel, sustituir o complementar el botón actual por una vista
+   embebida en Streamlit que llame a ese método — sin sesión de Google, y
+   sin salir del gate `PANEL_EMPLEADOS_PASSWORD` ya existente.
+
+Se valoró la alternativa sin código de hacer el calendario público en los
+ajustes de Google Calendar (genera una URL de embed/iCal sin login), pero
+`crear_evento` ya mete `description: f"Cliente: {cita.cliente_id}"` en
+cada evento — publicar el calendario completo expondría ese dato a
+cualquiera con el enlace, así que la vía API (control de acceso ya
+resuelto por el panel) es la opción correcta si se retoma.
+
 ## Aviso de Node.js 20 deprecado en cada run de CI
 
 ```
