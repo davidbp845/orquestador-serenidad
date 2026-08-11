@@ -232,8 +232,8 @@ export default function ChatWidget({ apiBaseUrl, ctaMensaje }: Props) {
         />
         <button
           type="submit"
-          disabled={enviando || !texto.trim()}
-          class="rounded-full bg-(--color-acento) px-(--spacing-fluid-s) py-(--spacing-fluid-3xs) text-sm font-medium text-white disabled:opacity-40"
+          aria-disabled={enviando || !texto.trim()}
+          class="rounded-full bg-(--color-acento) px-(--spacing-fluid-s) py-(--spacing-fluid-3xs) text-sm font-medium text-white aria-disabled:opacity-40"
         >
           Enviar
         </button>
