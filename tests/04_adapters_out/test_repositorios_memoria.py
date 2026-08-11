@@ -8,8 +8,19 @@ from adapters.out.repositorios_memoria import (
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
     RepositorioServiciosMemoria,
+    RepositorioTestimoniosMemoria,
 )
-from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, Profesional, Servicio
+from domain.entities import (
+    Cita,
+    Cliente,
+    EstadoCita,
+    EstadoPedido,
+    LineaPedido,
+    Pedido,
+    Profesional,
+    Servicio,
+    Testimonio,
+)
 
 
 def test_repositorio_servicios_obtener_y_listar():
@@ -188,6 +199,38 @@ def test_repositorio_pedidos_borrar_todo():
 
     assert repo.borrar_todo() == 2
     assert repo.listar_pendientes() == []
+
+
+def test_repositorio_testimonios_guardar_obtener_listar():
+    repo = RepositorioTestimoniosMemoria()
+    t1 = Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5)
+    t2 = Testimonio.nuevo("Ana", "Bien", "Correcto", 4)
+    repo.guardar(t1)
+    repo.guardar(t2)
+
+    assert repo.obtener(t1.id) is t1
+    assert repo.obtener("no_existe") is None
+    assert {t.id for t in repo.listar()} == {t1.id, t2.id}
+
+
+def test_repositorio_testimonios_eliminar():
+    repo = RepositorioTestimoniosMemoria()
+    t1 = Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5)
+    repo.guardar(t1)
+
+    repo.eliminar(t1.id)
+
+    assert repo.obtener(t1.id) is None
+    repo.eliminar(t1.id)  # repetirlo sobre uno ya borrado no lanza
+
+
+def test_repositorio_testimonios_borrar_todo():
+    repo = RepositorioTestimoniosMemoria()
+    repo.guardar(Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5))
+    repo.guardar(Testimonio.nuevo("Ana", "Bien", "Correcto", 4))
+
+    assert repo.borrar_todo() == 2
+    assert repo.listar() == []
 
 
 def test_repositorio_contadores_empieza_en_uno_e_incrementa():

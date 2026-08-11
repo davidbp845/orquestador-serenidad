@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import threading
 from datetime import date
+from uuid import UUID
 
-from domain.entities import Cita, Cliente, EstadoPedido, Pedido, Profesional, Servicio
+from domain.entities import Cita, Cliente, EstadoPedido, Pedido, Profesional, Servicio, Testimonio
 from domain.ports import (
     RepositorioCitas,
     RepositorioClientes,
@@ -17,6 +18,7 @@ from domain.ports import (
     RepositorioPedidos,
     RepositorioProfesionales,
     RepositorioServicios,
+    RepositorioTestimonios,
 )
 
 
@@ -87,6 +89,28 @@ class RepositorioClientesMemoria(RepositorioClientes):
 
     def listar(self) -> list[Cliente]:
         return list(self._data.values())
+
+    def borrar_todo(self) -> int:
+        n = len(self._data)
+        self._data.clear()
+        return n
+
+
+class RepositorioTestimoniosMemoria(RepositorioTestimonios):
+    def __init__(self):
+        self._data: dict[UUID, Testimonio] = {}
+
+    def obtener(self, testimonio_id: UUID) -> Testimonio | None:
+        return self._data.get(testimonio_id)
+
+    def guardar(self, testimonio: Testimonio) -> None:
+        self._data[testimonio.id] = testimonio
+
+    def listar(self) -> list[Testimonio]:
+        return list(self._data.values())
+
+    def eliminar(self, testimonio_id: UUID) -> None:
+        self._data.pop(testimonio_id, None)
 
     def borrar_todo(self) -> int:
         n = len(self._data)

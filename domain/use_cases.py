@@ -18,13 +18,16 @@ from .entities import (
     Pedido,
     Servicio,
     SlotDisponible,
+    Testimonio,
 )
 from .exceptions import (
     CitaNoExiste,
     PedidoNoExiste,
     ProfesionalNoDisponible,
     ServicioNoExiste,
+    TestimonioNoExiste,
     TransicionEstadoInvalida,
+    ValoracionInvalida,
 )
 from .ports import (
     NotificadorMensajes,
@@ -34,6 +37,7 @@ from .ports import (
     RepositorioPedidos,
     RepositorioProfesionales,
     RepositorioServicios,
+    RepositorioTestimonios,
     SincronizadorCalendario,
 )
 
@@ -392,3 +396,49 @@ class ConsultarConocimientoNegocio:
                 fuentes.append({"fuente": fuente, "categoria": r.get("categoria")})
 
         return {"fragmentos": fragmentos, "fuentes": fuentes}
+
+
+def _validar_valoracion(valoracion: int) -> None:
+    if not 1 <= valoracion <= 5:
+        raise ValoracionInvalida(valoracion)
+
+
+class CrearTestimonio:
+    def __init__(self, testimonios: RepositorioTestimonios):
+        self._testimonios = testimonios
+
+    def ejecutar(self, nombre: str, titulo: str, descripcion: str, valoracion: int) -> Testimonio:
+        _validar_valoracion(valoracion)
+        testimonio = Testimonio.nuevo(nombre, titulo, descripcion, valoracion)
+        self._testimonios.guardar(testimonio)
+        return testimonio
+
+
+class EditarTestimonio:
+    def __init__(self, testimonios: RepositorioTestimonios):
+        self._testimonios = testimonios
+
+    def ejecutar(
+        self, testimonio_id: UUID, nombre: str, titulo: str, descripcion: str, valoracion: int,
+    ) -> Testimonio:
+        testimonio = self._testimonios.obtener(testimonio_id)
+        if testimonio is None:
+            raise TestimonioNoExiste(testimonio_id)
+        _validar_valoracion(valoracion)
+
+        testimonio.nombre = nombre
+        testimonio.titulo = titulo
+        testimonio.descripcion = descripcion
+        testimonio.valoracion = valoracion
+        self._testimonios.guardar(testimonio)
+        return testimonio
+
+
+class EliminarTestimonio:
+    def __init__(self, testimonios: RepositorioTestimonios):
+        self._testimonios = testimonios
+
+    def ejecutar(self, testimonio_id: UUID) -> None:
+        if self._testimonios.obtener(testimonio_id) is None:
+            raise TestimonioNoExiste(testimonio_id)
+        self._testimonios.eliminar(testimonio_id)

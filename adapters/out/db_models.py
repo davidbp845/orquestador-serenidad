@@ -43,6 +43,17 @@ class PedidoDB(SQLModel, table=True):
     creado_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class TestimonioDB(SQLModel, table=True):
+    __tablename__ = "testimonios"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    nombre: str
+    titulo: str
+    descripcion: str
+    valoracion: int
+    creado_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 class ContadorDB(SQLModel, table=True):
     __tablename__ = "contadores"
 

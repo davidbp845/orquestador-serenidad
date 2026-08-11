@@ -14,8 +14,9 @@ from adapters.out.repositorios_postgres import (
     RepositorioClientesPostgres,
     RepositorioContadoresPostgres,
     RepositorioPedidosPostgres,
+    RepositorioTestimoniosPostgres,
 )
-from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido
+from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, Testimonio
 
 
 def _engine():
@@ -225,6 +226,49 @@ def test_pedidos_borrar_todo_incluye_las_lineas():
     assert repo.listar_pendientes() == []
     with Session(engine) as sesion:
         assert sesion.exec(select(LineaPedidoDB)).all() == []
+
+
+def test_testimonios_guardar_y_obtener():
+    repo = RepositorioTestimoniosPostgres(_engine())
+    testimonio = Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5)
+
+    repo.guardar(testimonio)
+    obtenido = repo.obtener(testimonio.id)
+
+    assert obtenido.nombre == "Juan"
+    assert obtenido.valoracion == 5
+    assert repo.obtener("00000000-0000-0000-0000-000000000000") is None
+
+
+def test_testimonios_listar():
+    repo = RepositorioTestimoniosPostgres(_engine())
+    t1 = Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5)
+    t2 = Testimonio.nuevo("Ana", "Bien", "Correcto", 4)
+    repo.guardar(t1)
+    repo.guardar(t2)
+
+    assert {t.id for t in repo.listar()} == {t1.id, t2.id}
+
+
+def test_testimonios_eliminar():
+    engine = _engine()
+    repo = RepositorioTestimoniosPostgres(engine)
+    testimonio = Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5)
+    repo.guardar(testimonio)
+
+    repo.eliminar(testimonio.id)
+
+    assert repo.obtener(testimonio.id) is None
+    repo.eliminar(testimonio.id)  # repetirlo sobre uno ya borrado no lanza
+
+
+def test_testimonios_borrar_todo():
+    repo = RepositorioTestimoniosPostgres(_engine())
+    repo.guardar(Testimonio.nuevo("Juan", "Genial", "Muy recomendable", 5))
+    repo.guardar(Testimonio.nuevo("Ana", "Bien", "Correcto", 4))
+
+    assert repo.borrar_todo() == 2
+    assert repo.listar() == []
 
 
 def test_contadores_empieza_en_uno_e_incrementa():

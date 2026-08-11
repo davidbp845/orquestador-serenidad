@@ -20,6 +20,7 @@ from .entities import (
     Pedido,
     Profesional,
     Servicio,
+    Testimonio,
 )
 
 # ---------- Puertos de salida: persistencia ----------
@@ -114,6 +115,30 @@ class RepositorioPedidos(ABC):
         """Ver RepositorioCitas.borrar_todo. Incluye también las líneas
         de pedido (pedido_lineas), que este repositorio gestiona de
         forma interna."""
+        ...
+
+
+class RepositorioTestimonios(ABC):
+    @abstractmethod
+    def obtener(self, testimonio_id: UUID) -> Testimonio | None: ...
+
+    @abstractmethod
+    def guardar(self, testimonio: Testimonio) -> None: ...
+
+    @abstractmethod
+    def listar(self) -> list[Testimonio]: ...
+
+    @abstractmethod
+    def eliminar(self, testimonio_id: UUID) -> None:
+        """Borrado unitario, a diferencia de borrar_todo() (vaciado
+        masivo, solo entorno local) — el panel permite eliminar un
+        testimonio suelto."""
+        ...
+
+    @abstractmethod
+    def borrar_todo(self) -> int:
+        """Ver RepositorioCitas.borrar_todo — misma herramienta de
+        panel, mismo alcance de "solo entorno local"."""
         ...
 
 

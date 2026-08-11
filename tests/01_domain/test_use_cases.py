@@ -5,13 +5,25 @@ from datetime import date, datetime, time
 
 import pytest
 
-from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, Profesional, Servicio
+from domain.entities import (
+    Cita,
+    Cliente,
+    EstadoCita,
+    EstadoPedido,
+    LineaPedido,
+    Pedido,
+    Profesional,
+    Servicio,
+    Testimonio,
+)
 from domain.exceptions import (
     CitaNoExiste,
     PedidoNoExiste,
     ProfesionalNoDisponible,
     ServicioNoExiste,
+    TestimonioNoExiste,
     TransicionEstadoInvalida,
+    ValoracionInvalida,
 )
 from domain.use_cases import (
     _DIAS_SEMANA_ES,
@@ -21,8 +33,21 @@ from domain.use_cases import (
     ComprobarDisponibilidad,
     ConsultarConocimientoNegocio,
     CrearReserva,
+    CrearTestimonio,
+    EditarTestimonio,
+    EliminarTestimonio,
     RegistrarPedido,
 )
+
+# pytest recolecta por defecto cualquier clase de nivel superior cuyo
+# nombre empiece por "Test" — Testimonio (entidad) y TestimonioNoExiste
+# (excepción) caen en ese patrón por casualidad de nombre, no porque
+# sean clases de test. __test__ = False es la forma estándar de decirle
+# a pytest que las ignore sin tocar domain/ (que no debe saber nada de
+# pytest) ni ampliar python_classes en pytest.ini (afectaría a todo el
+# resto de la suite).
+Testimonio.__test__ = False
+TestimonioNoExiste.__test__ = False
 
 
 class FakeSincronizadorCalendario:
@@ -128,6 +153,28 @@ class FakeRepoPedidos:
             p for p in self._data.values()
             if p.estado not in (EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO)
         ]
+
+
+class FakeRepoTestimonios:
+    def __init__(self, testimonios=None):
+        self._data = {t.id: t for t in (testimonios or [])}
+
+    def obtener(self, testimonio_id):
+        return self._data.get(testimonio_id)
+
+    def guardar(self, testimonio):
+        self._data[testimonio.id] = testimonio
+
+    def listar(self):
+        return list(self._data.values())
+
+    def eliminar(self, testimonio_id):
+        self._data.pop(testimonio_id, None)
+
+    def borrar_todo(self):
+        n = len(self._data)
+        self._data.clear()
+        return n
 
 
 class FakeRepoConocimiento:
@@ -737,3 +784,64 @@ class TestConsultarConocimientoNegocio:
 
         assert resultado["fragmentos"] == ["fragmento interno"]
         assert resultado["fuentes"] == []
+
+
+class TestCrearTestimonio:
+    def test_crea_y_guarda_testimonio_valido(self):
+        repo = FakeRepoTestimonios()
+        caso = CrearTestimonio(repo)
+
+        testimonio = caso.ejecutar("Juan", "Muy buena experiencia", "Repetiré seguro", 5)
+
+        assert testimonio.nombre == "Juan"
+        assert testimonio.valoracion == 5
+        assert repo.obtener(testimonio.id) is testimonio
+
+    @pytest.mark.parametrize("valoracion", [0, 6, -1])
+    def test_lanza_si_valoracion_fuera_de_rango(self, valoracion):
+        caso = CrearTestimonio(FakeRepoTestimonios())
+        with pytest.raises(ValoracionInvalida):
+            caso.ejecutar("Juan", "Título", "Descripción", valoracion)
+
+
+class TestEditarTestimonio:
+    def test_lanza_si_testimonio_no_existe(self):
+        caso = EditarTestimonio(FakeRepoTestimonios())
+        with pytest.raises(TestimonioNoExiste):
+            caso.ejecutar("no_existe", "Juan", "Título", "Desc", 4)
+
+    def test_edita_campos_y_guarda(self):
+        testimonio = Testimonio.nuevo("Juan", "Título viejo", "Desc vieja", 3)
+        repo = FakeRepoTestimonios([testimonio])
+        caso = EditarTestimonio(repo)
+
+        actualizado = caso.ejecutar(testimonio.id, "Juana", "Título nuevo", "Desc nueva", 5)
+
+        assert actualizado.nombre == "Juana"
+        assert actualizado.titulo == "Título nuevo"
+        assert actualizado.valoracion == 5
+        assert repo.obtener(testimonio.id).nombre == "Juana"
+
+    def test_lanza_si_nueva_valoracion_fuera_de_rango(self):
+        testimonio = Testimonio.nuevo("Juan", "Título", "Desc", 3)
+        repo = FakeRepoTestimonios([testimonio])
+        caso = EditarTestimonio(repo)
+
+        with pytest.raises(ValoracionInvalida):
+            caso.ejecutar(testimonio.id, "Juan", "Título", "Desc", 7)
+
+
+class TestEliminarTestimonio:
+    def test_lanza_si_testimonio_no_existe(self):
+        caso = EliminarTestimonio(FakeRepoTestimonios())
+        with pytest.raises(TestimonioNoExiste):
+            caso.ejecutar("no_existe")
+
+    def test_elimina_testimonio_existente(self):
+        testimonio = Testimonio.nuevo("Juan", "Título", "Desc", 4)
+        repo = FakeRepoTestimonios([testimonio])
+        caso = EliminarTestimonio(repo)
+
+        caso.ejecutar(testimonio.id)
+
+        assert repo.obtener(testimonio.id) is None

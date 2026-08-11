@@ -40,16 +40,20 @@ from adapters.out.repositorios_memoria import (
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
     RepositorioServiciosMemoria,
+    RepositorioTestimoniosMemoria,
 )
 from adapters.out.vector_store import RepositorioConocimientoChroma
 from config.loader import cargar_config, construir_profesionales, construir_servicios
 from domain.entities import EstadoPedido
-from domain.exceptions import TransicionEstadoInvalida
+from domain.exceptions import TransicionEstadoInvalida, ValoracionInvalida
 from domain.use_cases import (
     _DIAS_SEMANA_ES,
     _TRANSICIONES_CITA_VALIDAS,
     CambiarEstadoCita,
     CambiarEstadoPedido,
+    CrearTestimonio,
+    EditarTestimonio,
+    EliminarTestimonio,
 )
 
 load_dotenv()
@@ -72,18 +76,24 @@ def _construir_repos():
             RepositorioCitasPostgres,
             RepositorioClientesPostgres,
             RepositorioPedidosPostgres,
+            RepositorioTestimoniosPostgres,
             crear_engine,
         )
         engine = crear_engine(database_url)
         repo_citas = RepositorioCitasPostgres(engine)
         repo_clientes = RepositorioClientesPostgres(engine)
         repo_pedidos = RepositorioPedidosPostgres(engine)
+        repo_testimonios = RepositorioTestimoniosPostgres(engine)
     else:
         repo_citas = RepositorioCitasMemoria()
         repo_clientes = RepositorioClientesMemoria()
         repo_pedidos = RepositorioPedidosMemoria()
+        repo_testimonios = RepositorioTestimoniosMemoria()
 
-    return config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos
+    return (
+        config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos,
+        repo_testimonios,
+    )
 
 
 @st.cache_resource
@@ -210,10 +220,16 @@ if _clave_panel and not st.session_state.get("autenticado"):
             st.error("Contraseña incorrecta")
     st.stop()
 
-config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos = _construir_repos()
+(
+    config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos,
+    repo_testimonios,
+) = _construir_repos()
 notificador = _construir_notificador()
 cambiar_estado_pedido = CambiarEstadoPedido(repo_pedidos)
 cambiar_estado_cita = CambiarEstadoCita(repo_citas, repo_clientes, notificador)
+crear_testimonio = CrearTestimonio(repo_testimonios)
+editar_testimonio = EditarTestimonio(repo_testimonios)
+eliminar_testimonio = EliminarTestimonio(repo_testimonios)
 
 # ---------- Cabecera ----------
 _hoy = date.today()
@@ -224,7 +240,10 @@ st.caption(f"{_DIAS_SEMANA_ES[_hoy.weekday()].capitalize()}, {_hoy:%d/%m/%Y}")
 
 # ---------- Menú (sidebar: colapsado automáticamente en móvil) ----------
 with st.sidebar:
-    opcion = st.radio("Menú", ["📅 Agenda", "📦 Pedidos", "👤 Clientes", "🚦 Rate limiting", "🛠️ Herramientas"])
+    opcion = st.radio(
+        "Menú",
+        ["📅 Agenda", "📦 Pedidos", "👤 Clientes", "⭐ Testimonios", "🚦 Rate limiting", "🛠️ Herramientas"],
+    )
 
 # ---------- Agenda ----------
 if opcion == "📅 Agenda":
@@ -334,6 +353,78 @@ elif opcion == "👤 Clientes":
                 st.caption(cliente.notas)
             st.caption("📱 Telegram vinculado" if cliente.telegram_chat_id else "📱 Sin Telegram vinculado")
 
+# ---------- Testimonios ----------
+elif opcion == "⭐ Testimonios":
+    st.subheader("Nuevo testimonio")
+    # st.form: mismo motivo que el gate de contraseña — sin form, el
+    # slider/text_input pueden no haberse sincronizado todavía cuando
+    # se pulsa el botón, y clear_on_submit vacía el formulario tras
+    # crear en vez de dejar el testimonio anterior a medio rellenar.
+    with st.form("form_nuevo_testimonio", clear_on_submit=True):
+        nombre = st.text_input("Nombre")
+        titulo = st.text_input("Título")
+        descripcion = st.text_area("Descripción")
+        valoracion = st.slider("Valoración", 1, 5, 5, format="%d ⭐")
+        crear = st.form_submit_button("Crear testimonio")
+    if crear:
+        if not nombre.strip() or not titulo.strip() or not descripcion.strip():
+            st.error("Rellena nombre, título y descripción.")
+        else:
+            try:
+                crear_testimonio.ejecutar(nombre, titulo, descripcion, valoracion)
+                st.success("Testimonio creado.")
+                st.rerun()
+            except ValoracionInvalida as exc:
+                st.error(str(exc))
+
+    st.divider()
+    testimonios = sorted(repo_testimonios.listar(), key=lambda t: t.creado_en, reverse=True)
+
+    if not testimonios:
+        st.info("No hay testimonios todavía.")
+
+    for testimonio in testimonios:
+        clave_editando = f"editando_testimonio_{testimonio.id}"
+        with st.container(border=True):
+            if not st.session_state.get(clave_editando):
+                st.markdown(f"**{testimonio.nombre}** — {'⭐' * testimonio.valoracion}")
+                st.write(testimonio.titulo)
+                st.caption(testimonio.descripcion)
+                col_editar, col_eliminar = st.columns(2)
+                if col_editar.button("Editar", key=f"btn_editar_{testimonio.id}", use_container_width=True):
+                    st.session_state[clave_editando] = True
+                    st.rerun()
+                if col_eliminar.button("Eliminar", key=f"btn_eliminar_{testimonio.id}", use_container_width=True):
+                    eliminar_testimonio.ejecutar(testimonio.id)
+                    st.rerun()
+            else:
+                with st.form(f"form_editar_testimonio_{testimonio.id}"):
+                    nombre_editado = st.text_input("Nombre", value=testimonio.nombre)
+                    titulo_editado = st.text_input("Título", value=testimonio.titulo)
+                    descripcion_editada = st.text_area("Descripción", value=testimonio.descripcion)
+                    valoracion_editada = st.slider(
+                        "Valoración", 1, 5, testimonio.valoracion, format="%d ⭐",
+                    )
+                    col_guardar, col_cancelar = st.columns(2)
+                    guardar = col_guardar.form_submit_button("Guardar", use_container_width=True)
+                    cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
+                if guardar:
+                    if not nombre_editado.strip() or not titulo_editado.strip() or not descripcion_editada.strip():
+                        st.error("Rellena nombre, título y descripción.")
+                    else:
+                        try:
+                            editar_testimonio.ejecutar(
+                                testimonio.id, nombre_editado, titulo_editado,
+                                descripcion_editada, valoracion_editada,
+                            )
+                            st.session_state[clave_editando] = False
+                            st.rerun()
+                        except ValoracionInvalida as exc:
+                            st.error(str(exc))
+                if cancelar:
+                    st.session_state[clave_editando] = False
+                    st.rerun()
+
 # ---------- Rate limiting ----------
 elif opcion == "🚦 Rate limiting":
     limitador_consumo = _construir_limitador_consumo()
@@ -390,8 +481,8 @@ elif opcion == "🛠️ Herramientas":
     else:
         st.warning(
             "Borra TODAS las citas, clientes, pedidos y líneas de pedido, y "
-            "cancela los eventos de Google Calendar asociados (si hay uno "
-            "configurado). Acción irreversible."
+            "testimonios, y cancela los eventos de Google Calendar asociados "
+            "(si hay uno configurado). Acción irreversible."
         )
         confirmar = st.checkbox("Sí, quiero borrar todos los datos")
         if st.button("Borrar todos los datos", type="primary", disabled=not confirmar):
@@ -412,10 +503,11 @@ elif opcion == "🛠️ Herramientas":
                 n_citas = repo_citas.borrar_todo()
                 n_clientes = repo_clientes.borrar_todo()
                 n_pedidos = repo_pedidos.borrar_todo()
+                n_testimonios = repo_testimonios.borrar_todo()
 
             st.success(
                 f"Borrado: {n_citas} citas, {n_clientes} clientes, "
-                f"{n_pedidos} pedidos (con sus líneas)."
+                f"{n_pedidos} pedidos (con sus líneas), {n_testimonios} testimonios."
             )
             if calendario is not None:
                 st.caption(

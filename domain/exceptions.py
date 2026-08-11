@@ -35,6 +35,20 @@ class CitaNoExiste(DominioError):
         self.cita_id = cita_id
 
 
+class TestimonioNoExiste(DominioError):
+    def __init__(self, testimonio_id: UUID) -> None:
+        super().__init__(f"El testimonio '{testimonio_id}' no existe.")
+        self.testimonio_id = testimonio_id
+
+
+class ValoracionInvalida(DominioError):
+    def __init__(self, valoracion: int) -> None:
+        super().__init__(
+            f"La valoración debe estar entre 1 y 5 (recibido: {valoracion})."
+        )
+        self.valoracion = valoracion
+
+
 class TransicionEstadoInvalida(DominioError):
     """Genérica para cualquier entidad con máquina de estados (Pedido,
     Cita...) — el mensaje no asume cuál, solo reporta los estados."""

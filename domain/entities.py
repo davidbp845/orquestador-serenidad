@@ -113,3 +113,23 @@ class Pedido:
     @staticmethod
     def nuevo(cliente_id: str, lineas: list[LineaPedido]) -> Pedido:
         return Pedido(id=uuid4(), cliente_id=cliente_id, lineas=lineas)
+
+
+@dataclass
+class Testimonio:
+    """Reseña/valoración del negocio, gestionada manualmente desde el
+    panel interno (sin integración con ningún proveedor externo de
+    reseñas)."""
+    id: UUID
+    nombre: str
+    titulo: str
+    descripcion: str
+    valoracion: int
+    creado_en: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    @staticmethod
+    def nuevo(nombre: str, titulo: str, descripcion: str, valoracion: int) -> Testimonio:
+        return Testimonio(
+            id=uuid4(), nombre=nombre, titulo=titulo,
+            descripcion=descripcion, valoracion=valoracion,
+        )

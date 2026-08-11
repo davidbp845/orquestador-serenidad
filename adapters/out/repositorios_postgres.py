@@ -17,10 +17,16 @@ from uuid import UUID
 from sqlalchemy import delete, text
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido
-from domain.ports import RepositorioCitas, RepositorioClientes, RepositorioContadores, RepositorioPedidos
+from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, Testimonio
+from domain.ports import (
+    RepositorioCitas,
+    RepositorioClientes,
+    RepositorioContadores,
+    RepositorioPedidos,
+    RepositorioTestimonios,
+)
 
-from .db_models import CitaDB, ClienteDB, ContadorDB, LineaPedidoDB, PedidoDB
+from .db_models import CitaDB, ClienteDB, ContadorDB, LineaPedidoDB, PedidoDB, TestimonioDB
 
 
 def _como_uuid(valor) -> UUID | None:
@@ -164,6 +170,60 @@ class RepositorioClientesPostgres(RepositorioClientes):
             id=fila.id, nombre=fila.nombre, telefono=fila.telefono,
             email=fila.email, notas=fila.notas,
             telegram_chat_id=fila.telegram_chat_id,
+        )
+
+
+class RepositorioTestimoniosPostgres(RepositorioTestimonios):
+    def __init__(self, engine):
+        self._engine = engine
+
+    def obtener(self, testimonio_id) -> Testimonio | None:
+        testimonio_id = _como_uuid(testimonio_id)
+        if testimonio_id is None:
+            return None
+        with Session(self._engine) as sesion:
+            fila = sesion.get(TestimonioDB, testimonio_id)
+            return self._a_entidad(fila) if fila else None
+
+    def guardar(self, testimonio: Testimonio) -> None:
+        with Session(self._engine) as sesion:
+            sesion.merge(TestimonioDB(
+                id=testimonio.id,
+                nombre=testimonio.nombre,
+                titulo=testimonio.titulo,
+                descripcion=testimonio.descripcion,
+                valoracion=testimonio.valoracion,
+                creado_en=testimonio.creado_en,
+            ))
+            sesion.commit()
+
+    def listar(self) -> list[Testimonio]:
+        with Session(self._engine) as sesion:
+            filas = sesion.exec(select(TestimonioDB)).all()
+            return [self._a_entidad(fila) for fila in filas]
+
+    def eliminar(self, testimonio_id) -> None:
+        testimonio_id = _como_uuid(testimonio_id)
+        if testimonio_id is None:
+            return
+        with Session(self._engine) as sesion:
+            fila = sesion.get(TestimonioDB, testimonio_id)
+            if fila is not None:
+                sesion.delete(fila)
+                sesion.commit()
+
+    def borrar_todo(self) -> int:
+        with Session(self._engine) as sesion:
+            n = sesion.execute(delete(TestimonioDB)).rowcount
+            sesion.commit()
+            return n
+
+    @staticmethod
+    def _a_entidad(fila: TestimonioDB) -> Testimonio:
+        return Testimonio(
+            id=fila.id, nombre=fila.nombre, titulo=fila.titulo,
+            descripcion=fila.descripcion, valoracion=fila.valoracion,
+            creado_en=fila.creado_en,
         )
 
 
