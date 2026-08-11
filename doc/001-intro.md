@@ -73,6 +73,10 @@ edita el código, no para leerse de un tirón):
     qué tecnologías se usan y cuáles del stack habitual del mercado (LangChain,
     LangGraph, CrewAI, LlamaIndex, Next.js, Pinecone...) se han evitado
     deliberadamente, y por qué.
+13. **[013-plan-pruebas-manual.md](013-plan-pruebas-manual.md)** — plan de
+    pruebas manual end-to-end (tono comercial, streaming, panel interno,
+    multi-proveedor de LLM) para lo que `pytest` no cubre por sí solo, a
+    ejecutar antes de dar por buena una release.
 
 Para poner el sistema en marcha en local, el punto de partida sigue siendo el
 [`README.md`](../README.md) de la raíz del repo.
