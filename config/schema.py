@@ -13,6 +13,13 @@ from pydantic import BaseModel, Field, field_validator
 _PATRON_HORA = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
+def _validar_horario_dict(valor: dict[str, list[str]], campo: str) -> dict[str, list[str]]:
+    for dia, rango in valor.items():
+        if len(rango) != 2 or not all(_PATRON_HORA.match(h) for h in rango):
+            raise ValueError(f'{campo}.{dia} debe ser ["HH:MM", "HH:MM"], se recibió {rango!r}')
+    return valor
+
+
 class ServicioConfig(BaseModel):
     id: str
     nombre: str
@@ -29,12 +36,17 @@ class ProfesionalConfig(BaseModel):
     @field_validator("horario_semanal")
     @classmethod
     def _validar_horario(cls, valor: dict[str, list[str]]) -> dict[str, list[str]]:
-        for dia, rango in valor.items():
-            if len(rango) != 2 or not all(_PATRON_HORA.match(h) for h in rango):
-                raise ValueError(
-                    f'horario_semanal.{dia} debe ser ["HH:MM", "HH:MM"], se recibió {rango!r}'
-                )
-        return valor
+        return _validar_horario_dict(valor, "horario_semanal")
+
+
+class DireccionConfig(BaseModel):
+    """Para el JSON-LD de SEO (schema.org PostalAddress) en
+    frontend/src/components/DatosEstructurados.astro — antes esto
+    estaba transcrito a mano en ese componente (#75)."""
+    calle: str
+    localidad: str
+    codigo_postal: str
+    pais: str = "ES"
 
 
 class CanalesConfig(BaseModel):
@@ -73,3 +85,17 @@ class ConfigNegocio(BaseModel):
     canales: CanalesConfig = Field(default_factory=CanalesConfig)
     servicios: list[ServicioConfig] = Field(default_factory=list)
     profesionales: list[ProfesionalConfig] = Field(default_factory=list)
+    # Para el JSON-LD de SEO (DatosEstructurados.astro, #75) — todo
+    # opcional: un negocio puede no querer exponer estos datos.
+    direccion: DireccionConfig | None = None
+    telefono: str | None = None
+    email: str | None = None
+    # Horario de apertura del negocio (para SEO), distinto de
+    # horario_semanal por profesional: mismas claves de día
+    # (lunes..domingo) y mismo formato ["HH:MM", "HH:MM"].
+    horario_apertura: dict[str, list[str]] = Field(default_factory=dict)
+
+    @field_validator("horario_apertura")
+    @classmethod
+    def _validar_horario_apertura(cls, valor: dict[str, list[str]]) -> dict[str, list[str]]:
+        return _validar_horario_dict(valor, "horario_apertura")

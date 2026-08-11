@@ -163,6 +163,20 @@ instrucciones_comerciales: |
 
 vault_obsidian: "./vault_negocio"
 
+direccion:
+  calle: "Calle de la Serenidad, 12"
+  localidad: "Madrid"
+  codigo_postal: "28010"
+  pais: "ES"
+telefono: "+34910000000"
+email: "hola@masajesserenity.example"
+horario_apertura:
+  lunes: ["09:00", "18:00"]
+  martes: ["09:00", "18:00"]
+  miercoles: ["09:00", "18:00"]
+  jueves: ["09:00", "18:00"]
+  viernes: ["09:00", "15:00"]
+
 canales:
   web: true
   telegram: true

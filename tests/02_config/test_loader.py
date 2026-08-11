@@ -43,6 +43,49 @@ def test_cargar_config_aplica_valores_por_defecto_a_los_campos_opcionales(tmp_pa
     assert config["canales"] == {"web": False, "telegram": False, "whatsapp": False}
     assert config["servicios"] == []
     assert config["profesionales"] == []
+    assert config["direccion"] is None
+    assert config["telefono"] is None
+    assert config["email"] is None
+    assert config["horario_apertura"] == {}
+
+
+def test_cargar_config_direccion_telefono_email_horario_apertura(tmp_path):
+    ruta = tmp_path / "business.yaml"
+    ruta.write_text(dedent("""
+        nombre: "Negocio de prueba"
+        direccion:
+          calle: "Calle Falsa, 123"
+          localidad: "Springfield"
+          codigo_postal: "00000"
+        telefono: "+34600000000"
+        email: "hola@negocio.example"
+        horario_apertura:
+          lunes: ["09:00", "18:00"]
+    """))
+
+    config = cargar_config(str(ruta))
+
+    assert config["direccion"] == {
+        "calle": "Calle Falsa, 123",
+        "localidad": "Springfield",
+        "codigo_postal": "00000",
+        "pais": "ES",
+    }
+    assert config["telefono"] == "+34600000000"
+    assert config["email"] == "hola@negocio.example"
+    assert config["horario_apertura"] == {"lunes": ["09:00", "18:00"]}
+
+
+def test_cargar_config_horario_apertura_mal_formado_lanza_error_claro(tmp_path):
+    ruta = tmp_path / "business.yaml"
+    ruta.write_text(dedent("""
+        nombre: "Negocio de prueba"
+        horario_apertura:
+          lunes: ["9am", "18:00"]
+    """))
+
+    with pytest.raises(ValueError, match="horario_apertura.lunes"):
+        cargar_config(str(ruta))
 
 
 def test_cargar_config_sin_nombre_lanza_error_claro(tmp_path):
@@ -140,3 +183,6 @@ def test_carga_config_negocio_real():
     assert "masaje_relajante_60" in ids_servicios
     assert "masaje_descontracturante_45" in ids_servicios
     assert any(p.id == "ana" for p in profesionales)
+    assert config["direccion"]["localidad"] == "Madrid"
+    assert config["telefono"]
+    assert config["horario_apertura"]["lunes"] == ["09:00", "18:00"]

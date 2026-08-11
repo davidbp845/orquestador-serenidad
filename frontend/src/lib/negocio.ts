@@ -31,6 +31,18 @@ interface CtaCitaConfig {
   mensaje: string;
 }
 
+interface DireccionNegocio {
+  calle: string;
+  localidad: string;
+  codigo_postal: string;
+  pais: string;
+}
+
+// Mismas claves de día que horario_semanal (config/schema.py):
+// lunes..domingo, cada una ["HH:MM", "HH:MM"]. Usado solo para el
+// JSON-LD de SEO (DatosEstructurados.astro) — ver issue #75.
+type HorarioApertura = Record<string, [string, string]>;
+
 interface ConfigNegocio {
   nombre: string;
   tono?: string;
@@ -42,6 +54,10 @@ interface ConfigNegocio {
   imagen_fondo_url?: string;
   cta_cita?: CtaCitaConfig;
   vault_obsidian?: string;
+  direccion?: DireccionNegocio;
+  telefono?: string;
+  email?: string;
+  horario_apertura?: HorarioApertura;
 }
 
 const rutaConfig = resolve(process.cwd(), process.env.CONFIG_PATH ?? '../config/business.yaml');

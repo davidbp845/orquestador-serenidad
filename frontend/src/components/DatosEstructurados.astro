@@ -11,38 +11,56 @@ const priceRange =
       ? `${precioMin}€`
       : `${precioMin}€–${precioMax}€`;
 
-// Dirección, teléfono, email y horario no están en config/business.yaml
-// (solo como texto libre en el vault: vault_negocio/ubicacion-contacto.md
-// y vault_negocio/horarios.md) — se transcriben aquí a mano. Si esas notas
-// cambian, hay que actualizar estos valores también.
+// Día del business.yaml (horario_apertura, mismas claves que
+// horario_semanal por profesional) -> nombre de día que espera
+// schema.org/OpeningHoursSpecification.
+const DIA_A_INGLES: Record<string, string> = {
+  lunes: 'Monday',
+  martes: 'Tuesday',
+  miercoles: 'Wednesday',
+  jueves: 'Thursday',
+  viernes: 'Friday',
+  sabado: 'Saturday',
+  domingo: 'Sunday',
+};
+const ORDEN_DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+
+// Dirección, teléfono, email y horario de apertura vienen de
+// business.yaml (direccion/telefono/email/horario_apertura) — antes
+// estaban transcritos a mano aquí con los datos de Masajes Serenidad,
+// así que cualquier otro negocio publicaba SEO estructurado falso
+// (#75). Todos opcionales: un negocio puede no querer exponerlos.
+const openingHoursSpecification = ORDEN_DIAS.filter((dia) => negocio.horario_apertura?.[dia]).map(
+  (dia) => {
+    const [opens, closes] = negocio.horario_apertura![dia];
+    return {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: [DIA_A_INGLES[dia]],
+      opens,
+      closes,
+    };
+  },
+);
+
 const datosEstructurados = {
   '@context': 'https://schema.org',
   '@type': 'HealthAndBeautyBusiness',
   name: negocio.nombre,
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: 'Calle de la Serenidad, 12',
-    addressLocality: 'Madrid',
-    postalCode: '28010',
-    addressCountry: 'ES',
-  },
-  telephone: '+34910000000',
-  email: 'hola@masajesserenity.example',
+  ...(negocio.direccion
+    ? {
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: negocio.direccion.calle,
+          addressLocality: negocio.direccion.localidad,
+          postalCode: negocio.direccion.codigo_postal,
+          addressCountry: negocio.direccion.pais,
+        },
+      }
+    : {}),
+  ...(negocio.telefono ? { telephone: negocio.telefono } : {}),
+  ...(negocio.email ? { email: negocio.email } : {}),
   ...(priceRange ? { priceRange } : {}),
-  openingHoursSpecification: [
-    {
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday'],
-      opens: '09:00',
-      closes: '18:00',
-    },
-    {
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: ['Friday'],
-      opens: '09:00',
-      closes: '15:00',
-    },
-  ],
+  ...(openingHoursSpecification.length ? { openingHoursSpecification } : {}),
 };
 ---
 
