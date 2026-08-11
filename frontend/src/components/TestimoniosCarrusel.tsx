@@ -62,8 +62,17 @@ function usarChatExpandido(): boolean {
   return expandido;
 }
 
+// Antes de tener el listado, no había forma de distinguir "aún
+// cargando" de "cargó y no hay testimonios" (ambos eran un array
+// vacío) — el widget se quedaba invisible hasta que el fetch
+// resolviera, sin placeholder ni reintento, así que un fallo puntual
+// (backend arrancando, CORS lento) lo dejaba vacío para siempre hasta
+// un refresh manual.
+const REINTENTO_MS = 1500;
+
 export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) {
   const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
+  const [cargando, setCargando] = useState(true);
   const [pagina, setPagina] = useState(0);
   const [enPausa, setEnPausa] = useState(false);
   const anchura = usarAnchuraBreakpoint();
@@ -71,14 +80,27 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
 
   useEffect(() => {
     let cancelado = false;
-    fetch(`${apiBaseUrl}/testimonios`)
-      .then((respuesta) => (respuesta.ok ? respuesta.json() : []))
-      .then((datos) => {
-        if (!cancelado) setTestimonios(datos);
-      })
-      .catch(() => {
-        if (!cancelado) setTestimonios([]);
-      });
+    const cargar = (esReintento: boolean) => {
+      fetch(`${apiBaseUrl}/testimonios`)
+        .then((respuesta) => (respuesta.ok ? respuesta.json() : []))
+        .then((datos) => {
+          if (cancelado) return;
+          setTestimonios(datos);
+          setCargando(false);
+        })
+        .catch(() => {
+          if (cancelado) return;
+          if (!esReintento) {
+            setTimeout(() => {
+              if (!cancelado) cargar(true);
+            }, REINTENTO_MS);
+            return;
+          }
+          setTestimonios([]);
+          setCargando(false);
+        });
+    };
+    cargar(false);
     return () => {
       cancelado = true;
     };
@@ -122,6 +144,32 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
   // eligiendo otra a mano.
   const pausar = useCallback(() => setEnPausa(true), []);
   const reanudar = useCallback(() => setEnPausa(false), []);
+
+  if (cargando) {
+    // Mismo contenedor y misma rejilla (visibles/dirección) que el
+    // widget ya cargado, para no dar salto de layout cuando lleguen
+    // los datos — solo cambian las tarjetas por bloques en animate-pulse.
+    return (
+      <div class="rounded-2xl border border-(--color-borde) bg-(--color-superficie) p-(--spacing-fluid-s)">
+        <div
+          class="grid gap-(--spacing-fluid-s)"
+          style={{
+            gridTemplateColumns: direccion === 'horizontal' ? `repeat(${visibles}, minmax(0, 1fr))` : undefined,
+          }}
+        >
+          {Array.from({ length: visibles }, (_, i) => (
+            <div key={i} class="flex h-44 animate-pulse flex-col gap-(--spacing-fluid-2xs)">
+              <div class="h-4 w-20 rounded bg-(--color-borde)" />
+              <div class="h-4 w-2/3 rounded bg-(--color-borde)" />
+              <div class="h-3 w-full rounded bg-(--color-borde)" />
+              <div class="h-3 w-5/6 rounded bg-(--color-borde)" />
+              <div class="mt-auto h-3 w-1/3 rounded bg-(--color-borde)" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (testimonios.length === 0) return null;
 
