@@ -350,7 +350,6 @@ elif opcion == "📦 Pedidos":
 # ---------- Clientes ----------
 elif opcion == "👤 Clientes":
     st.subheader("Nuevo cliente")
-    st.caption("El ID se genera automáticamente al crear — no se escribe a mano.")
     # st.form: mismo motivo que en Testimonios — evita envíos con campos
     # a medio sincronizar, y clear_on_submit vacía el formulario tras
     # crear en vez de dejar el cliente anterior a medio rellenar.
