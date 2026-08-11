@@ -41,6 +41,7 @@ interface ConfigNegocio {
   hero_subtitulo: string;
   imagen_fondo_url?: string;
   cta_cita?: CtaCitaConfig;
+  vault_obsidian?: string;
 }
 
 const rutaConfig = resolve(process.cwd(), process.env.CONFIG_PATH ?? '../config/business.yaml');
