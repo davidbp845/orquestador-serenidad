@@ -15,7 +15,7 @@ const testimoniosIntervaloMs = Number(import.meta.env.PUBLIC_TESTIMONIOS_INTERVA
       {negocio.hero_subtitulo}
     </p>
   </div>
-  <div class="mt-(--spacing-fluid-s) grid grid-cols-1 gap-(--spacing-fluid-s) lg:grid-cols-[70%_30%]">
+  <div class="mt-(--spacing-fluid-s) grid grid-cols-1 gap-(--spacing-fluid-s) lg:grid-cols-[7fr_3fr]">
     <ChatWidget apiBaseUrl={apiBaseUrl} ctaMensaje={ctaMensaje} client:load />
     <TestimoniosCarrusel apiBaseUrl={apiBaseUrl} intervaloMs={testimoniosIntervaloMs} client:load />
   </div>
