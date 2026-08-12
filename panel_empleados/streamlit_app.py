@@ -452,27 +452,38 @@ elif opcion == "👤 Clientes":
 
 # ---------- Testimonios ----------
 elif opcion == "⭐ Testimonios":
-    st.subheader("Nuevo testimonio")
-    # st.form: mismo motivo que el gate de contraseña — sin form, el
-    # slider/text_input pueden no haberse sincronizado todavía cuando
-    # se pulsa el botón, y clear_on_submit vacía el formulario tras
-    # crear en vez de dejar el testimonio anterior a medio rellenar.
-    with st.form("form_nuevo_testimonio", clear_on_submit=True):
-        nombre = st.text_input("Nombre")
-        titulo = st.text_input("Título (opcional)")
-        descripcion = st.text_area("Descripción")
-        valoracion = st.slider("Valoración", 1, 5, 5, format="%d ⭐")
-        crear = st.form_submit_button("Crear testimonio")
-    if crear:
-        if not nombre.strip() or not descripcion.strip():
-            st.error("Rellena nombre y descripción.")
-        else:
-            try:
-                crear_testimonio.ejecutar(nombre, descripcion, valoracion, titulo=titulo)
-                st.success("Testimonio creado.")
-                st.rerun()
-            except ValoracionInvalida as exc:
-                st.error(str(exc))
+    if not st.session_state.get("mostrar_form_nuevo_testimonio"):
+        if st.button("+ Nuevo testimonio"):
+            st.session_state["mostrar_form_nuevo_testimonio"] = True
+            st.rerun()
+    else:
+        st.subheader("Nuevo testimonio")
+        # st.form: mismo motivo que el gate de contraseña — sin form, el
+        # slider/text_input pueden no haberse sincronizado todavía cuando
+        # se pulsa el botón, y clear_on_submit vacía el formulario tras
+        # crear en vez de dejar el testimonio anterior a medio rellenar.
+        with st.form("form_nuevo_testimonio", clear_on_submit=True):
+            nombre = st.text_input("Nombre")
+            titulo = st.text_input("Título (opcional)")
+            descripcion = st.text_area("Descripción")
+            valoracion = st.slider("Valoración", 1, 5, 5, format="%d ⭐")
+            col_crear, col_cancelar = st.columns(2)
+            crear = col_crear.form_submit_button("Crear testimonio", use_container_width=True)
+            cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
+        if crear:
+            if not nombre.strip() or not descripcion.strip():
+                st.error("Rellena nombre y descripción.")
+            else:
+                try:
+                    crear_testimonio.ejecutar(nombre, descripcion, valoracion, titulo=titulo)
+                    st.success("Testimonio creado.")
+                    st.session_state["mostrar_form_nuevo_testimonio"] = False
+                    st.rerun()
+                except ValoracionInvalida as exc:
+                    st.error(str(exc))
+        if cancelar:
+            st.session_state["mostrar_form_nuevo_testimonio"] = False
+            st.rerun()
 
     st.divider()
     testimonios = sorted(repo_testimonios.listar(), key=lambda t: t.creado_en, reverse=True)
