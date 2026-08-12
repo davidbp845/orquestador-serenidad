@@ -40,13 +40,14 @@
       "Bash(curl -s *)",
       "Bash(node -e *)",
       "Bash(gh project item-list *)",
+      "Bash(gh project item-add *)",
+      "Bash(gh project item-edit *)",
       "Bash(gh project field-list *)",
       "Bash(gh run watch *)",
       "Bash(gh project list *)",
       "Bash(gh label list *)",
       "Bash(gh secret list *)",
       "Bash(gh issue close *)",
-      "Bash(gh project item-edit *)",
       "Edit(**)"
     ],
     "ask": [
