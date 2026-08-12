@@ -560,7 +560,7 @@ elif opcion == "📢 Promobar":
     st.subheader("Promobar de la cabecera")
     st.caption(
         "Aviso u oferta que se muestra en la cabecera del sitio público. Admite HTML "
-        "básico (<a href>, <strong>, <em>, <b>, <i>, <br>, <span>) — cualquier otra "
+        "básico (<a href>, <strong>, <em>, <b>, <i>, <s>, <br>, <span>) — cualquier otra "
         "etiqueta o atributo se elimina al mostrarse, no hace falta escribir HTML "
         "seguro a mano."
     )

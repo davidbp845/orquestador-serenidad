@@ -321,6 +321,24 @@ def test_promobar_devuelve_el_contenido_saneado_si_esta_activo(modulo):
     assert cuerpo["contenido_html"] == 'Oferta con <a href="/x">enlace</a>'
 
 
+def test_promobar_conserva_tachado_para_precio_anterior(modulo):
+    from domain.entities import PromoBar
+
+    orquestador = FakeOrquestador()
+    repositorio_sesiones = RepositorioSesionesMemoria()
+    app = modulo.crear_router(
+        orquestador, repositorio_sesiones,
+        obtener_promo_bar=FakeObtenerPromoBar(
+            PromoBar(activo=True, contenido_html="<s>58€</s> <strong>48€</strong>")
+        ),
+    )
+    client = TestClient(app)
+
+    respuesta = client.get("/promobar")
+
+    assert respuesta.json()["contenido_html"] == "<s>58€</s> <strong>48€</strong>"
+
+
 def test_promobar_elimina_etiquetas_peligrosas(modulo):
     from domain.entities import PromoBar
 

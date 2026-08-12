@@ -32,7 +32,7 @@ from .rate_limit import (
 # una etiqueta no permitida desaparezca en vez de mostrarse como texto
 # literal roto; sin atributo "target" ni "rel" en <a>, deliberadamente,
 # para no tener que razonar sobre reverse tabnabbing.
-_PROMOBAR_TAGS_PERMITIDAS = ["a", "strong", "em", "b", "i", "br", "span"]
+_PROMOBAR_TAGS_PERMITIDAS = ["a", "strong", "em", "b", "i", "s", "br", "span"]
 _PROMOBAR_ATRIBUTOS_PERMITIDOS = {"a": ["href"]}
 _PROMOBAR_PROTOCOLOS_PERMITIDOS = ["http", "https"]
 
