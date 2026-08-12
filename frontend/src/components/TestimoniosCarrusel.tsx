@@ -68,7 +68,17 @@ function usarChatExpandido(): boolean {
 // resolviera, sin placeholder ni reintento, así que un fallo puntual
 // (backend arrancando, CORS lento) lo dejaba vacío para siempre hasta
 // un refresh manual.
-const REINTENTO_MS = 1500;
+//
+// El backend carga Chroma + el modelo de embeddings antes de
+// escuchar en el puerto, lo que puede tardar bastante más que un
+// único reintento corto — así que un fallo de red (backend aún no
+// arriba) se reintenta indefinidamente con backoff creciente hasta
+// que responda, en vez de rendirse tras un intento y dejar el widget
+// vacío hasta un refresh manual. Un fallo de "sí responde pero no
+// más allá" (respuesta.ok=false) no se reintenta: es un estado
+// legítimo, no indica que el backend siga arrancando.
+const REINTENTO_MS_INICIAL = 1500;
+const REINTENTO_MS_MAXIMO = 15000;
 
 export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) {
   const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
@@ -80,7 +90,9 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
 
   useEffect(() => {
     let cancelado = false;
-    const cargar = (esReintento: boolean) => {
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+
+    const cargar = (esperaSiFallaMs: number) => {
       fetch(`${apiBaseUrl}/testimonios`)
         .then((respuesta) => (respuesta.ok ? respuesta.json() : []))
         .then((datos) => {
@@ -90,19 +102,15 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
         })
         .catch(() => {
           if (cancelado) return;
-          if (!esReintento) {
-            setTimeout(() => {
-              if (!cancelado) cargar(true);
-            }, REINTENTO_MS);
-            return;
-          }
-          setTestimonios([]);
-          setCargando(false);
+          temporizador = setTimeout(() => {
+            if (!cancelado) cargar(Math.min(esperaSiFallaMs * 2, REINTENTO_MS_MAXIMO));
+          }, esperaSiFallaMs);
         });
     };
-    cargar(false);
+    cargar(REINTENTO_MS_INICIAL);
     return () => {
       cancelado = true;
+      if (temporizador) clearTimeout(temporizador);
     };
   }, [apiBaseUrl]);
 
