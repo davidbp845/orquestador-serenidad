@@ -198,6 +198,60 @@ def test_guardar_nota_cliente_sin_cliente_id_ni_sesion_devuelve_error():
     assert resultado == {"error": "Falta cliente_id y no hay sesión donde diferir la nota."}
 
 
+def test_guardar_nota_cliente_sin_cliente_id_reutiliza_el_de_una_reserva_anterior():
+    # Caso real reportado en #77: la reserva se hizo antes en la misma
+    # conversación y luego el cliente comenta algo (una alergia) — si el
+    # LLM omite cliente_id en guardar_nota_cliente (siguiendo al pie de
+    # la letra la instrucción de omitirlo "si todavía no lo conoce"), no
+    # hay ningún crear_reserva posterior que vuelque un buffer: sin este
+    # fallback la nota se quedaría colgada en notas_pendientes para
+    # siempre.
+    nota = NotaCliente.nueva(1, "cliente1", "Alérgica al aceite de almendras dulces")
+    caso = Mock()
+    caso.ejecutar.return_value = nota
+    ejecutor = EjecutorHerramientas({"anadir_nota_cliente": caso})
+    sesion = SesionConversacion(canal="web", usuario_id="u1", cliente_id_conocido="cliente1")
+
+    resultado = ejecutor.ejecutar(
+        "guardar_nota_cliente", {"texto": "Alérgica al aceite de almendras dulces"}, sesion=sesion,
+    )
+
+    caso.ejecutar.assert_called_once_with(cliente_id="cliente1", texto="Alérgica al aceite de almendras dulces")
+    assert sesion.notas_pendientes == []
+    assert resultado == {"nota_id": nota.id, "cliente_id": nota.cliente_id}
+
+
+def test_guardar_nota_cliente_cliente_id_explicito_gana_al_conocido_de_la_sesion():
+    nota = NotaCliente.nueva(1, "cliente2", "texto")
+    caso = Mock()
+    caso.ejecutar.return_value = nota
+    ejecutor = EjecutorHerramientas({"anadir_nota_cliente": caso})
+    sesion = SesionConversacion(canal="web", usuario_id="u1", cliente_id_conocido="cliente1")
+
+    ejecutor.ejecutar("guardar_nota_cliente", {"texto": "texto", "cliente_id": "cliente2"}, sesion=sesion)
+
+    caso.ejecutar.assert_called_once_with(cliente_id="cliente2", texto="texto")
+
+
+def test_crear_reserva_deja_el_cliente_id_conocido_en_la_sesion():
+    cita = Cita.nueva(1, "masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    caso_reserva = Mock()
+    caso_reserva.ejecutar.return_value = cita
+    ejecutor = EjecutorHerramientas({"crear_reserva": caso_reserva})
+    sesion = SesionConversacion(canal="web", usuario_id="u1")
+
+    ejecutor.ejecutar(
+        "crear_reserva",
+        {
+            "servicio_id": "masaje", "profesional_id": "ana", "nombre": "Juan",
+            "telefono": "600111222", "inicio": "2026-08-03T09:00:00",
+        },
+        sesion=sesion,
+    )
+
+    assert sesion.cliente_id_conocido == "cliente1"
+
+
 def test_crear_reserva_vuelca_notas_pendientes_de_la_sesion():
     cita = Cita.nueva(1, "masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
     caso_reserva = Mock()

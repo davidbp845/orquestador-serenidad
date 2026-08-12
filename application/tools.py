@@ -167,15 +167,19 @@ class EjecutorHerramientas:
                 # el mismo cliente en la misma conversación — ya no lo
                 # decide el LLM libremente, lo resuelve CrearReserva
                 # (por teléfono si existe, o lo genera el contador).
-                # Vuelca cualquier nota de guardar_nota_cliente que se
-                # hubiera quedado pendiente en la sesión por no conocer
-                # todavía el cliente_id (#77) — ya se conoce.
-                if sesion is not None and sesion.notas_pendientes:
-                    for texto_pendiente in sesion.notas_pendientes:
-                        self._casos["anadir_nota_cliente"].ejecutar(
-                            cliente_id=cita.cliente_id, texto=texto_pendiente,
-                        )
-                    sesion.notas_pendientes.clear()
+                if sesion is not None:
+                    # Recordado para guardar_nota_cliente (#77) — ver
+                    # SesionConversacion.cliente_id_conocido.
+                    sesion.cliente_id_conocido = cita.cliente_id
+                    # Vuelca cualquier nota que se hubiera quedado
+                    # pendiente en la sesión por no conocer todavía el
+                    # cliente_id — ya se conoce.
+                    if sesion.notas_pendientes:
+                        for texto_pendiente in sesion.notas_pendientes:
+                            self._casos["anadir_nota_cliente"].ejecutar(
+                                cliente_id=cita.cliente_id, texto=texto_pendiente,
+                            )
+                        sesion.notas_pendientes.clear()
                 return {
                     "cita_id": cita.id_visible,
                     "cliente_id": cita.cliente_id,
@@ -199,7 +203,15 @@ class EjecutorHerramientas:
 
             if nombre_tool == "guardar_nota_cliente":
                 texto = entrada["texto"]
-                cliente_id = entrada.get("cliente_id")
+                # Si el LLM no pasa cliente_id (lo olvida, o sigue al pie
+                # de la letra la instrucción de omitirlo cuando "todavía
+                # no lo conoce"), se resuelve solo desde el último que
+                # dejó crear_reserva en esta sesión — no depender solo de
+                # que el modelo lo reutilice explícitamente (#77: pasó
+                # justo esto cuando la nota llegó después de reservar).
+                cliente_id = entrada.get("cliente_id") or (
+                    sesion.cliente_id_conocido if sesion is not None else None
+                )
                 if cliente_id:
                     nota = self._casos["anadir_nota_cliente"].ejecutar(
                         cliente_id=cliente_id, texto=texto

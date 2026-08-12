@@ -36,6 +36,17 @@ class SesionConversacion:
     # infraestructura nueva, mismo criterio que ya aplica hoy a las
     # sesiones sin Redis.
     notas_pendientes: list[str] = field(default_factory=list)
+    # Último cliente_id resuelto por crear_reserva en esta conversación
+    # (#77). No depender solo de que el LLM reutilice el cliente_id que
+    # recibió como resultado de crear_reserva — si la nota llega
+    # *después* de la reserva en la misma conversación (orden habitual:
+    # reservas primero, comentarios sueltos después) y el modelo omite
+    # cliente_id en guardar_nota_cliente por seguir la instrucción del
+    # prompt sobre "cliente_id todavía no conocido" al pie de la letra,
+    # EjecutorHerramientas.ejecutar lo resuelve solo desde aquí en vez
+    # de dejar la nota colgada en notas_pendientes para siempre (no hay
+    # ningún crear_reserva posterior que la vuelque).
+    cliente_id_conocido: str | None = None
 
 
 class OrquestadorAgente:
