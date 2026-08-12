@@ -495,10 +495,12 @@ elif opcion == "⭐ Testimonios":
         clave_editando = f"editando_testimonio_{testimonio.id}"
         with st.container(border=True):
             if not st.session_state.get(clave_editando):
-                st.markdown(f"**{testimonio.nombre}** — {'⭐' * testimonio.valoracion}")
-                if testimonio.titulo:
-                    st.write(testimonio.titulo)
+                st.markdown("⭐" * testimonio.valoracion)
                 st.caption(testimonio.descripcion)
+                firma = f"— {testimonio.nombre}"
+                if testimonio.titulo:
+                    firma += f" · {testimonio.titulo}"
+                st.markdown(f"**{firma}**")
                 col_editar, col_eliminar = st.columns(2)
                 if col_editar.button("Editar", key=f"btn_editar_{testimonio.id}", use_container_width=True):
                     st.session_state[clave_editando] = True
