@@ -61,5 +61,19 @@
       "Edit(**/.env)",
       "Edit(.claude/**)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // empty' | grep -Eq '^[[:space:]]*cd[[:space:]]+\"?\\$\\(git rev-parse[[:space:]]+--show-toplevel\\)\"?' && printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Redundante: el cwd ya es la raiz del repo y persiste entre llamadas Bash. Ejecuta el comando directamente, sin el prefijo cd \\\"$(git rev-parse --show-toplevel)\\\".\"}}' || true",
+            "statusMessage": "Comprobando prefijo cd redundante..."
+          }
+        ]
+      }
+    ]
   }
 }
