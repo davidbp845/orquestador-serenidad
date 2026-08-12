@@ -22,6 +22,29 @@ const testimoniosIntervaloMs = Number(import.meta.env.PUBLIC_TESTIMONIOS_INTERVA
           promobar (issue #78) hace con /promobar (Cabecera.astro). */}
       <span id="valoracion-agregada" hidden class="text-(--color-texto)"></span>
     </p>
+    {/* Enlaces secundarios para quien no quiere usar el chat (issue #80):
+        peso visual menor que el CTA principal (texto, no botón). */}
+    <p class="mt-(--spacing-fluid-2xs) flex items-center justify-center gap-(--spacing-fluid-s) text-sm">
+      <a
+        href="/contenido/servicios/"
+        class="text-(--color-acento) underline-offset-4 hover:underline"
+      >
+        Ver precios
+      </a>
+      {negocio.telefono && (
+        // Oculto por defecto: el script de más abajo solo lo revela si
+        // estamos dentro de horario_apertura del día actual, calculado
+        // con la hora local del visitante (Hero.astro es estático).
+        <a
+          id="enlace-llamar"
+          href={`tel:${negocio.telefono}`}
+          hidden
+          class="text-(--color-acento) underline-offset-4 hover:underline"
+        >
+          Llamar
+        </a>
+      )}
+    </p>
   </div>
   <div class="mt-(--spacing-fluid-s) grid grid-cols-1 gap-(--spacing-fluid-s) lg:grid-cols-[7fr_3fr]">
     <ChatWidget apiBaseUrl={apiBaseUrl} ctaMensaje={ctaMensaje} client:load />
@@ -56,4 +79,26 @@ const testimoniosIntervaloMs = Number(import.meta.env.PUBLIC_TESTIMONIOS_INTERVA
       // Backend inalcanzable: la valoración simplemente no aparece esta
       // carga, sin reintento — mismo criterio que el promobar.
     });
+</script>
+
+<script define:vars={{ horarioApertura: negocio.horario_apertura ?? {} }}>
+  // Enlace "Llamar" (issue #80): solo visible dentro del horario_apertura
+  // del día actual, según la hora local del visitante — Hero.astro es
+  // estático (build), así que "ahora" no existe hasta el navegador.
+  // Mismo orden lunes..domingo que usa DatosEstructurados.astro, pero
+  // indexado como Date.getDay() (0 = domingo).
+  const ORDEN_DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+  const enlaceLlamar = document.getElementById('enlace-llamar');
+  const rango = enlaceLlamar ? horarioApertura[ORDEN_DIAS[new Date().getDay()]] : undefined;
+
+  if (enlaceLlamar && rango) {
+    const [apertura, cierre] = rango;
+    const [horaApertura, minApertura] = apertura.split(':').map(Number);
+    const [horaCierre, minCierre] = cierre.split(':').map(Number);
+    const ahora = new Date();
+    const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes();
+    if (minutosAhora >= horaApertura * 60 + minApertura && minutosAhora < horaCierre * 60 + minCierre) {
+      enlaceLlamar.hidden = false;
+    }
+  }
 </script>
