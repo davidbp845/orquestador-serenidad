@@ -23,8 +23,15 @@ function esperar(ms: number): Promise<void> {
 // muestran como sugerencias clicables a partir de sm: en móvil el
 // hueco es demasiado justo y priorizamos que el campo de texto quede
 // siempre visible sin hacer scroll.
+//
+// Las dos primeras son las únicas visibles sin expandir (ver
+// primeraFilaSugerencias más abajo) — por eso la segunda es de
+// intención de reserva directa, no solo informativa: la fila
+// comprimida no debería ser solo preguntas, también un empujón hacia
+// reservar en el primer clic (análisis de conversión, issue #79).
 const SUGERENCIAS = [
   '¿Cuánto cuesta el masaje relajante de 60 min?',
+  'Quiero reservar un masaje descontracturante',
   '¿Tenéis hueco mañana por la tarde?',
   '¿Cuál es vuestro horario de apertura?',
   '¿Dónde estáis ubicados?',
@@ -32,7 +39,6 @@ const SUGERENCIAS = [
   '¿Puedo cancelar mi cita sin coste?',
   '¿Es seguro el masaje si estoy embarazada?',
   '¿Quién es la profesional que me atenderá?',
-  'Quiero reservar un masaje descontracturante',
 ];
 
 export default function ChatWidget({ apiBaseUrl, ctaMensaje }: Props) {

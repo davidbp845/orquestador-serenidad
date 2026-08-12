@@ -97,7 +97,7 @@ class ConfigNegocio(BaseModel):
     # campo, la cabecera usa logo_url en todos los tamaños.
     logo_compacto_url: str | None = None
     hero_titulo: str | None = None
-    hero_subtitulo: str = "Escríbenos y te ayudamos al momento."
+    hero_subtitulo: str = "Reserva en menos de 2 minutos, sin llamadas ni esperas."
     imagen_fondo_url: str | None = None
     tema: TemaConfig = Field(default_factory=TemaConfig)
     cta_cita: CtaCitaConfig = Field(default_factory=CtaCitaConfig)
