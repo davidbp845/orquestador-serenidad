@@ -2,6 +2,7 @@
 import LayoutBase from '../layouts/LayoutBase.astro';
 import Hero from '../components/Hero.astro';
 import GridContenido from '../components/ContenidoPublico/GridContenido.astro';
+import Ubicacion from '../components/Ubicacion.astro';
 import DatosEstructurados from '../components/DatosEstructurados.astro';
 import { negocio } from '../lib/negocio';
 
@@ -12,4 +13,5 @@ const descripcion = `${negocio.nombre}, Madrid: masaje relajante y descontractur
   <DatosEstructurados slot="head" />
   <Hero />
   <GridContenido />
+  <Ubicacion />
 </LayoutBase>

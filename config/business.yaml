@@ -168,6 +168,7 @@ direccion:
   localidad: "Madrid"
   codigo_postal: "28010"
   pais: "ES"
+instrucciones_llegada: "Metro Bilbao (líneas 1 y 4), salida Calle Fuencarral. Parking público a 200m (Parking Trafalgar)."
 telefono: "+34910000000"
 email: "hola@masajesserenity.example"
 horario_apertura:

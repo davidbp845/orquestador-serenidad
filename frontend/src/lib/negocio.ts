@@ -73,6 +73,8 @@ interface ConfigNegocio {
   cta_cita?: CtaCitaConfig;
   vault_obsidian?: string;
   direccion?: DireccionNegocio;
+  mapa_url?: string;
+  instrucciones_llegada?: string;
   telefono?: string;
   email?: string;
   horario_apertura?: HorarioApertura;

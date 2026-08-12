@@ -1,0 +1,48 @@
+---
+import { negocio } from '../lib/negocio';
+
+// Embed de Google Maps sin API key ni facturación (issue #83) — mismo
+// mecanismo que usa "Compartir → Insertar un mapa" de Google Maps.
+// `mapa_url` (opcional, config/schema.py) permite pegar directamente
+// ese `src` cuando la dirección en texto no geocodifica con precisión
+// suficiente; sin él, se construye automáticamente a partir de
+// `direccion`. Sin ninguna de las dos, el widget no se muestra.
+const direccionTexto = negocio.direccion
+  ? `${negocio.direccion.calle}, ${negocio.direccion.codigo_postal} ${negocio.direccion.localidad}, ${negocio.direccion.pais}`
+  : undefined;
+
+const src =
+  negocio.mapa_url ??
+  (direccionTexto ? `https://www.google.com/maps?q=${encodeURIComponent(direccionTexto)}&output=embed` : undefined);
+---
+
+{src && (
+  <section
+    id="ubicacion"
+    class="mx-auto max-w-3xl px-(--spacing-fluid-s) py-(--spacing-fluid-l) md:max-w-none md:px-(--spacing-fluid-m)"
+  >
+    <h2 class="text-xl font-semibold text-(--color-texto)">Cómo llegar</h2>
+    <div class="mt-(--spacing-fluid-s) grid grid-cols-1 gap-(--spacing-fluid-s) md:grid-cols-2 md:items-start">
+      <div
+        class:list={[
+          'aspect-video w-full overflow-hidden rounded-2xl border border-(--color-borde)',
+          { 'md:col-span-2': !direccionTexto && !negocio.instrucciones_llegada },
+        ]}
+      >
+        <iframe
+          src={src}
+          title={`Mapa de ubicación de ${negocio.nombre}`}
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          class="h-full w-full"
+        />
+      </div>
+      {(direccionTexto || negocio.instrucciones_llegada) && (
+        <div class="text-(--color-texto-suave)">
+          {direccionTexto && <p>{direccionTexto}</p>}
+          {negocio.instrucciones_llegada && <p class="mt-(--spacing-fluid-3xs)">{negocio.instrucciones_llegada}</p>}
+        </div>
+      )}
+    </div>
+  </section>
+)}

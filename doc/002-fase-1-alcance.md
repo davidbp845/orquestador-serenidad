@@ -399,6 +399,41 @@ mano con `fetch` + `ReadableStream` (no `EventSource`, porque este no soporta
 para resaltar la tarjeta de contenido correspondiente — el chat y el
 contenido público están enlazados en la misma página.
 
+**La home como página de conversión, no solo de contenido.** Un bloque de
+issues más reciente (#78 a #83) trata la home no solo como escaparate del
+contenido del vault, sino como una página de conversión: el objetivo pasó de
+"que el negocio tenga presencia web" a "que quien aterrice ahí decida
+reservar sin fricción", con cuatro piezas independientes:
+
+- **#78 — Promobar en la cabecera**: aviso/oferta editable desde el panel
+  (entidad `PromoBar`, fila única, `activo` + `contenido_html` saneado con
+  `bleach` antes de servirse por `GET /promobar`) — visible en `Cabecera.astro`,
+  entre logo y CTA en desktop, como segunda fila propia en móvil (con cierre
+  que dura la sesión, vía `sessionStorage`).
+- **#79 — Valoración media agregada**: bajo el subtítulo del Hero, calculada
+  en cliente a partir de `GET /testimonios` (mismo endpoint que ya usaba
+  `TestimoniosCarrusel.tsx`, sin backend nuevo) — nace oculta y se revela al
+  llegar el fetch, mismo patrón que el promobar. El precio de entrada que
+  planteaba el issue originalmente quedó descartado: `hero_subtitulo` ya es
+  texto libre en `business.yaml`, así que si el negocio quiere precio ahí lo
+  escribe directamente, sin necesidad de calcularlo aparte.
+- **#80 — Enlaces "Ver precios" / "Llamar"**: alternativa de menor peso
+  visual al CTA principal, bajo el subtítulo del Hero, para quien no quiere
+  usar el chat. "Llamar" es un enlace `tel:` que solo aparece si
+  `negocio.telefono` está definido y, comprobado en cliente con la hora
+  local del visitante, estamos dentro del `horario_apertura` del día
+  actual — queda pendiente (fuera de este issue) la comprobación de si hay
+  una cita en curso ahora mismo, que necesitaría un endpoint nuevo.
+- **#83 — Widget de ubicación (Google Maps)**: iframe del embed público de
+  Google Maps (`https://www.google.com/maps?q=...&output=embed`, sin API key
+  ni facturación — deliberadamente no la Maps API "oficial", que exigiría un
+  proyecto de Google Cloud con facturación activada), construido
+  automáticamente a partir de `direccion` o, si la dirección en texto no
+  geocodifica con precisión suficiente, sobreescribible con `mapa_url`.
+  Sección propia (`Ubicacion.astro`) bajo `GridContenido`, con el mapa y la
+  dirección/instrucciones de llegada (`instrucciones_llegada`) en columnas
+  lado a lado a partir de tablet.
+
 ## 9. Panel interno para el negocio
 
 **Qué resuelve:** que alguien del equipo (no el dueño necesariamente) pueda

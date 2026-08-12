@@ -107,6 +107,16 @@ class ConfigNegocio(BaseModel):
     # Para el JSON-LD de SEO (DatosEstructurados.astro, #75) — todo
     # opcional: un negocio puede no querer exponer estos datos.
     direccion: DireccionConfig | None = None
+    # Override del mapa embebido en frontend/src/components/Ubicacion.astro
+    # (#83): pegar ahí el `src` que genera "Compartir → Insertar un mapa"
+    # de Google Maps. Opcional — sin él, si hay `direccion`, el frontend
+    # construye el embed automáticamente a partir de esos campos.
+    mapa_url: str | None = None
+    # Texto libre corto (metro, parking, referencias) mostrado junto al
+    # mapa en frontend/src/components/Ubicacion.astro (#83) — distinto
+    # de la dirección estructurada de `direccion`, que es solo para el
+    # JSON-LD. Opcional: sin él, solo se muestra la dirección.
+    instrucciones_llegada: str | None = None
     telefono: str | None = None
     email: str | None = None
     # Horario de apertura del negocio (para SEO), distinto de
