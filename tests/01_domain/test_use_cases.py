@@ -11,6 +11,7 @@ from domain.entities import (
     EstadoCita,
     EstadoPedido,
     LineaPedido,
+    NotaCliente,
     Pedido,
     Profesional,
     PromoBar,
@@ -32,6 +33,7 @@ from domain.exceptions import (
 from domain.use_cases import (
     _DIAS_SEMANA_ES,
     ActivarPromoBar,
+    AñadirNotaCliente,
     CambiarEstadoCita,
     CambiarEstadoPedido,
     CancelarReserva,
@@ -49,6 +51,7 @@ from domain.use_cases import (
     EliminarPromoBar,
     EliminarTestimonio,
     FusionarClientes,
+    ListarNotasCliente,
     ListarPromoBars,
     ListarTestimoniosRecientes,
     ObtenerPromoBar,
@@ -196,6 +199,30 @@ class FakeRepoPedidos:
             if pedido.cliente_id == id_antiguo:
                 pedido.cliente_id = id_nuevo
                 n += 1
+        return n
+
+
+class FakeRepoNotasCliente:
+    def __init__(self, notas=None):
+        self._data = {n.id: n for n in (notas or [])}
+
+    def crear(self, nota):
+        self._data[nota.id] = nota
+
+    def listar_de_cliente(self, cliente_id):
+        return [n for n in self._data.values() if n.cliente_id == cliente_id]
+
+    def reasignar_cliente(self, id_antiguo, id_nuevo):
+        n = 0
+        for nota in self._data.values():
+            if nota.cliente_id == id_antiguo:
+                nota.cliente_id = id_nuevo
+                n += 1
+        return n
+
+    def borrar_todo(self):
+        n = len(self._data)
+        self._data.clear()
         return n
 
 
@@ -1148,7 +1175,7 @@ class TestEditarCliente:
     def test_lanza_si_cliente_no_existe(self):
         caso = EditarCliente(FakeRepoClientes())
         with pytest.raises(ClienteNoExiste):
-            caso.ejecutar("no_existe", "Juan", None, None, "")
+            caso.ejecutar("no_existe", "Juan", None, None)
 
     def test_edita_campos_pero_no_el_id(self):
         cliente = Cliente(id="c1", nombre="Juan", telefono="600111222")
@@ -1156,13 +1183,12 @@ class TestEditarCliente:
         repo.guardar(cliente)
         caso = EditarCliente(repo)
 
-        actualizado = caso.ejecutar("c1", "Juana", "600999888", "juana@example.com", "vip")
+        actualizado = caso.ejecutar("c1", "Juana", "600999888", "juana@example.com")
 
         assert actualizado.id == "c1"
         assert actualizado.nombre == "Juana"
         assert actualizado.telefono == "600999888"
         assert actualizado.email == "juana@example.com"
-        assert actualizado.notas == "vip"
 
     def test_no_toca_telegram_chat_id(self):
         cliente = Cliente(id="c1", nombre="Juan", telegram_chat_id="tg-123")
@@ -1170,7 +1196,7 @@ class TestEditarCliente:
         repo.guardar(cliente)
         caso = EditarCliente(repo)
 
-        actualizado = caso.ejecutar("c1", "Juana", None, None, "")
+        actualizado = caso.ejecutar("c1", "Juana", None, None)
 
         assert actualizado.telegram_chat_id == "tg-123"
 
@@ -1272,3 +1298,71 @@ class TestFusionarClientes:
 
         assert repo_citas.obtener(cita.id).cliente_id == "1"
         assert repo_pedidos.obtener(pedido.id).cliente_id == "1"
+
+    def test_reasigna_notas_al_superviviente_si_se_pasa_el_repo(self):
+        repo_clientes = FakeRepoClientes()
+        repo_clientes.guardar(Cliente(id="1", nombre="Juan", telefono="600111222"))
+        repo_clientes.guardar(Cliente(id="2", nombre="Juan", telefono="600111222"))
+        nota = NotaCliente.nueva(1, "2", "Prefiere sesiones por la mañana")
+        repo_notas = FakeRepoNotasCliente([nota])
+        caso = FusionarClientes(repo_clientes, FakeRepoCitas(), FakeRepoPedidos(), repo_notas)
+
+        caso.ejecutar(["1", "2"])
+
+        assert repo_notas.listar_de_cliente("1") == [nota]
+        assert nota.cliente_id == "1"
+
+    def test_sin_repo_de_notas_no_lanza(self):
+        # notas es opcional (compatibilidad con quien construya
+        # FusionarClientes sin pasarlo) — simplemente no reasigna nada.
+        repo_clientes = FakeRepoClientes()
+        repo_clientes.guardar(Cliente(id="1", nombre="Juan", telefono="600111222"))
+        repo_clientes.guardar(Cliente(id="2", nombre="Juan", telefono="600111222"))
+        caso = FusionarClientes(repo_clientes, FakeRepoCitas(), FakeRepoPedidos())
+
+        caso.ejecutar(["1", "2"])  # no debe lanzar
+
+
+class TestAñadirNotaCliente:
+    def test_lanza_si_cliente_no_existe(self):
+        caso = AñadirNotaCliente(FakeRepoNotasCliente(), FakeRepoClientes(), FakeRepoContadores())
+        with pytest.raises(ClienteNoExiste):
+            caso.ejecutar("no_existe", "texto")
+
+    def test_crea_nota_con_id_generado_por_contador(self):
+        repo_clientes = FakeRepoClientes([Cliente(id="c1", nombre="Juan")])
+        repo_notas = FakeRepoNotasCliente()
+        caso = AñadirNotaCliente(repo_notas, repo_clientes, FakeRepoContadores())
+
+        nota = caso.ejecutar("c1", "Alérgico al aceite de almendras")
+
+        assert nota.id == 1
+        assert nota.cliente_id == "c1"
+        assert nota.texto == "Alérgico al aceite de almendras"
+        assert repo_notas.listar_de_cliente("c1") == [nota]
+
+    def test_ids_crecientes_e_independientes_de_otros_contadores(self):
+        repo_clientes = FakeRepoClientes([Cliente(id="c1", nombre="Juan")])
+        repo_notas = FakeRepoNotasCliente()
+        contadores = FakeRepoContadores()
+        contadores.siguiente_valor("cliente")  # simula otro contador ya en uso
+        caso = AñadirNotaCliente(repo_notas, repo_clientes, contadores)
+
+        n1 = caso.ejecutar("c1", "primera")
+        n2 = caso.ejecutar("c1", "segunda")
+
+        assert (n1.id, n2.id) == (1, 2)
+
+
+class TestListarNotasCliente:
+    def test_lista_solo_las_notas_del_cliente_pedido_mas_reciente_primero(self):
+        n1 = NotaCliente(id=1, cliente_id="c1", texto="primera", creado_en=datetime(2026, 1, 1, tzinfo=UTC))
+        n2 = NotaCliente(id=2, cliente_id="c1", texto="segunda", creado_en=datetime(2026, 6, 1, tzinfo=UTC))
+        n3 = NotaCliente(id=3, cliente_id="c2", texto="de otro cliente", creado_en=datetime(2026, 3, 1, tzinfo=UTC))
+        caso = ListarNotasCliente(FakeRepoNotasCliente([n1, n2, n3]))
+
+        assert caso.ejecutar("c1") == [n2, n1]
+
+    def test_vacio_si_el_cliente_no_tiene_notas(self):
+        caso = ListarNotasCliente(FakeRepoNotasCliente())
+        assert caso.ejecutar("c1") == []

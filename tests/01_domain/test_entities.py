@@ -6,6 +6,7 @@ from domain.entities import (
     EstadoCita,
     EstadoPedido,
     LineaPedido,
+    NotaCliente,
     Pedido,
     Profesional,
     Servicio,
@@ -34,7 +35,13 @@ def test_cliente_valores_por_defecto():
     cliente = Cliente(id="c1", nombre="Juan")
     assert cliente.telefono is None
     assert cliente.email is None
-    assert cliente.notas == ""
+
+
+def test_nota_cliente_nueva_usa_el_id_recibido():
+    nota = NotaCliente.nueva(1, "c1", "Alérgico al aceite de almendras")
+    assert nota.id == 1
+    assert nota.cliente_id == "c1"
+    assert nota.texto == "Alérgico al aceite de almendras"
 
 
 def test_estado_cita_tiene_los_seis_valores_del_ciclo_de_vida():

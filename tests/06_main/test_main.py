@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 from adapters.out.repositorios_postgres import (
     RepositorioCitasPostgres,
     RepositorioClientesPostgres,
+    RepositorioNotasClientePostgres,
     RepositorioPedidosPostgres,
 )
 from application.orchestrator import OrquestadorAgente
@@ -27,7 +28,7 @@ def test_construir_sistema_conecta_las_piezas():
 
     herramientas_esperadas = {
         "comprobar_disponibilidad", "crear_reserva", "cancelar_reserva",
-        "registrar_pedido", "consultar_conocimiento",
+        "registrar_pedido", "consultar_conocimiento", "anadir_nota_cliente",
     }
     assert set(orquestador._ejecutor._casos.keys()) == herramientas_esperadas
     assert "Centro de Masajes Serenidad" in orquestador._system_prompt
@@ -129,11 +130,13 @@ def test_construir_sistema_usa_repos_postgres_si_hay_database_url(monkeypatch):
     crear_reserva = orquestador._ejecutor._casos["crear_reserva"]
     cancelar_reserva = orquestador._ejecutor._casos["cancelar_reserva"]
     registrar_pedido = orquestador._ejecutor._casos["registrar_pedido"]
+    anadir_nota_cliente = orquestador._ejecutor._casos["anadir_nota_cliente"]
 
     assert isinstance(crear_reserva._citas, RepositorioCitasPostgres)
     assert isinstance(crear_reserva._clientes, RepositorioClientesPostgres)
     assert isinstance(cancelar_reserva._citas, RepositorioCitasPostgres)
     assert isinstance(registrar_pedido._pedidos, RepositorioPedidosPostgres)
+    assert isinstance(anadir_nota_cliente._notas, RepositorioNotasClientePostgres)
 
 
 def test_construir_sistema_sin_calendario_configurado(monkeypatch):

@@ -1,17 +1,19 @@
 from datetime import date, datetime
 from unittest.mock import Mock
 
+from application.orchestrator import SesionConversacion
 from application.tools import TOOLS_SCHEMA, EjecutorHerramientas
-from domain.entities import Cita, EstadoCita, EstadoPedido, LineaPedido, Pedido, SlotDisponible
+from domain.entities import Cita, EstadoCita, EstadoPedido, LineaPedido, NotaCliente, Pedido, SlotDisponible
 
 
-def test_tools_schema_declara_las_cuatro_herramientas():
+def test_tools_schema_declara_las_cinco_herramientas():
     nombres = {t["name"] for t in TOOLS_SCHEMA}
     assert nombres == {
         "comprobar_disponibilidad",
         "crear_reserva",
         "registrar_pedido",
         "consultar_conocimiento_negocio",
+        "guardar_nota_cliente",
     }
     for tool in TOOLS_SCHEMA:
         assert "description" in tool
@@ -160,6 +162,84 @@ def test_registrar_pedido_notas_por_defecto():
 
     _, kwargs = caso.ejecutar.call_args
     assert kwargs["lineas"][0].notas == ""
+
+
+def test_guardar_nota_cliente_con_cliente_id_escribe_directamente():
+    nota = NotaCliente.nueva(1, "cliente1", "Alérgica al aceite de almendras")
+    caso = Mock()
+    caso.ejecutar.return_value = nota
+    ejecutor = EjecutorHerramientas({"anadir_nota_cliente": caso})
+
+    resultado = ejecutor.ejecutar(
+        "guardar_nota_cliente", {"texto": "Alérgica al aceite de almendras", "cliente_id": "cliente1"},
+    )
+
+    caso.ejecutar.assert_called_once_with(cliente_id="cliente1", texto="Alérgica al aceite de almendras")
+    assert resultado == {"nota_id": nota.id, "cliente_id": nota.cliente_id}
+
+
+def test_guardar_nota_cliente_sin_cliente_id_la_difiere_en_la_sesion():
+    caso = Mock()
+    ejecutor = EjecutorHerramientas({"anadir_nota_cliente": caso})
+    sesion = SesionConversacion(canal="web", usuario_id="u1")
+
+    resultado = ejecutor.ejecutar("guardar_nota_cliente", {"texto": "prefiere profesional Ana"}, sesion=sesion)
+
+    caso.ejecutar.assert_not_called()
+    assert sesion.notas_pendientes == ["prefiere profesional Ana"]
+    assert resultado == {"guardada": "pendiente_de_cliente_id"}
+
+
+def test_guardar_nota_cliente_sin_cliente_id_ni_sesion_devuelve_error():
+    ejecutor = EjecutorHerramientas({"anadir_nota_cliente": Mock()})
+
+    resultado = ejecutor.ejecutar("guardar_nota_cliente", {"texto": "algo"})
+
+    assert resultado == {"error": "Falta cliente_id y no hay sesión donde diferir la nota."}
+
+
+def test_crear_reserva_vuelca_notas_pendientes_de_la_sesion():
+    cita = Cita.nueva(1, "masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    caso_reserva = Mock()
+    caso_reserva.ejecutar.return_value = cita
+    caso_notas = Mock()
+    ejecutor = EjecutorHerramientas({"crear_reserva": caso_reserva, "anadir_nota_cliente": caso_notas})
+    sesion = SesionConversacion(canal="web", usuario_id="u1", notas_pendientes=["nota 1", "nota 2"])
+
+    ejecutor.ejecutar(
+        "crear_reserva",
+        {
+            "servicio_id": "masaje", "profesional_id": "ana", "nombre": "Juan",
+            "telefono": "600111222", "inicio": "2026-08-03T09:00:00",
+        },
+        sesion=sesion,
+    )
+
+    assert caso_notas.ejecutar.call_args_list == [
+        ((), {"cliente_id": "cliente1", "texto": "nota 1"}),
+        ((), {"cliente_id": "cliente1", "texto": "nota 2"}),
+    ]
+    assert sesion.notas_pendientes == []
+
+
+def test_crear_reserva_sin_notas_pendientes_no_llama_a_anadir_nota():
+    cita = Cita.nueva(1, "masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    caso_reserva = Mock()
+    caso_reserva.ejecutar.return_value = cita
+    caso_notas = Mock()
+    ejecutor = EjecutorHerramientas({"crear_reserva": caso_reserva, "anadir_nota_cliente": caso_notas})
+    sesion = SesionConversacion(canal="web", usuario_id="u1")
+
+    ejecutor.ejecutar(
+        "crear_reserva",
+        {
+            "servicio_id": "masaje", "profesional_id": "ana", "nombre": "Juan",
+            "telefono": "600111222", "inicio": "2026-08-03T09:00:00",
+        },
+        sesion=sesion,
+    )
+
+    caso_notas.ejecutar.assert_not_called()
 
 
 def test_consultar_conocimiento_negocio():

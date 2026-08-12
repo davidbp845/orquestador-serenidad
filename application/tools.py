@@ -7,6 +7,14 @@ nunca toca el dominio directamente, siempre a través de esta capa.
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # Solo para el type hint de sesion en EjecutorHerramientas.ejecutar
+    # (#77) — un import real aquí crearía un ciclo, ya que
+    # application/orchestrator.py importa TOOLS_SCHEMA/EjecutorHerramientas
+    # de este mismo módulo.
+    from .orchestrator import SesionConversacion
 
 TOOLS_SCHEMA = [
     {
@@ -80,6 +88,30 @@ TOOLS_SCHEMA = [
             "required": ["consulta"],
         },
     },
+    {
+        "name": "guardar_nota_cliente",
+        "description": (
+            "Guarda una anotación relevante sobre el cliente para futuras "
+            "conversaciones (una alergia, una preferencia de profesional, "
+            "una incidencia) — no para resumir cada mensaje. Si en esta "
+            "conversación todavía no conoces el cliente_id del cliente "
+            "(porque aún no se ha reservado con crear_reserva), llama a "
+            "esta herramienta igualmente sin indicar cliente_id: la nota "
+            "queda pendiente y se guarda automáticamente en cuanto "
+            "crear_reserva resuelva quién es el cliente."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "texto": {"type": "string"},
+                "cliente_id": {
+                    "type": "string",
+                    "description": "Omítelo si todavía no lo conoces en esta conversación.",
+                },
+            },
+            "required": ["texto"],
+        },
+    },
 ]
 
 
@@ -96,6 +128,7 @@ class EjecutorHerramientas:
         entrada: dict,
         canal: str | None = None,
         usuario_id: str | None = None,
+        sesion: SesionConversacion | None = None,
     ) -> dict:
         try:
             if nombre_tool == "comprobar_disponibilidad":
@@ -134,6 +167,15 @@ class EjecutorHerramientas:
                 # el mismo cliente en la misma conversación — ya no lo
                 # decide el LLM libremente, lo resuelve CrearReserva
                 # (por teléfono si existe, o lo genera el contador).
+                # Vuelca cualquier nota de guardar_nota_cliente que se
+                # hubiera quedado pendiente en la sesión por no conocer
+                # todavía el cliente_id (#77) — ya se conoce.
+                if sesion is not None and sesion.notas_pendientes:
+                    for texto_pendiente in sesion.notas_pendientes:
+                        self._casos["anadir_nota_cliente"].ejecutar(
+                            cliente_id=cita.cliente_id, texto=texto_pendiente,
+                        )
+                    sesion.notas_pendientes.clear()
                 return {
                     "cita_id": cita.id_visible,
                     "cliente_id": cita.cliente_id,
@@ -154,6 +196,24 @@ class EjecutorHerramientas:
                     cliente_id=entrada["cliente_id"], lineas=lineas
                 )
                 return {"pedido_id": str(pedido.id), "estado": pedido.estado.value}
+
+            if nombre_tool == "guardar_nota_cliente":
+                texto = entrada["texto"]
+                cliente_id = entrada.get("cliente_id")
+                if cliente_id:
+                    nota = self._casos["anadir_nota_cliente"].ejecutar(
+                        cliente_id=cliente_id, texto=texto
+                    )
+                    return {"nota_id": nota.id, "cliente_id": nota.cliente_id}
+                # Sin cliente_id todavía: se difiere en el buffer de la
+                # sesión (ver el flush en crear_reserva más arriba). Sin
+                # sesión (ej. llamada directa fuera del orquestador) no
+                # hay dónde guardarla — se informa al LLM en vez de
+                # perder el texto en silencio.
+                if sesion is not None:
+                    sesion.notas_pendientes.append(texto)
+                    return {"guardada": "pendiente_de_cliente_id"}
+                return {"error": "Falta cliente_id y no hay sesión donde diferir la nota."}
 
             if nombre_tool == "consultar_conocimiento_negocio":
                 return self._casos["consultar_conocimiento"].ejecutar(

@@ -28,6 +28,14 @@ class SesionConversacion:
     canal: str
     usuario_id: str
     historial: list[dict] = field(default_factory=list)
+    # Buffer de textos de guardar_nota_cliente (#77) para cuando el LLM
+    # todavía no conoce el cliente_id en esta conversación — se vuelca a
+    # NotaCliente en cuanto crear_reserva lo resuelve en la misma sesión
+    # (ver EjecutorHerramientas.ejecutar). Si la sesión termina sin
+    # reservar, se pierde junto con el resto del historial — sin
+    # infraestructura nueva, mismo criterio que ya aplica hoy a las
+    # sesiones sin Redis.
+    notas_pendientes: list[str] = field(default_factory=list)
 
 
 class OrquestadorAgente:
@@ -74,7 +82,7 @@ class OrquestadorAgente:
             for bloque in bloques_tool:
                 resultado = self._ejecutor.ejecutar(
                     bloque["name"], bloque["input"],
-                    canal=sesion.canal, usuario_id=sesion.usuario_id,
+                    canal=sesion.canal, usuario_id=sesion.usuario_id, sesion=sesion,
                 )
                 resultados_tool.append({
                     "type": "tool_result",
@@ -127,7 +135,7 @@ class OrquestadorAgente:
             for bloque in bloques_tool:
                 resultado = self._ejecutor.ejecutar(
                     bloque["name"], bloque["input"],
-                    canal=sesion.canal, usuario_id=sesion.usuario_id,
+                    canal=sesion.canal, usuario_id=sesion.usuario_id, sesion=sesion,
                 )
                 if isinstance(resultado, dict):
                     for f in resultado.get("fuentes", []):

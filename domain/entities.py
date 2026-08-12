@@ -46,7 +46,6 @@ class Cliente:
     nombre: str
     telefono: str | None = None
     email: str | None = None
-    notas: str = ""
     # Chat id de Telegram del cliente, si ha reservado alguna vez por ese
     # canal — lo que permite mandarle una notificación proactiva (ver
     # NotificadorMensajes) sin depender de una sesión de conversación activa.
@@ -150,6 +149,24 @@ class Testimonio:
             id=id, nombre=nombre, descripcion=descripcion,
             valoracion=valoracion, titulo=titulo,
         )
+
+
+@dataclass
+class NotaCliente:
+    """Anotación fechada sobre un Cliente (alergia, preferencia,
+    incidencia...) — reemplaza a Cliente.notas: str (#77), que era un
+    único campo de texto libre sin fecha ni historial: cada anotación
+    nueva sobrescribía o se concatenaba a mano con las anteriores. id:
+    int generado por RepositorioContadores ('nota_cliente'), igual que
+    Testimonio."""
+    id: int
+    cliente_id: str
+    texto: str
+    creado_en: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    @staticmethod
+    def nueva(id: int, cliente_id: str, texto: str) -> NotaCliente:
+        return NotaCliente(id=id, cliente_id=cliente_id, texto=texto)
 
 
 @dataclass

@@ -5,6 +5,7 @@ from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
     RepositorioClientesMemoria,
     RepositorioContadoresMemoria,
+    RepositorioNotasClienteMemoria,
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
     RepositorioPromoBarMemoria,
@@ -17,6 +18,7 @@ from domain.entities import (
     EstadoCita,
     EstadoPedido,
     LineaPedido,
+    NotaCliente,
     Pedido,
     Profesional,
     PromoBar,
@@ -250,6 +252,40 @@ def test_repositorio_pedidos_reasignar_cliente():
     assert n == 1
     assert repo.obtener(pedido1.id).cliente_id == "c_final"
     assert repo.obtener(pedido2.id).cliente_id == "c2"
+
+
+def test_repositorio_notas_cliente_crear_y_listar_de_cliente():
+    repo = RepositorioNotasClienteMemoria()
+    n1 = NotaCliente.nueva(1, "c1", "primera")
+    n2 = NotaCliente.nueva(2, "c1", "segunda")
+    n3 = NotaCliente.nueva(3, "c2", "de otro cliente")
+    repo.crear(n1)
+    repo.crear(n2)
+    repo.crear(n3)
+
+    assert {n.id for n in repo.listar_de_cliente("c1")} == {n1.id, n2.id}
+    assert repo.listar_de_cliente("no_existe") == []
+
+
+def test_repositorio_notas_cliente_reasignar_cliente():
+    repo = RepositorioNotasClienteMemoria()
+    repo.crear(NotaCliente.nueva(1, "c1", "nota"))
+    repo.crear(NotaCliente.nueva(2, "c2", "otra"))
+
+    n = repo.reasignar_cliente("c1", "c_final")
+
+    assert n == 1
+    assert [nota.cliente_id for nota in repo.listar_de_cliente("c_final")] == ["c_final"]
+    assert repo.listar_de_cliente("c1") == []
+
+
+def test_repositorio_notas_cliente_borrar_todo():
+    repo = RepositorioNotasClienteMemoria()
+    repo.crear(NotaCliente.nueva(1, "c1", "nota"))
+    repo.crear(NotaCliente.nueva(2, "c2", "otra"))
+
+    assert repo.borrar_todo() == 2
+    assert repo.listar_de_cliente("c1") == []
 
 
 def test_repositorio_testimonios_guardar_obtener_listar():

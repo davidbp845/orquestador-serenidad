@@ -39,6 +39,7 @@ from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
     RepositorioClientesMemoria,
     RepositorioContadoresMemoria,
+    RepositorioNotasClienteMemoria,
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
     RepositorioPromoBarMemoria,
@@ -53,6 +54,7 @@ from domain.use_cases import (
     _DIAS_SEMANA_ES,
     _TRANSICIONES_CITA_VALIDAS,
     ActivarPromoBar,
+    AñadirNotaCliente,
     CambiarEstadoCita,
     CambiarEstadoPedido,
     CrearCliente,
@@ -66,6 +68,7 @@ from domain.use_cases import (
     EliminarPromoBar,
     EliminarTestimonio,
     FusionarClientes,
+    ListarNotasCliente,
     ListarPromoBars,
     _clave_orden_fusion,
 )
@@ -90,6 +93,7 @@ def _construir_repos():
             RepositorioCitasPostgres,
             RepositorioClientesPostgres,
             RepositorioContadoresPostgres,
+            RepositorioNotasClientePostgres,
             RepositorioPedidosPostgres,
             RepositorioPromoBarPostgres,
             RepositorioTestimoniosPostgres,
@@ -102,6 +106,7 @@ def _construir_repos():
         repo_testimonios = RepositorioTestimoniosPostgres(engine)
         repo_contadores = RepositorioContadoresPostgres(engine)
         repo_promo_bar = RepositorioPromoBarPostgres(engine)
+        repo_notas_cliente = RepositorioNotasClientePostgres(engine)
     else:
         repo_citas = RepositorioCitasMemoria()
         repo_clientes = RepositorioClientesMemoria()
@@ -109,10 +114,11 @@ def _construir_repos():
         repo_testimonios = RepositorioTestimoniosMemoria()
         repo_contadores = RepositorioContadoresMemoria()
         repo_promo_bar = RepositorioPromoBarMemoria()
+        repo_notas_cliente = RepositorioNotasClienteMemoria()
 
     return (
         config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos,
-        repo_testimonios, repo_contadores, repo_promo_bar,
+        repo_testimonios, repo_contadores, repo_promo_bar, repo_notas_cliente,
     )
 
 
@@ -269,7 +275,7 @@ if _clave_panel and not st.session_state.get("autenticado"):
 
 (
     config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos,
-    repo_testimonios, repo_contadores, repo_promo_bar,
+    repo_testimonios, repo_contadores, repo_promo_bar, repo_notas_cliente,
 ) = _construir_repos()
 notificador = _construir_notificador()
 cambiar_estado_pedido = CambiarEstadoPedido(repo_pedidos)
@@ -281,7 +287,9 @@ crear_cliente = CrearCliente(repo_clientes, repo_contadores)
 editar_cliente = EditarCliente(repo_clientes)
 eliminar_cliente = EliminarCliente(repo_clientes)
 detectar_clientes_duplicados = DetectarClientesDuplicados(repo_clientes)
-fusionar_clientes = FusionarClientes(repo_clientes, repo_citas, repo_pedidos)
+fusionar_clientes = FusionarClientes(repo_clientes, repo_citas, repo_pedidos, repo_notas_cliente)
+anadir_nota_cliente = AñadirNotaCliente(repo_notas_cliente, repo_clientes, repo_contadores)
+listar_notas_cliente = ListarNotasCliente(repo_notas_cliente)
 crear_promo_bar = CrearPromoBar(repo_promo_bar, repo_contadores)
 editar_promo_bar = EditarPromoBar(repo_promo_bar)
 eliminar_promo_bar = EliminarPromoBar(repo_promo_bar)
@@ -404,7 +412,6 @@ elif opcion == "👤 Clientes":
             nombre_nuevo = st.text_input("Nombre")
             telefono_nuevo = st.text_input("Teléfono (opcional)")
             email_nuevo = st.text_input("Email (opcional)")
-            notas_nuevas = st.text_area("Notas (opcional)")
             col_crear, col_cancelar = st.columns(2)
             crear = col_crear.form_submit_button("Crear cliente", use_container_width=True)
             cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
@@ -416,7 +423,6 @@ elif opcion == "👤 Clientes":
                     nuevo = crear_cliente.ejecutar(
                         nombre_nuevo,
                         telefono=telefono_nuevo or None, email=email_nuevo or None,
-                        notas=notas_nuevas,
                     )
                     st.success(f"Cliente creado con id {nuevo.id}.")
                     st.session_state["mostrar_form_nuevo_cliente"] = False
@@ -467,9 +473,27 @@ elif opcion == "👤 Clientes":
                 st.markdown(f"**{cliente.nombre}** · `{cliente.id}`")
                 st.write(cliente.telefono or "Sin teléfono")
                 st.write(cliente.email or "Sin email")
-                if cliente.notas:
-                    st.caption(cliente.notas)
                 st.caption("📱 Telegram vinculado" if cliente.telegram_chat_id else "📱 Sin Telegram vinculado")
+
+                # Notas fechadas (#77): reemplaza al antiguo campo de texto
+                # libre Cliente.notas — cada anotación queda su propia
+                # fila con fecha, en vez de sobrescribirse/concatenarse a
+                # mano con las anteriores.
+                notas_del_cliente = listar_notas_cliente.ejecutar(cliente.id)
+                if notas_del_cliente:
+                    st.caption("📝 Notas")
+                    for nota in notas_del_cliente:
+                        st.caption(f"`{nota.creado_en:%d/%m/%Y}` {nota.texto}")
+                with st.form(f"form_nota_nueva_{cliente.id}", clear_on_submit=True):
+                    texto_nota_nueva = st.text_input(
+                        "Añadir nota", label_visibility="collapsed",
+                        placeholder="Añadir nota (alergia, preferencia, incidencia...)",
+                    )
+                    anadir_nota = st.form_submit_button("+ Nota")
+                if anadir_nota and texto_nota_nueva.strip():
+                    anadir_nota_cliente.ejecutar(cliente.id, texto_nota_nueva.strip())
+                    st.rerun()
+
                 col_editar, col_eliminar = st.columns(2)
                 if col_editar.button("Editar", key=f"btn_editar_cliente_{cliente.id}", use_container_width=True):
                     st.session_state[clave_editando] = True
@@ -483,7 +507,6 @@ elif opcion == "👤 Clientes":
                     nombre_editado = st.text_input("Nombre", value=cliente.nombre)
                     telefono_editado = st.text_input("Teléfono", value=cliente.telefono or "")
                     email_editado = st.text_input("Email", value=cliente.email or "")
-                    notas_editadas = st.text_area("Notas", value=cliente.notas)
                     col_guardar, col_cancelar = st.columns(2)
                     guardar = col_guardar.form_submit_button("Guardar", use_container_width=True)
                     cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
@@ -493,7 +516,7 @@ elif opcion == "👤 Clientes":
                     else:
                         editar_cliente.ejecutar(
                             cliente.id, nombre_editado,
-                            telefono_editado or None, email_editado or None, notas_editadas,
+                            telefono_editado or None, email_editado or None,
                         )
                         st.session_state[clave_editando] = False
                         st.rerun()
@@ -755,10 +778,10 @@ elif opcion == "🛠️ Herramientas":
         )
     else:
         st.warning(
-            "Borra TODAS las citas, clientes, pedidos y líneas de pedido, y "
-            "testimonios, reinicia todos los contadores, y cancela los "
-            "eventos de Google Calendar asociados (si hay uno configurado). "
-            "Acción irreversible."
+            "Borra TODAS las citas, clientes, pedidos y líneas de pedido, "
+            "testimonios y notas de cliente, reinicia todos los contadores, "
+            "y cancela los eventos de Google Calendar asociados (si hay uno "
+            "configurado). Acción irreversible."
         )
         confirmar = st.checkbox("Sí, quiero borrar todos los datos")
         if st.button("Borrar todos los datos", type="primary", disabled=not confirmar):
@@ -780,11 +803,13 @@ elif opcion == "🛠️ Herramientas":
                 n_clientes = repo_clientes.borrar_todo()
                 n_pedidos = repo_pedidos.borrar_todo()
                 n_testimonios = repo_testimonios.borrar_todo()
+                n_notas_cliente = repo_notas_cliente.borrar_todo()
                 n_contadores = repo_contadores.borrar_todo()
 
             st.success(
                 f"Borrado: {n_citas} citas, {n_clientes} clientes, "
                 f"{n_pedidos} pedidos (con sus líneas), {n_testimonios} testimonios, "
+                f"{n_notas_cliente} notas de cliente, "
                 f"{n_contadores} contadores reiniciados."
             )
             if calendario is not None:

@@ -30,6 +30,7 @@ realmente en un despliegue con solo algunas activadas.
 | `Profesional` | Memoria (RAM) | Siempre — igual que `Servicio`, catálogo derivado del YAML |
 | `Cita` | Postgres (tabla `citas`) si `DATABASE_URL`; si no, memoria (RAM) | Opcional |
 | `Cliente` | Postgres (tabla `clientes`) si `DATABASE_URL`; si no, memoria | Opcional |
+| `NotaCliente` | Postgres (tabla `notas_cliente`) si `DATABASE_URL`; si no, memoria | Opcional |
 | `Pedido` + `LineaPedido` | Postgres (tablas `pedidos` + `pedido_lineas`) si `DATABASE_URL`; si no, memoria | Opcional |
 | Fragmentos del vault (conocimiento/RAG) | Chroma (base vectorial local, carpeta `./chroma_data` por defecto) | Siempre, independiente de `DATABASE_URL` |
 | `SesionConversacion` (historial de chat) | Redis si `REDIS_URL`; si no, memoria (RAM) — puerto `RepositorioSesiones` | Opcional (desde #18) |
@@ -192,10 +193,15 @@ Este documento cierra el issue #36 tal como estaba planteado (una foto del
 estado actual), pero dos preguntas de fondo que el propio issue original
 dejaba abiertas siguen sin decidirse, y no forman parte de este cierre:
 
-- Si el modelo actual — una única entidad `Servicio` sin variantes, un
-  `Cliente` sin historial estructurado más allá de `notas: str` — aguanta un
-  negocio real más allá del ejemplo del centro de masajes. No hay issue
+- Si el modelo actual — una única entidad `Servicio` sin variantes — aguanta
+  un negocio real más allá del ejemplo del centro de masajes. No hay issue
   abierto específico para esto hoy; si aparece, debería enlazar aquí.
+  (El otro punto de esta lista, `Cliente` sin historial estructurado más allá
+  de `notas: str`, ya se resolvió: #77 sustituye ese campo por `NotaCliente`,
+  una entidad propia con `id`/`cliente_id`/`texto`/`creado_en`, múltiples por
+  cliente. La migración `notas_cliente` convierte cada `notas` no vacío
+  existente en una `NotaCliente` marcada `[Importada]` antes de dropear la
+  columna.)
 - Las sesiones de conversación en memoria (sin `REDIS_URL`) siguen sin
   compartirse entre procesos ni sobrevivir a un reinicio — comportamiento
   esperado y documentado, no un bug, pero relevante para cualquier despliegue

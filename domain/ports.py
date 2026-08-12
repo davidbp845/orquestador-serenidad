@@ -17,6 +17,7 @@ from uuid import UUID
 from .entities import (
     Cita,
     Cliente,
+    NotaCliente,
     Pedido,
     Profesional,
     PromoBar,
@@ -116,6 +117,31 @@ class RepositorioClientes(ABC):
         """Borrado lógico: pone borrado=True sin eliminar la fila. Lo
         usa FusionarClientes sobre los clientes absorbidos — nunca
         eliminar(), para no perder el id como referencia histórica."""
+        ...
+
+    @abstractmethod
+    def borrar_todo(self) -> int:
+        """Ver RepositorioCitas.borrar_todo — misma herramienta de
+        panel, mismo alcance de "solo entorno local"."""
+        ...
+
+
+class RepositorioNotasCliente(ABC):
+    @abstractmethod
+    def crear(self, nota: NotaCliente) -> None: ...
+
+    @abstractmethod
+    def listar_de_cliente(self, cliente_id: str) -> list[NotaCliente]:
+        """Notas de un cliente concreto, sin orden garantizado por el
+        puerto — quien las consuma (panel, tool del LLM) ordena por
+        creado_en según le convenga."""
+        ...
+
+    @abstractmethod
+    def reasignar_cliente(self, id_antiguo: str, id_nuevo: str) -> int:
+        """Ver RepositorioCitas.reasignar_cliente — mismo propósito,
+        para que FusionarClientes también mueva las notas del cliente
+        absorbido al superviviente."""
         ...
 
     @abstractmethod

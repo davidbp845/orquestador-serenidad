@@ -10,11 +10,22 @@ import threading
 from datetime import date
 from uuid import UUID
 
-from domain.entities import Cita, Cliente, EstadoPedido, Pedido, Profesional, PromoBar, Servicio, Testimonio
+from domain.entities import (
+    Cita,
+    Cliente,
+    EstadoPedido,
+    NotaCliente,
+    Pedido,
+    Profesional,
+    PromoBar,
+    Servicio,
+    Testimonio,
+)
 from domain.ports import (
     RepositorioCitas,
     RepositorioClientes,
     RepositorioContadores,
+    RepositorioNotasCliente,
     RepositorioPedidos,
     RepositorioProfesionales,
     RepositorioPromoBar,
@@ -107,6 +118,30 @@ class RepositorioClientesMemoria(RepositorioClientes):
     def marcar_borrado(self, cliente_id: str) -> None:
         if cliente_id in self._data:
             self._data[cliente_id].borrado = True
+
+    def borrar_todo(self) -> int:
+        n = len(self._data)
+        self._data.clear()
+        return n
+
+
+class RepositorioNotasClienteMemoria(RepositorioNotasCliente):
+    def __init__(self):
+        self._data: dict[int, NotaCliente] = {}
+
+    def crear(self, nota: NotaCliente) -> None:
+        self._data[nota.id] = nota
+
+    def listar_de_cliente(self, cliente_id: str) -> list[NotaCliente]:
+        return [n for n in self._data.values() if n.cliente_id == cliente_id]
+
+    def reasignar_cliente(self, id_antiguo: str, id_nuevo: str) -> int:
+        n = 0
+        for nota in self._data.values():
+            if nota.cliente_id == id_antiguo:
+                nota.cliente_id = id_nuevo
+                n += 1
+        return n
 
     def borrar_todo(self) -> int:
         n = len(self._data)

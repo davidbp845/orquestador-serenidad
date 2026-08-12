@@ -17,17 +17,37 @@ from uuid import UUID
 from sqlalchemy import delete, text, update
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, PromoBar, Testimonio
+from domain.entities import (
+    Cita,
+    Cliente,
+    EstadoCita,
+    EstadoPedido,
+    LineaPedido,
+    NotaCliente,
+    Pedido,
+    PromoBar,
+    Testimonio,
+)
 from domain.ports import (
     RepositorioCitas,
     RepositorioClientes,
     RepositorioContadores,
+    RepositorioNotasCliente,
     RepositorioPedidos,
     RepositorioPromoBar,
     RepositorioTestimonios,
 )
 
-from .db_models import CitaDB, ClienteDB, ContadorDB, LineaPedidoDB, PedidoDB, PromoBarDB, TestimonioDB
+from .db_models import (
+    CitaDB,
+    ClienteDB,
+    ContadorDB,
+    LineaPedidoDB,
+    NotaClienteDB,
+    PedidoDB,
+    PromoBarDB,
+    TestimonioDB,
+)
 
 
 def _como_uuid(valor) -> UUID | None:
@@ -166,7 +186,6 @@ class RepositorioClientesPostgres(RepositorioClientes):
                 nombre=cliente.nombre,
                 telefono=cliente.telefono,
                 email=cliente.email,
-                notas=cliente.notas,
                 telegram_chat_id=cliente.telegram_chat_id,
                 borrado=cliente.borrado,
             ))
@@ -209,8 +228,51 @@ class RepositorioClientesPostgres(RepositorioClientes):
     def _a_entidad(fila: ClienteDB) -> Cliente:
         return Cliente(
             id=fila.id, nombre=fila.nombre, telefono=fila.telefono,
-            email=fila.email, notas=fila.notas,
+            email=fila.email,
             telegram_chat_id=fila.telegram_chat_id, borrado=fila.borrado,
+        )
+
+
+class RepositorioNotasClientePostgres(RepositorioNotasCliente):
+    def __init__(self, engine):
+        self._engine = engine
+
+    def crear(self, nota: NotaCliente) -> None:
+        with Session(self._engine) as sesion:
+            sesion.add(NotaClienteDB(
+                id=nota.id, cliente_id=nota.cliente_id,
+                texto=nota.texto, creado_en=nota.creado_en,
+            ))
+            sesion.commit()
+
+    def listar_de_cliente(self, cliente_id: str) -> list[NotaCliente]:
+        with Session(self._engine) as sesion:
+            filas = sesion.exec(
+                select(NotaClienteDB).where(NotaClienteDB.cliente_id == cliente_id)
+            ).all()
+            return [self._a_entidad(fila) for fila in filas]
+
+    def reasignar_cliente(self, id_antiguo: str, id_nuevo: str) -> int:
+        with Session(self._engine) as sesion:
+            resultado = sesion.execute(
+                update(NotaClienteDB)
+                .where(NotaClienteDB.cliente_id == id_antiguo)
+                .values(cliente_id=id_nuevo)
+            )
+            sesion.commit()
+            return resultado.rowcount
+
+    def borrar_todo(self) -> int:
+        with Session(self._engine) as sesion:
+            n = sesion.execute(delete(NotaClienteDB)).rowcount
+            sesion.commit()
+            return n
+
+    @staticmethod
+    def _a_entidad(fila: NotaClienteDB) -> NotaCliente:
+        return NotaCliente(
+            id=fila.id, cliente_id=fila.cliente_id,
+            texto=fila.texto, creado_en=fila.creado_en,
         )
 
 

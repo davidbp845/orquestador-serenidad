@@ -39,11 +39,13 @@ class FakeEjecutor:
         self.llamadas = []
         self.canal_recibido = None
         self.usuario_id_recibido = None
+        self.sesion_recibida = None
 
-    def ejecutar(self, nombre_tool, entrada, canal=None, usuario_id=None):
+    def ejecutar(self, nombre_tool, entrada, canal=None, usuario_id=None, sesion=None):
         self.llamadas.append((nombre_tool, entrada))
         self.canal_recibido = canal
         self.usuario_id_recibido = usuario_id
+        self.sesion_recibida = sesion
         return self.resultado
 
 
@@ -113,6 +115,7 @@ def test_pasa_canal_y_usuario_id_de_la_sesion_al_ejecutor():
 
     assert ejecutor.canal_recibido == "telegram"
     assert ejecutor.usuario_id_recibido == "chat123"
+    assert ejecutor.sesion_recibida is sesion
 
 
 def test_concatena_varios_bloques_de_texto():
@@ -211,6 +214,7 @@ def test_stream_pasa_canal_y_usuario_id_de_la_sesion_al_ejecutor():
 
     assert ejecutor.canal_recibido == "telegram"
     assert ejecutor.usuario_id_recibido == "chat123"
+    assert ejecutor.sesion_recibida is sesion
 
 
 def test_stream_da_mensaje_de_fallback_tras_agotar_iteraciones():

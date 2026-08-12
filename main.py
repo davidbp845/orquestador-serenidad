@@ -38,6 +38,7 @@ from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
     RepositorioClientesMemoria,
     RepositorioContadoresMemoria,
+    RepositorioNotasClienteMemoria,
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
     RepositorioPromoBarMemoria,
@@ -51,6 +52,7 @@ from application.prompts import construir_system_prompt
 from application.tools import EjecutorHerramientas
 from config.loader import cargar_config, construir_profesionales, construir_servicios
 from domain.use_cases import (
+    AñadirNotaCliente,
     CancelarReserva,
     ComprobarDisponibilidad,
     ConsultarConocimientoNegocio,
@@ -98,6 +100,7 @@ def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
             RepositorioCitasPostgres,
             RepositorioClientesPostgres,
             RepositorioContadoresPostgres,
+            RepositorioNotasClientePostgres,
             RepositorioPedidosPostgres,
             crear_engine,
         )
@@ -106,11 +109,13 @@ def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
         repo_clientes = RepositorioClientesPostgres(engine)
         repo_pedidos = RepositorioPedidosPostgres(engine)
         repo_contadores = RepositorioContadoresPostgres(engine)
+        repo_notas_cliente = RepositorioNotasClientePostgres(engine)
     else:
         repo_citas = RepositorioCitasMemoria()
         repo_clientes = RepositorioClientesMemoria()
         repo_pedidos = RepositorioPedidosMemoria()
         repo_contadores = RepositorioContadoresMemoria()
+        repo_notas_cliente = RepositorioNotasClienteMemoria()
 
     conocimiento = RepositorioConocimientoChroma()
 
@@ -151,6 +156,7 @@ def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
     cancelar_reserva = CancelarReserva(repo_citas, calendario, repo_clientes, notificador)
     registrar_pedido = RegistrarPedido(repo_pedidos, repo_servicios)
     consultar_conocimiento = ConsultarConocimientoNegocio(conocimiento)
+    anadir_nota_cliente = AñadirNotaCliente(repo_notas_cliente, repo_clientes, repo_contadores)
 
     ejecutor = EjecutorHerramientas({
         "comprobar_disponibilidad": disponibilidad,
@@ -158,6 +164,7 @@ def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
         "cancelar_reserva": cancelar_reserva,
         "registrar_pedido": registrar_pedido,
         "consultar_conocimiento": consultar_conocimiento,
+        "anadir_nota_cliente": anadir_nota_cliente,
     })
 
     system_prompt = construir_system_prompt(config)

@@ -15,6 +15,7 @@ from .entities import (
     EstadoCita,
     EstadoPedido,
     LineaPedido,
+    NotaCliente,
     Pedido,
     PromoBar,
     Servicio,
@@ -39,6 +40,7 @@ from .ports import (
     RepositorioClientes,
     RepositorioConocimiento,
     RepositorioContadores,
+    RepositorioNotasCliente,
     RepositorioPedidos,
     RepositorioProfesionales,
     RepositorioPromoBar,
@@ -563,12 +565,12 @@ class CrearCliente:
 
     def ejecutar(
         self, nombre: str,
-        telefono: str | None = None, email: str | None = None, notas: str = "",
+        telefono: str | None = None, email: str | None = None,
     ) -> Cliente:
         nuevo_id = str(self._contadores.siguiente_valor("cliente"))
         if self._clientes.obtener(nuevo_id) is not None:
             raise ClienteYaExiste(nuevo_id)
-        cliente = Cliente(id=nuevo_id, nombre=nombre, telefono=telefono, email=email, notas=notas)
+        cliente = Cliente(id=nuevo_id, nombre=nombre, telefono=telefono, email=email)
         self._clientes.guardar(cliente)
         return cliente
 
@@ -583,7 +585,7 @@ class EditarCliente:
 
     def ejecutar(
         self, cliente_id: str, nombre: str,
-        telefono: str | None, email: str | None, notas: str,
+        telefono: str | None, email: str | None,
     ) -> Cliente:
         cliente = self._clientes.obtener(cliente_id)
         if cliente is None:
@@ -592,7 +594,6 @@ class EditarCliente:
         cliente.nombre = nombre
         cliente.telefono = telefono
         cliente.email = email
-        cliente.notas = notas
         self._clientes.guardar(cliente)
         return cliente
 
@@ -644,14 +645,18 @@ def _clave_orden_fusion(cliente_id: str) -> tuple[int, str]:
 
 class FusionarClientes:
     """Fusiona un grupo de Cliente duplicados en uno solo: reasigna
-    todas sus citas y pedidos al superviviente, y marca los demás
-    como borrado=True (borrado lógico, nunca eliminar() físico — ver
-    RepositorioClientes.marcar_borrado)."""
+    todas sus citas, pedidos y notas (#77) al superviviente, y marca
+    los demás como borrado=True (borrado lógico, nunca eliminar()
+    físico — ver RepositorioClientes.marcar_borrado)."""
 
-    def __init__(self, clientes: RepositorioClientes, citas: RepositorioCitas, pedidos: RepositorioPedidos):
+    def __init__(
+        self, clientes: RepositorioClientes, citas: RepositorioCitas, pedidos: RepositorioPedidos,
+        notas: RepositorioNotasCliente | None = None,
+    ):
         self._clientes = clientes
         self._citas = citas
         self._pedidos = pedidos
+        self._notas = notas
 
     def ejecutar(self, ids: list[str]) -> Cliente:
         clientes = []
@@ -668,6 +673,42 @@ class FusionarClientes:
                 continue
             self._citas.reasignar_cliente(cliente.id, superviviente.id)
             self._pedidos.reasignar_cliente(cliente.id, superviviente.id)
+            if self._notas is not None:
+                self._notas.reasignar_cliente(cliente.id, superviviente.id)
             self._clientes.marcar_borrado(cliente.id)
 
         return superviviente
+
+
+class AñadirNotaCliente:
+    """Pensado para ser llamado tanto desde el panel (formulario manual)
+    como desde la tool del LLM guardar_nota_cliente (#77) — misma
+    lógica, dos orígenes, sin duplicar la validación de que el cliente
+    exista en ninguno de los dos sitios."""
+
+    def __init__(
+        self, notas: RepositorioNotasCliente, clientes: RepositorioClientes,
+        contadores: RepositorioContadores,
+    ):
+        self._notas = notas
+        self._clientes = clientes
+        self._contadores = contadores
+
+    def ejecutar(self, cliente_id: str, texto: str) -> NotaCliente:
+        if self._clientes.obtener(cliente_id) is None:
+            raise ClienteNoExiste(cliente_id)
+        nuevo_id = self._contadores.siguiente_valor("nota_cliente")
+        nota = NotaCliente.nueva(nuevo_id, cliente_id, texto)
+        self._notas.crear(nota)
+        return nota
+
+
+class ListarNotasCliente:
+    """Lectura pura para el panel — más reciente primero, igual que
+    ListarTestimoniosRecientes."""
+
+    def __init__(self, notas: RepositorioNotasCliente):
+        self._notas = notas
+
+    def ejecutar(self, cliente_id: str) -> list[NotaCliente]:
+        return sorted(self._notas.listar_de_cliente(cliente_id), key=lambda n: n.creado_en, reverse=True)

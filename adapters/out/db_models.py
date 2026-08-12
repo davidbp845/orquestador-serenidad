@@ -17,7 +17,6 @@ class ClienteDB(SQLModel, table=True):
     nombre: str
     telefono: str | None = Field(default=None, index=True)
     email: str | None = None
-    notas: str = ""
     telegram_chat_id: str | None = None
     borrado: bool = False
 
@@ -41,6 +40,15 @@ class PedidoDB(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     cliente_id: str
     estado: str
+    creado_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class NotaClienteDB(SQLModel, table=True):
+    __tablename__ = "notas_cliente"
+
+    id: int = Field(primary_key=True)
+    cliente_id: str = Field(index=True)
+    texto: str
     creado_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 

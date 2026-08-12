@@ -93,6 +93,13 @@ conversación necesitas registrar un pedido (registrar_pedido) para el
 mismo cliente, reutiliza ese cliente_id tal cual en vez de inventar
 uno nuevo.
 
+Si durante la conversación el cliente menciona algo que valga la pena
+recordar para el futuro (una alergia, una preferencia de profesional,
+una incidencia), guárdalo con guardar_nota_cliente — no la uses para
+resumir cada mensaje, solo información realmente relevante. Si todavía
+no conoces su cliente_id en esta conversación, llama a la herramienta
+igual sin indicarlo: se guarda en cuanto quede identificado.
+
 {instrucciones_extra}
 
 {instrucciones_comerciales}
