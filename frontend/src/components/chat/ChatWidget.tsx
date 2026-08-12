@@ -230,18 +230,18 @@ export default function ChatWidget({ apiBaseUrl, ctaMensaje }: Props) {
       </div>
       <form
         onSubmit={manejarEnvio}
-        class="flex gap-(--spacing-fluid-2xs) border-t border-(--color-borde) p-(--spacing-fluid-2xs)"
+        class="flex gap-(--spacing-fluid-2xs) border-t border-(--color-borde) px-(--spacing-fluid-2xs) py-(--spacing-fluid-3xs)"
       >
         <input
           value={texto}
           onInput={(e) => setTexto((e.target as HTMLInputElement).value)}
           placeholder="Escribe tu mensaje…"
-          class="flex-1 rounded-full border border-(--color-borde) bg-(--color-superficie) px-(--spacing-fluid-xs) py-(--spacing-fluid-3xs) text-sm text-(--color-texto) outline-none focus:border-(--color-acento)"
+          class="flex-1 rounded-full border border-(--color-borde) bg-(--color-superficie) px-(--spacing-fluid-xs) py-(--spacing-fluid-2xs) text-sm text-(--color-texto) outline-none focus:border-(--color-acento)"
         />
         <button
           type="submit"
           aria-disabled={enviando || !texto.trim()}
-          class="rounded-full bg-(--color-acento) px-(--spacing-fluid-s) py-(--spacing-fluid-3xs) text-sm font-medium text-white aria-disabled:opacity-40"
+          class="rounded-full bg-(--color-acento) px-(--spacing-fluid-s) py-(--spacing-fluid-2xs) text-sm font-medium text-white aria-disabled:opacity-40"
         >
           Enviar
         </button>
@@ -250,7 +250,7 @@ export default function ChatWidget({ apiBaseUrl, ctaMensaje }: Props) {
           onClick={() => setExpandido((v) => !v)}
           aria-label={expandido ? 'Comprimir respuesta' : 'Expandir respuesta'}
           title={expandido ? 'Comprimir respuesta' : 'Expandir respuesta'}
-          class="inline-flex shrink-0 items-center justify-center rounded-full border border-(--color-borde) bg-(--color-superficie) p-(--spacing-fluid-3xs) text-(--color-texto-suave) transition-colors hover:border-(--color-acento) hover:text-(--color-acento)"
+          class="inline-flex shrink-0 items-center justify-center rounded-full border border-(--color-borde) bg-(--color-superficie) p-(--spacing-fluid-2xs) text-(--color-texto-suave) transition-colors hover:border-(--color-acento) hover:text-(--color-acento)"
         >
           <svg
             viewBox="0 0 24 24"
