@@ -55,6 +55,24 @@ class CanalesConfig(BaseModel):
     whatsapp: bool = False
 
 
+class TemaConfig(BaseModel):
+    """Paleta de colores y tipografía del frontend (frontend/src/styles/global.css,
+    tokens --color-*/--font-*) — ver issue #76. Todo opcional: sin tema definido,
+    el frontend usa la paleta neutra y la tipografía por defecto del skeleton.
+    Las fuentes son autoalojadas (no Google Fonts): la url apunta a un .woff2
+    servido por el propio frontend (frontend/public/fonts/...), no a un servicio
+    externo — evita depender de red externa en cada visita."""
+    color_fondo: str | None = None
+    color_superficie: str | None = None
+    color_texto: str | None = None
+    color_texto_suave: str | None = None
+    color_borde: str | None = None
+    color_acento: str | None = None
+    color_acento_suave: str | None = None
+    fuente_titulo_url: str | None = None
+    fuente_cuerpo_url: str | None = None
+
+
 class CtaCitaConfig(BaseModel):
     """Botón CTA de la cabecera (frontend/src/components/Cabecera.astro)
     que escribe un mensaje predefinido en el chat — ver issue #56.
@@ -81,6 +99,7 @@ class ConfigNegocio(BaseModel):
     hero_titulo: str | None = None
     hero_subtitulo: str = "Escríbenos y te ayudamos al momento."
     imagen_fondo_url: str | None = None
+    tema: TemaConfig = Field(default_factory=TemaConfig)
     cta_cita: CtaCitaConfig = Field(default_factory=CtaCitaConfig)
     canales: CanalesConfig = Field(default_factory=CanalesConfig)
     servicios: list[ServicioConfig] = Field(default_factory=list)

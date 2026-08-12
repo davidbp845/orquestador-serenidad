@@ -39,11 +39,23 @@
   --color-borde: #e7e2db;
   --color-acento: #2f6f5e;
   --color-acento-suave: #e5efec;
+
+  /* Tipografía por defecto del skeleton (sin fuente propia del negocio).
+     config/business.yaml -> tema.fuente_titulo_url/fuente_cuerpo_url
+     sobreescribe estos tokens vía --font-titulo/--font-cuerpo inline en
+     LayoutBase.astro, mismo mecanismo que --fondo-imagen/--color-*. */
+  --font-titulo: ui-sans-serif, system-ui, sans-serif;
+  --font-cuerpo: ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
   background: var(--color-fondo);
   color: var(--color-texto);
+  font-family: var(--font-cuerpo);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-titulo);
 }
 
 /* Imagen de fondo fija, solo si el negocio define imagen_fondo_url

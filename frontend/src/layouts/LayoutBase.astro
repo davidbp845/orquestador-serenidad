@@ -10,6 +10,25 @@ interface Props {
 }
 
 const { titulo, descripcion } = Astro.props;
+
+// Paleta/tipografía del negocio (config/business.yaml -> tema, issue #76):
+// mismo mecanismo que --fondo-imagen ya usaba — solo se inyectan las
+// custom properties que el negocio define, el resto sigue heredando los
+// valores por defecto de global.css. Los nombres de familia (NegocioTitulo/
+// NegocioCuerpo) son internos y fijos: el negocio solo aporta el fichero
+// .woff2, no necesita declarar cómo se llama la fuente.
+const tema = negocio.tema ?? {};
+const estiloTema: Record<string, string> = {};
+if (negocio.imagen_fondo_url) estiloTema['--fondo-imagen'] = `url(${negocio.imagen_fondo_url})`;
+if (tema.color_fondo) estiloTema['--color-fondo'] = tema.color_fondo;
+if (tema.color_superficie) estiloTema['--color-superficie'] = tema.color_superficie;
+if (tema.color_texto) estiloTema['--color-texto'] = tema.color_texto;
+if (tema.color_texto_suave) estiloTema['--color-texto-suave'] = tema.color_texto_suave;
+if (tema.color_borde) estiloTema['--color-borde'] = tema.color_borde;
+if (tema.color_acento) estiloTema['--color-acento'] = tema.color_acento;
+if (tema.color_acento_suave) estiloTema['--color-acento-suave'] = tema.color_acento_suave;
+if (tema.fuente_titulo_url) estiloTema['--font-titulo'] = "'NegocioTitulo', ui-sans-serif, system-ui, sans-serif";
+if (tema.fuente_cuerpo_url) estiloTema['--font-cuerpo'] = "'NegocioCuerpo', ui-sans-serif, system-ui, sans-serif";
 ---
 
 <html lang="es">
@@ -32,6 +51,13 @@ const { titulo, descripcion } = Astro.props;
     <meta name="twitter:title" content={titulo} />
     <meta name="twitter:description" content={descripcion} />
 
+    {tema.fuente_titulo_url && (
+      <style set:html={`@font-face { font-family: 'NegocioTitulo'; src: url('${tema.fuente_titulo_url}') format('woff2'); font-display: swap; }`} />
+    )}
+    {tema.fuente_cuerpo_url && (
+      <style set:html={`@font-face { font-family: 'NegocioCuerpo'; src: url('${tema.fuente_cuerpo_url}') format('woff2'); font-display: swap; }`} />
+    )}
+
     <slot name="head" />
   </head>
   <body
@@ -39,7 +65,7 @@ const { titulo, descripcion } = Astro.props;
       'flex min-h-screen flex-col bg-(--color-fondo) text-(--color-texto)',
       { 'tiene-fondo': negocio.imagen_fondo_url },
     ]}
-    style={negocio.imagen_fondo_url ? { '--fondo-imagen': `url(${negocio.imagen_fondo_url})` } : undefined}
+    style={Object.keys(estiloTema).length ? estiloTema : undefined}
   >
     <Cabecera />
     <main class="flex-1">

@@ -47,6 +47,37 @@ def test_cargar_config_aplica_valores_por_defecto_a_los_campos_opcionales(tmp_pa
     assert config["telefono"] is None
     assert config["email"] is None
     assert config["horario_apertura"] == {}
+    assert config["tema"] == {
+        "color_fondo": None,
+        "color_superficie": None,
+        "color_texto": None,
+        "color_texto_suave": None,
+        "color_borde": None,
+        "color_acento": None,
+        "color_acento_suave": None,
+        "fuente_titulo_url": None,
+        "fuente_cuerpo_url": None,
+    }
+
+
+def test_cargar_config_tema(tmp_path):
+    ruta = tmp_path / "business.yaml"
+    ruta.write_text(dedent("""
+        nombre: "Negocio de prueba"
+        tema:
+          color_acento: "#123456"
+          color_fondo: "#fafafa"
+          fuente_titulo_url: "/fonts/titulo.woff2"
+          fuente_cuerpo_url: "/fonts/cuerpo.woff2"
+    """))
+
+    config = cargar_config(str(ruta))
+
+    assert config["tema"]["color_acento"] == "#123456"
+    assert config["tema"]["color_fondo"] == "#fafafa"
+    assert config["tema"]["color_texto"] is None
+    assert config["tema"]["fuente_titulo_url"] == "/fonts/titulo.woff2"
+    assert config["tema"]["fuente_cuerpo_url"] == "/fonts/cuerpo.woff2"
 
 
 def test_cargar_config_direccion_telefono_email_horario_apertura(tmp_path):

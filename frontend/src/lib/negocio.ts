@@ -38,6 +38,23 @@ interface DireccionNegocio {
   pais: string;
 }
 
+// Paleta de colores y tipografía del negocio (config/schema.py::TemaConfig,
+// issue #76). Todo opcional: sin campos definidos, LayoutBase.astro no
+// inyecta ningún override y el frontend usa la paleta/tipografía neutra
+// por defecto de global.css. Las fuentes son autoalojadas (.woff2 servido
+// por el propio frontend), no Google Fonts.
+interface TemaNegocio {
+  color_fondo?: string;
+  color_superficie?: string;
+  color_texto?: string;
+  color_texto_suave?: string;
+  color_borde?: string;
+  color_acento?: string;
+  color_acento_suave?: string;
+  fuente_titulo_url?: string;
+  fuente_cuerpo_url?: string;
+}
+
 // Mismas claves de día que horario_semanal (config/schema.py):
 // lunes..domingo, cada una ["HH:MM", "HH:MM"]. Usado solo para el
 // JSON-LD de SEO (DatosEstructurados.astro) — ver issue #75.
@@ -52,6 +69,7 @@ interface ConfigNegocio {
   hero_titulo?: string;
   hero_subtitulo: string;
   imagen_fondo_url?: string;
+  tema?: TemaNegocio;
   cta_cita?: CtaCitaConfig;
   vault_obsidian?: string;
   direccion?: DireccionNegocio;
