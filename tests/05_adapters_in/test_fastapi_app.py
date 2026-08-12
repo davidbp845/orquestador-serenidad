@@ -281,14 +281,12 @@ def test_promobar_devuelve_inactivo_si_no_hay_caso_de_uso_configurado(cliente):
     assert respuesta.json() == {"activo": False, "contenido_html": ""}
 
 
-def test_promobar_devuelve_inactivo_si_no_esta_activo(modulo):
-    from domain.entities import PromoBar
-
+def test_promobar_devuelve_inactivo_si_ninguno_esta_activo(modulo):
     orquestador = FakeOrquestador()
     repositorio_sesiones = RepositorioSesionesMemoria()
     app = modulo.crear_router(
         orquestador, repositorio_sesiones,
-        obtener_promo_bar=FakeObtenerPromoBar(PromoBar(activo=False, contenido_html="<p>Oferta</p>")),
+        obtener_promo_bar=FakeObtenerPromoBar(None),
     )
     client = TestClient(app)
 
@@ -306,7 +304,7 @@ def test_promobar_devuelve_el_contenido_saneado_si_esta_activo(modulo):
     app = modulo.crear_router(
         orquestador, repositorio_sesiones,
         obtener_promo_bar=FakeObtenerPromoBar(
-            PromoBar(activo=True, contenido_html='<p>Oferta con <a href="/x">enlace</a></p>')
+            PromoBar(id=1, nombre="Test", activo=True, contenido_html='<p>Oferta con <a href="/x">enlace</a></p>')
         ),
     )
     client = TestClient(app)
@@ -329,7 +327,7 @@ def test_promobar_conserva_tachado_para_precio_anterior(modulo):
     app = modulo.crear_router(
         orquestador, repositorio_sesiones,
         obtener_promo_bar=FakeObtenerPromoBar(
-            PromoBar(activo=True, contenido_html="<s>58€</s> <strong>48€</strong>")
+            PromoBar(id=1, nombre="Test", activo=True, contenido_html="<s>58€</s> <strong>48€</strong>")
         ),
     )
     client = TestClient(app)
@@ -347,7 +345,7 @@ def test_promobar_elimina_etiquetas_peligrosas(modulo):
     app = modulo.crear_router(
         orquestador, repositorio_sesiones,
         obtener_promo_bar=FakeObtenerPromoBar(
-            PromoBar(activo=True, contenido_html='<script>alert(1)</script><strong>2x1</strong>')
+            PromoBar(id=1, nombre="Test", activo=True, contenido_html='<script>alert(1)</script><strong>2x1</strong>')
         ),
     )
     client = TestClient(app)
@@ -370,7 +368,7 @@ def test_promobar_elimina_protocolo_javascript_en_enlaces(modulo):
     app = modulo.crear_router(
         orquestador, repositorio_sesiones,
         obtener_promo_bar=FakeObtenerPromoBar(
-            PromoBar(activo=True, contenido_html='<a href="javascript:alert(1)">click</a>')
+            PromoBar(id=1, nombre="Test", activo=True, contenido_html='<a href="javascript:alert(1)">click</a>')
         ),
     )
     client = TestClient(app)

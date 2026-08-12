@@ -27,6 +27,7 @@ from .exceptions import (
     ClienteYaExiste,
     PedidoNoExiste,
     ProfesionalNoDisponible,
+    PromoBarNoExiste,
     ServicioNoExiste,
     TestimonioNoExiste,
     TransicionEstadoInvalida,
@@ -478,25 +479,74 @@ class ListarTestimoniosRecientes:
 
 
 class ObtenerPromoBar:
-    """Lectura pública: el estado actual del promobar para el
-    endpoint del frontend (issue #78)."""
+    """Lectura pública: el promobar activo (o None si ninguno lo
+    está) para el endpoint del frontend (issue #78)."""
     def __init__(self, promo_bar: RepositorioPromoBar):
         self._promo_bar = promo_bar
 
-    def ejecutar(self) -> PromoBar:
-        return self._promo_bar.obtener()
+    def ejecutar(self) -> PromoBar | None:
+        return self._promo_bar.obtener_activo()
 
 
-class ActualizarPromoBar:
-    """Escritura desde el panel — única vía para cambiar el promobar,
-    no hay tool de LLM ni otro camino de escritura."""
-    def __init__(self, promo_bar: RepositorioPromoBar):
+class CrearPromoBar:
+    """Escritura desde el panel (issue #81) — no hay tool de LLM ni
+    otro camino de escritura. Nace inactivo: crear uno nuevo no debe
+    desactivar en silencio el que ya estuviera activo, eso requiere
+    el paso explícito de ActivarPromoBar."""
+    def __init__(self, promo_bar: RepositorioPromoBar, contadores: RepositorioContadores):
         self._promo_bar = promo_bar
+        self._contadores = contadores
 
-    def ejecutar(self, activo: bool, contenido_html: str) -> PromoBar:
-        promo_bar = PromoBar(activo=activo, contenido_html=contenido_html)
+    def ejecutar(self, nombre: str, contenido_html: str = "") -> PromoBar:
+        nuevo_id = self._contadores.siguiente_valor("promo_bar")
+        promo_bar = PromoBar.nuevo(nuevo_id, nombre, contenido_html)
         self._promo_bar.guardar(promo_bar)
         return promo_bar
+
+
+class EditarPromoBar:
+    def __init__(self, promo_bar: RepositorioPromoBar):
+        self._promo_bar = promo_bar
+
+    def ejecutar(self, promo_bar_id: int, nombre: str, contenido_html: str) -> PromoBar:
+        promo_bar = self._promo_bar.obtener(promo_bar_id)
+        if promo_bar is None:
+            raise PromoBarNoExiste(promo_bar_id)
+        promo_bar.nombre = nombre
+        promo_bar.contenido_html = contenido_html
+        self._promo_bar.guardar(promo_bar)
+        return promo_bar
+
+
+class EliminarPromoBar:
+    def __init__(self, promo_bar: RepositorioPromoBar):
+        self._promo_bar = promo_bar
+
+    def ejecutar(self, promo_bar_id: int) -> None:
+        if self._promo_bar.obtener(promo_bar_id) is None:
+            raise PromoBarNoExiste(promo_bar_id)
+        self._promo_bar.eliminar(promo_bar_id)
+
+
+class ListarPromoBars:
+    def __init__(self, promo_bar: RepositorioPromoBar):
+        self._promo_bar = promo_bar
+
+    def ejecutar(self) -> list[PromoBar]:
+        return self._promo_bar.listar()
+
+
+class ActivarPromoBar:
+    """Activa un promobar y desactiva cualquier otro que lo estuviera
+    — la invariante "como mucho uno activo a la vez" vive aquí, no en
+    el panel ni delegada sin más al repositorio."""
+    def __init__(self, promo_bar: RepositorioPromoBar):
+        self._promo_bar = promo_bar
+
+    def ejecutar(self, promo_bar_id: int) -> None:
+        if self._promo_bar.obtener(promo_bar_id) is None:
+            raise PromoBarNoExiste(promo_bar_id)
+        self._promo_bar.activar(promo_bar_id)
 
 
 class CrearCliente:

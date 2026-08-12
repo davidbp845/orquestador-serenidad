@@ -269,29 +269,64 @@ class RepositorioTestimoniosPostgres(RepositorioTestimonios):
 
 
 class RepositorioPromoBarPostgres(RepositorioPromoBar):
-    """Fila única, id fijo a 1 (ver PromoBarDB) — obtener() la crea
-    con los valores por defecto si todavía no existe."""
-
     def __init__(self, engine):
         self._engine = engine
 
-    def obtener(self) -> PromoBar:
+    def obtener(self, promo_bar_id: int) -> PromoBar | None:
+        promo_bar_id = _como_int(promo_bar_id)
+        if promo_bar_id is None:
+            return None
         with Session(self._engine) as sesion:
-            fila = sesion.get(PromoBarDB, 1)
-            if fila is None:
-                return PromoBar()
-            return PromoBar(
-                activo=fila.activo, contenido_html=fila.contenido_html,
-                actualizado_en=fila.actualizado_en,
-            )
+            fila = sesion.get(PromoBarDB, promo_bar_id)
+            return self._a_entidad(fila) if fila else None
 
     def guardar(self, promo_bar: PromoBar) -> None:
         with Session(self._engine) as sesion:
             sesion.merge(PromoBarDB(
-                id=1, activo=promo_bar.activo, contenido_html=promo_bar.contenido_html,
-                actualizado_en=promo_bar.actualizado_en,
+                id=promo_bar.id, nombre=promo_bar.nombre, activo=promo_bar.activo,
+                contenido_html=promo_bar.contenido_html, actualizado_en=promo_bar.actualizado_en,
             ))
             sesion.commit()
+
+    def listar(self) -> list[PromoBar]:
+        with Session(self._engine) as sesion:
+            filas = sesion.exec(select(PromoBarDB)).all()
+            return [self._a_entidad(fila) for fila in filas]
+
+    def eliminar(self, promo_bar_id: int) -> None:
+        promo_bar_id = _como_int(promo_bar_id)
+        if promo_bar_id is None:
+            return
+        with Session(self._engine) as sesion:
+            fila = sesion.get(PromoBarDB, promo_bar_id)
+            if fila is not None:
+                sesion.delete(fila)
+                sesion.commit()
+
+    def obtener_activo(self) -> PromoBar | None:
+        with Session(self._engine) as sesion:
+            fila = sesion.exec(select(PromoBarDB).where(PromoBarDB.activo.is_(True))).first()
+            return self._a_entidad(fila) if fila else None
+
+    def activar(self, promo_bar_id: int) -> None:
+        # Una sola transacción: desactivar todos + activar el elegido.
+        # Sin esto, dos llamadas a activar() casi simultáneas (o un
+        # fallo a mitad) podrían dejar dos promobars activos a la vez,
+        # o ninguno — mismo motivo que RepositorioContadoresPostgres
+        # usa un UPSERT atómico en vez de SELECT+UPDATE.
+        with Session(self._engine) as sesion:
+            sesion.execute(update(PromoBarDB).values(activo=False))
+            sesion.execute(
+                update(PromoBarDB).where(PromoBarDB.id == promo_bar_id).values(activo=True)
+            )
+            sesion.commit()
+
+    @staticmethod
+    def _a_entidad(fila: PromoBarDB) -> PromoBar:
+        return PromoBar(
+            id=fila.id, nombre=fila.nombre, activo=fila.activo,
+            contenido_html=fila.contenido_html, actualizado_en=fila.actualizado_en,
+        )
 
 
 class RepositorioContadoresPostgres(RepositorioContadores):

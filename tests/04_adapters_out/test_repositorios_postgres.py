@@ -319,34 +319,54 @@ def test_testimonios_borrar_todo():
     assert repo.listar() == []
 
 
-def test_promo_bar_obtener_sin_guardar_devuelve_valores_por_defecto():
+def test_promo_bar_obtener_devuelve_none_si_no_existe():
     repo = RepositorioPromoBarPostgres(_engine())
-
-    promo_bar = repo.obtener()
-
-    assert promo_bar.activo is False
-    assert promo_bar.contenido_html == ""
+    assert repo.obtener(999) is None
 
 
 def test_promo_bar_guardar_y_obtener():
     repo = RepositorioPromoBarPostgres(_engine())
 
-    repo.guardar(PromoBar(activo=True, contenido_html="<p>2x1</p>"))
-    leido = repo.obtener()
+    repo.guardar(PromoBar(id=1, nombre="Lanzamiento", activo=True, contenido_html="<p>2x1</p>"))
+    leido = repo.obtener(1)
 
+    assert leido.nombre == "Lanzamiento"
     assert leido.activo is True
     assert leido.contenido_html == "<p>2x1</p>"
 
 
-def test_promo_bar_guardar_sobrescribe_la_misma_fila():
+def test_promo_bar_listar_y_eliminar():
     repo = RepositorioPromoBarPostgres(_engine())
-    repo.guardar(PromoBar(activo=True, contenido_html="Viejo"))
+    repo.guardar(PromoBar(id=1, nombre="Uno"))
+    repo.guardar(PromoBar(id=2, nombre="Dos"))
 
-    repo.guardar(PromoBar(activo=False, contenido_html="Nuevo"))
-    leido = repo.obtener()
+    assert {p.id for p in repo.listar()} == {1, 2}
 
-    assert leido.activo is False
-    assert leido.contenido_html == "Nuevo"
+    repo.eliminar(1)
+
+    assert {p.id for p in repo.listar()} == {2}
+    repo.eliminar(1)  # repetirlo sobre uno ya borrado no lanza
+
+
+def test_promo_bar_obtener_activo():
+    repo = RepositorioPromoBarPostgres(_engine())
+    assert repo.obtener_activo() is None
+
+    repo.guardar(PromoBar(id=1, nombre="Uno", activo=False))
+    repo.guardar(PromoBar(id=2, nombre="Dos", activo=True))
+
+    assert repo.obtener_activo().id == 2
+
+
+def test_promo_bar_activar_desactiva_el_anterior():
+    repo = RepositorioPromoBarPostgres(_engine())
+    repo.guardar(PromoBar(id=1, nombre="Uno", activo=True))
+    repo.guardar(PromoBar(id=2, nombre="Dos", activo=False))
+
+    repo.activar(2)
+
+    assert repo.obtener(1).activo is False
+    assert repo.obtener(2).activo is True
 
 
 def test_contadores_empieza_en_uno_e_incrementa():

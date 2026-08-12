@@ -23,6 +23,7 @@ from domain.exceptions import (
     ClienteYaExiste,
     PedidoNoExiste,
     ProfesionalNoDisponible,
+    PromoBarNoExiste,
     ServicioNoExiste,
     TestimonioNoExiste,
     TransicionEstadoInvalida,
@@ -30,21 +31,25 @@ from domain.exceptions import (
 )
 from domain.use_cases import (
     _DIAS_SEMANA_ES,
-    ActualizarPromoBar,
+    ActivarPromoBar,
     CambiarEstadoCita,
     CambiarEstadoPedido,
     CancelarReserva,
     ComprobarDisponibilidad,
     ConsultarConocimientoNegocio,
     CrearCliente,
+    CrearPromoBar,
     CrearReserva,
     CrearTestimonio,
     DetectarClientesDuplicados,
     EditarCliente,
+    EditarPromoBar,
     EditarTestimonio,
     EliminarCliente,
+    EliminarPromoBar,
     EliminarTestimonio,
     FusionarClientes,
+    ListarPromoBars,
     ListarTestimoniosRecientes,
     ObtenerPromoBar,
     RegistrarPedido,
@@ -217,14 +222,27 @@ class FakeRepoTestimonios:
 
 
 class FakeRepoPromoBar:
-    def __init__(self, promo_bar=None):
-        self._promo_bar = promo_bar or PromoBar()
+    def __init__(self, promo_bars=None):
+        self._data = {p.id: p for p in (promo_bars or [])}
 
-    def obtener(self):
-        return self._promo_bar
+    def obtener(self, promo_bar_id):
+        return self._data.get(promo_bar_id)
 
     def guardar(self, promo_bar):
-        self._promo_bar = promo_bar
+        self._data[promo_bar.id] = promo_bar
+
+    def listar(self):
+        return list(self._data.values())
+
+    def eliminar(self, promo_bar_id):
+        self._data.pop(promo_bar_id, None)
+
+    def obtener_activo(self):
+        return next((p for p in self._data.values() if p.activo), None)
+
+    def activar(self, promo_bar_id):
+        for promo_bar in self._data.values():
+            promo_bar.activo = promo_bar.id == promo_bar_id
 
 
 class FakeRepoContadores:
@@ -1002,44 +1020,95 @@ class TestListarTestimoniosRecientes:
 
 
 class TestObtenerPromoBar:
-    def test_devuelve_valores_por_defecto_si_nunca_se_guardo_nada(self):
+    def test_devuelve_none_si_ninguno_esta_activo(self):
         caso = ObtenerPromoBar(FakeRepoPromoBar())
+        assert caso.ejecutar() is None
 
-        resultado = caso.ejecutar()
-
-        assert resultado.activo is False
-        assert resultado.contenido_html == ""
-
-    def test_devuelve_lo_guardado(self):
-        repo = FakeRepoPromoBar(PromoBar(activo=True, contenido_html="<p>Oferta</p>"))
+    def test_devuelve_el_activo(self):
+        activo = PromoBar(id=1, nombre="Lanzamiento", activo=True, contenido_html="<p>Oferta</p>")
+        inactivo = PromoBar(id=2, nombre="Bienvenida", activo=False)
+        repo = FakeRepoPromoBar([activo, inactivo])
         caso = ObtenerPromoBar(repo)
 
         resultado = caso.ejecutar()
 
-        assert resultado.activo is True
+        assert resultado.id == 1
         assert resultado.contenido_html == "<p>Oferta</p>"
 
 
-class TestActualizarPromoBar:
-    def test_guarda_activo_y_contenido(self):
+class TestCrearPromoBar:
+    def test_crea_inactivo_con_id_generado_por_contador(self):
         repo = FakeRepoPromoBar()
-        caso = ActualizarPromoBar(repo)
+        caso = CrearPromoBar(repo, FakeRepoContadores())
 
-        resultado = caso.ejecutar(activo=True, contenido_html="<a href='/x'>Oferta</a>")
+        resultado = caso.ejecutar("Lanzamiento", "<p>Oferta</p>")
 
+        assert resultado.id == 1
+        assert resultado.nombre == "Lanzamiento"
+        assert resultado.contenido_html == "<p>Oferta</p>"
+        assert resultado.activo is False
+        assert repo.obtener(1) == resultado
+
+
+class TestEditarPromoBar:
+    def test_edita_nombre_y_contenido_sin_tocar_activo(self):
+        repo = FakeRepoPromoBar([PromoBar(id=1, nombre="Viejo", activo=True, contenido_html="Antes")])
+        caso = EditarPromoBar(repo)
+
+        resultado = caso.ejecutar(1, "Nuevo", "Después")
+
+        assert resultado.nombre == "Nuevo"
+        assert resultado.contenido_html == "Después"
         assert resultado.activo is True
-        assert resultado.contenido_html == "<a href='/x'>Oferta</a>"
-        assert repo.obtener() == resultado
 
-    def test_sobrescribe_lo_anterior(self):
-        repo = FakeRepoPromoBar(PromoBar(activo=True, contenido_html="Viejo"))
-        caso = ActualizarPromoBar(repo)
+    def test_lanza_si_no_existe(self):
+        caso = EditarPromoBar(FakeRepoPromoBar())
+        with pytest.raises(PromoBarNoExiste):
+            caso.ejecutar(999, "Nombre", "Contenido")
 
-        caso.ejecutar(activo=False, contenido_html="Nuevo")
 
-        actual = repo.obtener()
-        assert actual.activo is False
-        assert actual.contenido_html == "Nuevo"
+class TestEliminarPromoBar:
+    def test_elimina_existente(self):
+        repo = FakeRepoPromoBar([PromoBar(id=1, nombre="Uno")])
+        caso = EliminarPromoBar(repo)
+
+        caso.ejecutar(1)
+
+        assert repo.obtener(1) is None
+
+    def test_lanza_si_no_existe(self):
+        caso = EliminarPromoBar(FakeRepoPromoBar())
+        with pytest.raises(PromoBarNoExiste):
+            caso.ejecutar(999)
+
+
+class TestListarPromoBars:
+    def test_lista_todos(self):
+        repo = FakeRepoPromoBar([PromoBar(id=1, nombre="Uno"), PromoBar(id=2, nombre="Dos")])
+        caso = ListarPromoBars(repo)
+
+        assert {p.id for p in caso.ejecutar()} == {1, 2}
+
+    def test_lista_vacia_si_no_hay_ninguno(self):
+        assert ListarPromoBars(FakeRepoPromoBar()).ejecutar() == []
+
+
+class TestActivarPromoBar:
+    def test_activa_y_desactiva_el_anterior(self):
+        uno = PromoBar(id=1, nombre="Uno", activo=True)
+        dos = PromoBar(id=2, nombre="Dos", activo=False)
+        repo = FakeRepoPromoBar([uno, dos])
+        caso = ActivarPromoBar(repo)
+
+        caso.ejecutar(2)
+
+        assert repo.obtener(1).activo is False
+        assert repo.obtener(2).activo is True
+
+    def test_lanza_si_no_existe(self):
+        caso = ActivarPromoBar(FakeRepoPromoBar())
+        with pytest.raises(PromoBarNoExiste):
+            caso.ejecutar(999)
 
 
 class TestCrearCliente:

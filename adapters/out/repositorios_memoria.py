@@ -138,13 +138,26 @@ class RepositorioTestimoniosMemoria(RepositorioTestimonios):
 
 class RepositorioPromoBarMemoria(RepositorioPromoBar):
     def __init__(self):
-        self._promo_bar = PromoBar()
+        self._data: dict[int, PromoBar] = {}
 
-    def obtener(self) -> PromoBar:
-        return self._promo_bar
+    def obtener(self, promo_bar_id: int) -> PromoBar | None:
+        return self._data.get(promo_bar_id)
 
     def guardar(self, promo_bar: PromoBar) -> None:
-        self._promo_bar = promo_bar
+        self._data[promo_bar.id] = promo_bar
+
+    def listar(self) -> list[PromoBar]:
+        return list(self._data.values())
+
+    def eliminar(self, promo_bar_id: int) -> None:
+        self._data.pop(promo_bar_id, None)
+
+    def obtener_activo(self) -> PromoBar | None:
+        return next((p for p in self._data.values() if p.activo), None)
+
+    def activar(self, promo_bar_id: int) -> None:
+        for promo_bar in self._data.values():
+            promo_bar.activo = promo_bar.id == promo_bar_id
 
 
 class RepositorioContadoresMemoria(RepositorioContadores):

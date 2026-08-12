@@ -155,9 +155,17 @@ class Testimonio:
 @dataclass
 class PromoBar:
     """Aviso/oferta editable desde el panel, mostrado en la cabecera
-    del frontend público (issue #78). Fila única, no una colección
-    como Testimonio: no tiene id propio, el repositorio guarda/lee
-    siempre la misma instancia."""
+    del frontend público (issue #78). Colección (issue #81): puede
+    haber varios preparados, pero como mucho uno con activo=True a la
+    vez — esa invariante la garantiza el caso de uso ActivarPromoBar,
+    no esta entidad. id: int generado por RepositorioContadores
+    ('promo_bar'), igual que Testimonio."""
+    id: int
+    nombre: str
     activo: bool = False
     contenido_html: str = ""
     actualizado_en: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    @staticmethod
+    def nuevo(id: int, nombre: str, contenido_html: str = "") -> PromoBar:
+        return PromoBar(id=id, nombre=nombre, contenido_html=contenido_html)

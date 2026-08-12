@@ -53,6 +53,12 @@ class TestimonioNoExiste(DominioError):
         self.testimonio_id = testimonio_id
 
 
+class PromoBarNoExiste(DominioError):
+    def __init__(self, promo_bar_id: int) -> None:
+        super().__init__(f"El promobar '{promo_bar_id}' no existe.")
+        self.promo_bar_id = promo_bar_id
+
+
 class ValoracionInvalida(DominioError):
     def __init__(self, valoracion: int) -> None:
         super().__init__(

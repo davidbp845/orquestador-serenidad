@@ -63,11 +63,12 @@ class ContadorDB(SQLModel, table=True):
 
 
 class PromoBarDB(SQLModel, table=True):
-    """Fila única (ver domain.entities.PromoBar): id fijo a 1, siempre
-    la misma fila se lee/sobrescribe."""
+    """Colección (issue #81): puede haber varios, como mucho uno con
+    activo=True — ver RepositorioPromoBarPostgres.activar()."""
     __tablename__ = "promo_bar"
 
-    id: int = Field(default=1, primary_key=True)
+    id: int = Field(primary_key=True)
+    nombre: str
     activo: bool = False
     contenido_html: str = ""
     actualizado_en: datetime = Field(default_factory=lambda: datetime.now(UTC))

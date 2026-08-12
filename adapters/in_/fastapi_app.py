@@ -172,10 +172,8 @@ def crear_router(
 
     @app.get("/promobar", response_model=PromoBarSalida)
     def promobar():
-        if obtener_promo_bar is None:
-            return PromoBarSalida(activo=False, contenido_html="")
-        promo_bar = obtener_promo_bar.ejecutar()
-        if not promo_bar.activo:
+        promo_bar = obtener_promo_bar.ejecutar() if obtener_promo_bar else None
+        if promo_bar is None:
             return PromoBarSalida(activo=False, contenido_html="")
         return PromoBarSalida(
             activo=True, contenido_html=_sanear_html_promobar(promo_bar.contenido_html),

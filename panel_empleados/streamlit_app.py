@@ -51,18 +51,21 @@ from domain.exceptions import ClienteYaExiste, TransicionEstadoInvalida, Valorac
 from domain.use_cases import (
     _DIAS_SEMANA_ES,
     _TRANSICIONES_CITA_VALIDAS,
-    ActualizarPromoBar,
+    ActivarPromoBar,
     CambiarEstadoCita,
     CambiarEstadoPedido,
     CrearCliente,
+    CrearPromoBar,
     CrearTestimonio,
     DetectarClientesDuplicados,
     EditarCliente,
+    EditarPromoBar,
     EditarTestimonio,
     EliminarCliente,
+    EliminarPromoBar,
     EliminarTestimonio,
     FusionarClientes,
-    ObtenerPromoBar,
+    ListarPromoBars,
     _clave_orden_fusion,
 )
 
@@ -253,8 +256,11 @@ editar_cliente = EditarCliente(repo_clientes)
 eliminar_cliente = EliminarCliente(repo_clientes)
 detectar_clientes_duplicados = DetectarClientesDuplicados(repo_clientes)
 fusionar_clientes = FusionarClientes(repo_clientes, repo_citas, repo_pedidos)
-obtener_promo_bar = ObtenerPromoBar(repo_promo_bar)
-actualizar_promo_bar = ActualizarPromoBar(repo_promo_bar)
+crear_promo_bar = CrearPromoBar(repo_promo_bar, repo_contadores)
+editar_promo_bar = EditarPromoBar(repo_promo_bar)
+eliminar_promo_bar = EliminarPromoBar(repo_promo_bar)
+activar_promo_bar = ActivarPromoBar(repo_promo_bar)
+listar_promo_bars = ListarPromoBars(repo_promo_bar)
 
 # ---------- Cabecera ----------
 _hoy = date.today()
@@ -557,24 +563,85 @@ elif opcion == "⭐ Testimonios":
 
 # ---------- Promobar ----------
 elif opcion == "📢 Promobar":
-    st.subheader("Promobar de la cabecera")
     st.caption(
-        "Aviso u oferta que se muestra en la cabecera del sitio público. Admite HTML "
-        "básico (<a href>, <strong>, <em>, <b>, <i>, <s>, <br>, <span>) — cualquier otra "
-        "etiqueta o atributo se elimina al mostrarse, no hace falta escribir HTML "
-        "seguro a mano."
+        "Avisos/ofertas para la cabecera del sitio público — como mucho uno activo a "
+        "la vez. Admiten HTML básico (<a href>, <strong>, <em>, <b>, <i>, <s>, <br>, "
+        "<span>) — cualquier otra etiqueta o atributo se elimina al mostrarse, no hace "
+        "falta escribir HTML seguro a mano."
     )
-    promo_bar_actual = obtener_promo_bar.ejecutar()
-    with st.form("form_promo_bar"):
-        activo = st.checkbox("Activo (visible en la web)", value=promo_bar_actual.activo)
-        contenido_html = st.text_area(
-            "Contenido (HTML)", value=promo_bar_actual.contenido_html, height=150,
-        )
-        guardar = st.form_submit_button("Guardar")
-    if guardar:
-        actualizar_promo_bar.ejecutar(activo, contenido_html)
-        st.success("Promobar actualizado.")
-        st.rerun()
+    if not st.session_state.get("mostrar_form_nuevo_promo_bar"):
+        if st.button("+ Nuevo promobar"):
+            st.session_state["mostrar_form_nuevo_promo_bar"] = True
+            st.rerun()
+    else:
+        st.subheader("Nuevo promobar")
+        with st.form("form_nuevo_promo_bar", clear_on_submit=True):
+            nombre = st.text_input("Nombre (solo para identificarlo aquí, no se muestra en la web)")
+            contenido_html = st.text_area("Contenido (HTML)", height=150)
+            col_crear, col_cancelar = st.columns(2)
+            crear = col_crear.form_submit_button("Crear promobar", use_container_width=True)
+            cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
+        if crear:
+            if not nombre.strip():
+                st.error("Rellena el nombre.")
+            else:
+                crear_promo_bar.ejecutar(nombre, contenido_html)
+                st.success("Promobar creado (inactivo — actívalo cuando quieras que se muestre).")
+                st.session_state["mostrar_form_nuevo_promo_bar"] = False
+                st.rerun()
+        if cancelar:
+            st.session_state["mostrar_form_nuevo_promo_bar"] = False
+            st.rerun()
+
+    st.divider()
+    promo_bars = sorted(listar_promo_bars.ejecutar(), key=lambda p: p.actualizado_en, reverse=True)
+
+    if not promo_bars:
+        st.info("No hay promobars todavía.")
+
+    for promo_bar in promo_bars:
+        clave_editando = f"editando_promo_bar_{promo_bar.id}"
+        with st.container(border=True):
+            if not st.session_state.get(clave_editando):
+                titulo = f"**{promo_bar.nombre}**"
+                if promo_bar.activo:
+                    titulo += " 🟢 Activo"
+                st.markdown(titulo)
+                st.caption(promo_bar.contenido_html or "(sin contenido)")
+                col_activar, col_editar, col_eliminar = st.columns(3)
+                if col_activar.button(
+                    "Activar", key=f"btn_activar_{promo_bar.id}",
+                    disabled=promo_bar.activo, use_container_width=True,
+                ):
+                    activar_promo_bar.ejecutar(promo_bar.id)
+                    st.rerun()
+                if col_editar.button("Editar", key=f"btn_editar_{promo_bar.id}", use_container_width=True):
+                    st.session_state[clave_editando] = True
+                    st.rerun()
+                if col_eliminar.button(
+                    "Eliminar", key=f"btn_eliminar_{promo_bar.id}", use_container_width=True,
+                ):
+                    eliminar_promo_bar.ejecutar(promo_bar.id)
+                    st.rerun()
+            else:
+                with st.form(f"form_editar_promo_bar_{promo_bar.id}"):
+                    nombre_editado = st.text_input("Nombre", value=promo_bar.nombre)
+                    contenido_editado = st.text_area(
+                        "Contenido (HTML)", value=promo_bar.contenido_html, height=150,
+                    )
+                    col_guardar, col_cancelar = st.columns(2)
+                    guardar = col_guardar.form_submit_button("Guardar", use_container_width=True)
+                    cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
+                if guardar:
+                    if not nombre_editado.strip():
+                        st.error("Rellena el nombre.")
+                    else:
+                        editar_promo_bar.ejecutar(promo_bar.id, nombre_editado, contenido_editado)
+                        st.session_state[clave_editando] = False
+                        st.rerun()
+                if cancelar:
+                    st.session_state[clave_editando] = False
+                    st.rerun()
 
 # ---------- Contadores ----------
 elif opcion == "🔢 Contadores":

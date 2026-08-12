@@ -178,17 +178,31 @@ class RepositorioTestimonios(ABC):
 
 
 class RepositorioPromoBar(ABC):
-    """Fila única (ver PromoBar): no hay id, obtener()/guardar()
-    siempre leen/escriben la misma instancia."""
-
     @abstractmethod
-    def obtener(self) -> PromoBar:
-        """Nunca devuelve None: si no se ha guardado nada todavía,
-        un PromoBar() con los valores por defecto (activo=False)."""
-        ...
+    def obtener(self, promo_bar_id: int) -> PromoBar | None: ...
 
     @abstractmethod
     def guardar(self, promo_bar: PromoBar) -> None: ...
+
+    @abstractmethod
+    def listar(self) -> list[PromoBar]: ...
+
+    @abstractmethod
+    def eliminar(self, promo_bar_id: int) -> None: ...
+
+    @abstractmethod
+    def obtener_activo(self) -> PromoBar | None:
+        """El que tenga activo=True, o None si ninguno lo está —
+        nunca puede haber más de uno (ver activar())."""
+        ...
+
+    @abstractmethod
+    def activar(self, promo_bar_id: int) -> None:
+        """Pone este PromoBar en activo=True y cualquier otro en
+        activo=False, en una sola operación atómica (importante en
+        Postgres: evita una ventana de carrera donde dos promobars
+        pudieran quedar activos, o ninguno)."""
+        ...
 
 
 class RepositorioContadores(ABC):
