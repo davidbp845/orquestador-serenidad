@@ -250,10 +250,12 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
                     class={`mt-(--spacing-fluid-2xs) text-sm text-(--color-texto-suave) ${
                       // El ancho de la tarjeta es el mismo en vertical y en
                       // horizontal con 1 sola visible (misma columna del
-                      // 30% del Hero) — solo hace falta acotar líneas
-                      // cuando de verdad hay varias tarjetas compartiendo
-                      // fila (tablet, visibles > 1), no por defecto.
-                      direccion === 'horizontal' && visibles > 1 ? 'line-clamp-3' : ''
+                      // 30% del Hero), así que ahí se permiten más líneas
+                      // antes de truncar que cuando hay varias tarjetas
+                      // compartiendo fila (tablet, visibles > 1) — pero
+                      // incluso sin competir por espacio, un testimonio no
+                      // debe poder crecer sin límite y desbordar la tarjeta.
+                      direccion === 'horizontal' && visibles > 1 ? 'line-clamp-3' : 'line-clamp-6'
                     }`}
                   >
                     {t.descripcion}
