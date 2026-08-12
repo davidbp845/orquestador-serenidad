@@ -166,7 +166,7 @@ export default function ChatWidget({ apiBaseUrl, ctaMensaje }: Props) {
             ? expandido
               ? 'h-[min(70vh,32rem)] lg:h-[min(70vh,36rem)] 2xl:h-[min(70vh,44rem)]'
               : ''
-            : 'max-h-[min(70vh,32rem)] lg:max-h-[min(70vh,36rem)] 2xl:max-h-[min(70vh,44rem)]'
+            : 'flex-1 max-h-[min(70vh,32rem)] lg:max-h-[min(70vh,36rem)] 2xl:max-h-[min(70vh,44rem)]'
         }`}
       >
         {mensajes.length === 0 && (
