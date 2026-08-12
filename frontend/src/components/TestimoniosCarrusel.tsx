@@ -166,11 +166,11 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
           }}
         >
           {Array.from({ length: visibles }, (_, i) => (
-            <div key={i} class="flex h-44 animate-pulse flex-col gap-(--spacing-fluid-2xs)">
+            <div key={i} class="flex animate-pulse flex-col gap-(--spacing-fluid-2xs)">
               <div class="h-4 w-20 rounded bg-(--color-borde)" />
               <div class="h-3 w-full rounded bg-(--color-borde)" />
               <div class="h-3 w-5/6 rounded bg-(--color-borde)" />
-              <div class="mt-auto h-3 w-2/5 rounded bg-(--color-borde)" />
+              <div class="h-3 w-2/5 rounded bg-(--color-borde)" />
             </div>
           ))}
         </div>
@@ -210,12 +210,12 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
               }}
             >
               {testimonios.slice(p * visibles, p * visibles + visibles).map((t) => (
-                <article key={t.id} class="flex h-44 flex-col overflow-hidden">
+                <article key={t.id} class="flex flex-col overflow-hidden">
                   <p class="text-(--color-acento)">{'⭐'.repeat(t.valoracion)}</p>
                   <p class="mt-(--spacing-fluid-2xs) line-clamp-3 text-sm text-(--color-texto-suave)">
                     {t.descripcion}
                   </p>
-                  <p class="mt-auto pt-(--spacing-fluid-2xs) text-sm font-medium text-(--color-texto)">
+                  <p class="mt-(--spacing-fluid-2xs) text-sm font-medium text-(--color-texto)">
                     — {t.nombre}
                     {t.titulo && <span class="font-normal text-(--color-texto-suave)"> · {t.titulo}</span>}
                   </p>
