@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 interface Testimonio {
   id: number;
@@ -87,6 +87,39 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
   const [enPausa, setEnPausa] = useState(false);
   const anchura = usarAnchuraBreakpoint();
   const chatExpandido = usarChatExpandido();
+
+  // Testimonios largos (p.ej. el de Buddy) no caben en 3 líneas —
+  // se truncan con line-clamp y, SOLO si de verdad desbordan
+  // (scrollHeight > clientHeight), se ofrece un "Leer más" que abre
+  // el testimonio completo en un diálogo con scroll. Testimonios
+  // cortos no se tocan: sin recorte ni botón.
+  const refsDescripcion = useRef(new Map<number, HTMLParagraphElement>());
+  const [truncados, setTruncados] = useState<Set<number>>(new Set());
+  const [testimonioAbierto, setTestimonioAbierto] = useState<Testimonio | null>(null);
+  const dialogoRef = useRef<HTMLDialogElement>(null);
+
+  const registrarRefDescripcion = useCallback(
+    (id: number) => (el: HTMLParagraphElement | null) => {
+      if (el) refsDescripcion.current.set(id, el);
+      else refsDescripcion.current.delete(id);
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    const siguiente = new Set<number>();
+    refsDescripcion.current.forEach((el, id) => {
+      if (el.scrollHeight > el.clientHeight + 1) siguiente.add(id);
+    });
+    setTruncados((actual) => {
+      if (actual.size === siguiente.size && [...actual].every((id) => siguiente.has(id))) return actual;
+      return siguiente;
+    });
+  });
+
+  useEffect(() => {
+    if (testimonioAbierto) dialogoRef.current?.showModal();
+  }, [testimonioAbierto]);
 
   useEffect(() => {
     let cancelado = false;
@@ -212,7 +245,21 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
               {testimonios.slice(p * visibles, p * visibles + visibles).map((t) => (
                 <article key={t.id} class="flex flex-col overflow-hidden">
                   <p class="text-(--color-acento)">{'⭐'.repeat(t.valoracion)}</p>
-                  <p class="mt-(--spacing-fluid-2xs) text-sm text-(--color-texto-suave)">{t.descripcion}</p>
+                  <p
+                    ref={registrarRefDescripcion(t.id)}
+                    class="mt-(--spacing-fluid-2xs) line-clamp-3 text-sm text-(--color-texto-suave)"
+                  >
+                    {t.descripcion}
+                  </p>
+                  {truncados.has(t.id) && (
+                    <button
+                      type="button"
+                      onClick={() => setTestimonioAbierto(t)}
+                      class="mt-(--spacing-fluid-3xs) self-start text-sm font-medium text-(--color-acento) hover:underline"
+                    >
+                      Leer más
+                    </button>
+                  )}
                   <p class="mt-(--spacing-fluid-2xs) text-sm font-medium text-(--color-texto)">
                     — {t.nombre}
                     {t.titulo && ` · ${t.titulo}`}
@@ -239,6 +286,41 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
           ))}
         </div>
       )}
+      <dialog
+        ref={dialogoRef}
+        onClose={() => setTestimonioAbierto(null)}
+        onClick={(e) => {
+          if (e.target === dialogoRef.current) dialogoRef.current?.close();
+        }}
+        class="m-auto max-h-[80vh] w-[90vw] max-w-md rounded-2xl border border-(--color-borde) bg-(--color-superficie) p-0 backdrop:bg-black/50"
+      >
+        {testimonioAbierto && (
+          <div class="flex max-h-[80vh] flex-col">
+            <div class="flex items-center justify-between border-b border-(--color-borde) p-(--spacing-fluid-s)">
+              <p class="text-(--color-acento)">{'⭐'.repeat(testimonioAbierto.valoracion)}</p>
+              <button
+                type="button"
+                onClick={() => dialogoRef.current?.close()}
+                aria-label="Cerrar"
+                class="rounded-full p-(--spacing-fluid-3xs) text-(--color-texto-suave) transition-colors hover:bg-(--color-acento-suave) hover:text-(--color-acento)"
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-(--spacing-fluid-s)">
+              <p class="whitespace-pre-wrap text-sm text-(--color-texto-suave)">
+                {testimonioAbierto.descripcion}
+              </p>
+            </div>
+            <div class="border-t border-(--color-borde) p-(--spacing-fluid-s) text-sm font-medium text-(--color-texto)">
+              — {testimonioAbierto.nombre}
+              {testimonioAbierto.titulo && ` · ${testimonioAbierto.titulo}`}
+            </div>
+          </div>
+        )}
+      </dialog>
     </div>
   );
 }
