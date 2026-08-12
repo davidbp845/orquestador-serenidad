@@ -21,12 +21,22 @@ class RepositorioSesionesRedis(RepositorioSesiones):
         bruto = self._cliente.get(self._clave(canal, usuario_id))
         if bruto is None:
             return None
-        return SesionConversacion(canal=canal, usuario_id=usuario_id, historial=json.loads(bruto))
+        datos = json.loads(bruto)
+        return SesionConversacion(
+            canal=canal, usuario_id=usuario_id,
+            historial=datos["historial"], notas_pendientes=datos["notas_pendientes"],
+        )
 
     def guardar(self, sesion: SesionConversacion) -> None:
+        # notas_pendientes (#77) también tiene que sobrevivir entre
+        # peticiones: antes solo se serializaba historial, así que el
+        # buffer de guardar_nota_cliente se perdía en cuanto la sesión
+        # daba una vuelta por Redis (el siguiente obtener() la
+        # reconstruía sin ese campo) — silenciosamente, sin error, con
+        # REDIS_URL configurada.
         self._cliente.set(
             self._clave(sesion.canal, sesion.usuario_id),
-            json.dumps(sesion.historial),
+            json.dumps({"historial": sesion.historial, "notas_pendientes": sesion.notas_pendientes}),
         )
 
     @staticmethod
