@@ -152,7 +152,7 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
     return (
       <div class="rounded-2xl border border-(--color-borde) bg-(--color-superficie) p-(--spacing-fluid-s)">
         <div
-          class="grid gap-(--spacing-fluid-s)"
+          class={`grid ${direccion === 'vertical' ? 'gap-(--spacing-fluid-m)' : 'gap-(--spacing-fluid-s)'}`}
           style={{
             gridTemplateColumns: direccion === 'horizontal' ? `repeat(${visibles}, minmax(0, 1fr))` : undefined,
           }}
@@ -193,7 +193,9 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
           {Array.from({ length: totalPaginas }, (_, p) => (
             <div
               key={p}
-              class="grid w-full shrink-0 gap-(--spacing-fluid-s)"
+              class={`grid w-full shrink-0 ${
+                direccion === 'vertical' ? 'gap-(--spacing-fluid-m)' : 'gap-(--spacing-fluid-s)'
+              }`}
               style={{
                 gridTemplateColumns:
                   direccion === 'horizontal' ? `repeat(${visibles}, minmax(0, 1fr))` : undefined,
