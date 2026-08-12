@@ -73,9 +73,7 @@ Inbound adapter → `OrquestadorAgente.responder(sesion, mensaje)` → calls the
 
 ### Extending to a new business
 
-1. Duplicate `config/business.yaml`, adjust services/professionals/tone.
-2. Create a new Obsidian vault with that business's knowledge, point `vault_obsidian` at it, and re-run `obsidian_ingest`.
-3. If the business needs a genuinely different use case (e.g. "reserve a table" instead of "reserve an appointment"), add it in `domain/use_cases.py` and expose a corresponding tool in `application/tools.py` (both the `TOOLS_SCHEMA` entry and the dispatch branch in `EjecutorHerramientas.ejecutar`). Nothing else in the system needs to change.
+Only `config/business.yaml` and the Obsidian vault should normally change — `domain/`/`application/` stay untouched unless the new vertical needs a genuinely different use case. Full procedure in `.claude/commands/nuevo-negocio.md` (invoke with `/nuevo-negocio`).
 
 ### Replacing an adapter
 
@@ -176,14 +174,11 @@ with a summary when done.
   read-only API, querying a local/dev database.
 - Run `alembic upgrade head` against a local `DATABASE_URL` (additive schema change,
   not data-destructive).
-- Run a full **sprint**: for every GitHub issue currently at project Status = Ready,
-  implement it end-to-end (code, tests, `ruff check`), commit locally, comment on the
-  issue documenting what was done and how it was verified, then close it and move
-  Status to **In review** (never Done) — following the documented open/close cycle.
-  Move on to the next Ready issue without pausing for confirmation in between. Still
-  stop for anything listed under "Blocked entirely" or "Still requires explicit
-  confirmation" below (e.g. `git push`, PR merges) — report back with a summary once
-  the batch of Ready issues is exhausted or one of those is hit.
+- Run a full **sprint** over every GitHub issue at project Status = Ready — implement,
+  test, commit, comment, close to In review, chained without pausing between issues.
+  Mechanics documented in `.claude/commands/sprint.md` (invoke with `/sprint`); the
+  stop conditions below ("Blocked entirely" / "Still requires explicit confirmation")
+  still apply mid-sprint.
 
 ### Blocked entirely (enforced in `.claude/settings.json`, not even askable in-session)
 - `git push --force` to any remote.
