@@ -212,7 +212,11 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
               {testimonios.slice(p * visibles, p * visibles + visibles).map((t) => (
                 <article key={t.id} class="flex flex-col overflow-hidden">
                   <p class="text-(--color-acento)">{'⭐'.repeat(t.valoracion)}</p>
-                  <p class="mt-(--spacing-fluid-2xs) line-clamp-3 text-sm text-(--color-texto-suave)">
+                  <p
+                    class={`mt-(--spacing-fluid-2xs) text-sm text-(--color-texto-suave) ${
+                      direccion === 'horizontal' ? 'line-clamp-3' : ''
+                    }`}
+                  >
                     {t.descripcion}
                   </p>
                   <p class="mt-(--spacing-fluid-2xs) text-sm font-medium text-(--color-texto)">
