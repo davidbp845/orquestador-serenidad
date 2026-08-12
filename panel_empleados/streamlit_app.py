@@ -12,6 +12,7 @@ Uso:
 from __future__ import annotations
 
 import os
+import re
 import secrets
 import sys
 import urllib.parse
@@ -186,6 +187,31 @@ def _desplazar_ancla(ancla: date, vista: str, direccion: int) -> date:
     if vista == "Mes":
         return _mes_relativo(ancla, direccion)
     return ancla + timedelta(days=direccion)  # Día
+
+
+# Guía, no límite estricto: cuánto texto suele caber en la fila de
+# promobar en móvil (line-clamp-1, ver #78) — depende del ancho real
+# del dispositivo, así que solo se avisa, nunca se bloquea el guardado.
+_LONGITUD_GUIA_PROMOBAR = 40
+
+
+def _quitar_etiquetas_html(html: str) -> str:
+    """Las etiquetas (<strong>, <a href="...">...) no ocupan espacio
+    visible en la barra — contar los caracteres del HTML tal cual
+    induciría a error, así que se despojan antes de contar."""
+    return re.sub(r"<[^>]*>", "", html)
+
+
+def _contador_caracteres_promobar(contenido_html: str) -> None:
+    n = len(_quitar_etiquetas_html(contenido_html))
+    guia = (
+        f"guía: ~{_LONGITUD_GUIA_PROMOBAR} caracteres para que quepa en una línea en "
+        "móvil — no es un límite estricto, depende del ancho real del dispositivo"
+    )
+    if n > _LONGITUD_GUIA_PROMOBAR:
+        st.caption(f"⚠️ {n} caracteres ({guia}).")
+    else:
+        st.caption(f"{n} caracteres ({guia}).")
 
 
 def _tarjeta_cita(cita, repo_servicios, repo_profesionales, repo_clientes, cambiar_estado_cita) -> None:
@@ -575,9 +601,18 @@ elif opcion == "📢 Promobar":
             st.rerun()
     else:
         st.subheader("Nuevo promobar")
-        with st.form("form_nuevo_promo_bar", clear_on_submit=True):
+        # El contenido vive fuera del st.form: dentro de un form,
+        # Streamlit no vuelve a ejecutar el script en cada pulsación
+        # (por diseño, para no enviar con campos a medio sincronizar),
+        # así que un contador que reaccione mientras se escribe
+        # necesita este campo suelto — es el único, no hay varios
+        # campos interdependientes cuya sincronización se pierda.
+        contenido_html = st.text_area(
+            "Contenido (HTML)", height=150, key="contenido_nuevo_promo_bar",
+        )
+        _contador_caracteres_promobar(contenido_html)
+        with st.form("form_nuevo_promo_bar"):
             nombre = st.text_input("Nombre (solo para identificarlo aquí, no se muestra en la web)")
-            contenido_html = st.text_area("Contenido (HTML)", height=150)
             col_crear, col_cancelar = st.columns(2)
             crear = col_crear.form_submit_button("Crear promobar", use_container_width=True)
             cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
@@ -588,9 +623,11 @@ elif opcion == "📢 Promobar":
                 crear_promo_bar.ejecutar(nombre, contenido_html)
                 st.success("Promobar creado (inactivo — actívalo cuando quieras que se muestre).")
                 st.session_state["mostrar_form_nuevo_promo_bar"] = False
+                del st.session_state["contenido_nuevo_promo_bar"]
                 st.rerun()
         if cancelar:
             st.session_state["mostrar_form_nuevo_promo_bar"] = False
+            del st.session_state["contenido_nuevo_promo_bar"]
             st.rerun()
 
     st.divider()
@@ -624,11 +661,16 @@ elif opcion == "📢 Promobar":
                     eliminar_promo_bar.ejecutar(promo_bar.id)
                     st.rerun()
             else:
+                # Mismo motivo que en "Nuevo promobar": el contenido
+                # queda fuera del form para que el contador reaccione
+                # en cada pulsación.
+                contenido_editado = st.text_area(
+                    "Contenido (HTML)", value=promo_bar.contenido_html, height=150,
+                    key=f"contenido_editar_promo_bar_{promo_bar.id}",
+                )
+                _contador_caracteres_promobar(contenido_editado)
                 with st.form(f"form_editar_promo_bar_{promo_bar.id}"):
                     nombre_editado = st.text_input("Nombre", value=promo_bar.nombre)
-                    contenido_editado = st.text_area(
-                        "Contenido (HTML)", value=promo_bar.contenido_html, height=150,
-                    )
                     col_guardar, col_cancelar = st.columns(2)
                     guardar = col_guardar.form_submit_button("Guardar", use_container_width=True)
                     cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
@@ -638,9 +680,11 @@ elif opcion == "📢 Promobar":
                     else:
                         editar_promo_bar.ejecutar(promo_bar.id, nombre_editado, contenido_editado)
                         st.session_state[clave_editando] = False
+                        del st.session_state[f"contenido_editar_promo_bar_{promo_bar.id}"]
                         st.rerun()
                 if cancelar:
                     st.session_state[clave_editando] = False
+                    del st.session_state[f"contenido_editar_promo_bar_{promo_bar.id}"]
                     st.rerun()
 
 # ---------- Contadores ----------
