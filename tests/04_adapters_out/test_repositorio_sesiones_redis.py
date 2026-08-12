@@ -74,6 +74,19 @@ def test_obtener_deserializa_el_cliente_id_conocido_guardado():
     assert sesion.cliente_id_conocido == "c1"
 
 
+def test_obtener_tolera_una_sesion_guardada_sin_cliente_id_conocido():
+    # Sesión guardada por una versión anterior del código, antes de
+    # añadir cliente_id_conocido (#77) — no debe romper con KeyError,
+    # solo faltarle ese campo concreto (vuelve a None).
+    repo, mock_cliente = _construir_con_cliente_falso()
+    mock_cliente.get.return_value = json.dumps({"historial": [], "notas_pendientes": ["x"]})
+
+    sesion = repo.obtener("web", "u1")
+
+    assert sesion.notas_pendientes == ["x"]
+    assert sesion.cliente_id_conocido is None
+
+
 def test_guardar_serializa_historial_notas_pendientes_y_cliente_id_conocido():
     repo, mock_cliente = _construir_con_cliente_falso()
     sesion = SesionConversacion(

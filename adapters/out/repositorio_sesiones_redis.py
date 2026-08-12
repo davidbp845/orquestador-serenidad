@@ -22,10 +22,16 @@ class RepositorioSesionesRedis(RepositorioSesiones):
         if bruto is None:
             return None
         datos = json.loads(bruto)
+        # .get() con default, no indexado directo: una sesión guardada
+        # con una versión anterior del código (un campo de
+        # SesionConversacion menos) no debe romper el chat con un
+        # KeyError — solo pierde ese campo concreto, igual que si nunca
+        # se hubiera rellenado.
         return SesionConversacion(
             canal=canal, usuario_id=usuario_id,
-            historial=datos["historial"], notas_pendientes=datos["notas_pendientes"],
-            cliente_id_conocido=datos["cliente_id_conocido"],
+            historial=datos.get("historial", []),
+            notas_pendientes=datos.get("notas_pendientes", []),
+            cliente_id_conocido=datos.get("cliente_id_conocido"),
         )
 
     def guardar(self, sesion: SesionConversacion) -> None:
