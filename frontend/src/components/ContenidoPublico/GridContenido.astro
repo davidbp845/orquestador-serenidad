@@ -28,9 +28,6 @@ const notas = (await getCollection('vault', ({ data }) => data.publicar_web === 
     document.querySelectorAll<HTMLElement>('[data-fuente]').forEach((tarjeta) => {
       const coincide = nombres.has(tarjeta.dataset.fuente ?? '');
       tarjeta.classList.toggle('destacado', coincide);
-      if (coincide) {
-        tarjeta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
     });
   });
 
