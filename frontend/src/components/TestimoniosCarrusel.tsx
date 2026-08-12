@@ -221,7 +221,7 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
                   </p>
                   <p class="mt-(--spacing-fluid-2xs) text-sm font-medium text-(--color-texto)">
                     — {t.nombre}
-                    {t.titulo && <span class="font-normal text-(--color-texto-suave)"> · {t.titulo}</span>}
+                    {t.titulo && ` · ${t.titulo}`}
                   </p>
                 </article>
               ))}
