@@ -10,13 +10,14 @@ import threading
 from datetime import date
 from uuid import UUID
 
-from domain.entities import Cita, Cliente, EstadoPedido, Pedido, Profesional, Servicio, Testimonio
+from domain.entities import Cita, Cliente, EstadoPedido, Pedido, Profesional, PromoBar, Servicio, Testimonio
 from domain.ports import (
     RepositorioCitas,
     RepositorioClientes,
     RepositorioContadores,
     RepositorioPedidos,
     RepositorioProfesionales,
+    RepositorioPromoBar,
     RepositorioServicios,
     RepositorioTestimonios,
 )
@@ -133,6 +134,17 @@ class RepositorioTestimoniosMemoria(RepositorioTestimonios):
         n = len(self._data)
         self._data.clear()
         return n
+
+
+class RepositorioPromoBarMemoria(RepositorioPromoBar):
+    def __init__(self):
+        self._promo_bar = PromoBar()
+
+    def obtener(self) -> PromoBar:
+        return self._promo_bar
+
+    def guardar(self, promo_bar: PromoBar) -> None:
+        self._promo_bar = promo_bar
 
 
 class RepositorioContadoresMemoria(RepositorioContadores):

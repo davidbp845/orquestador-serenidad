@@ -150,3 +150,14 @@ class Testimonio:
             id=id, nombre=nombre, descripcion=descripcion,
             valoracion=valoracion, titulo=titulo,
         )
+
+
+@dataclass
+class PromoBar:
+    """Aviso/oferta editable desde el panel, mostrado en la cabecera
+    del frontend público (issue #78). Fila única, no una colección
+    como Testimonio: no tiene id propio, el repositorio guarda/lee
+    siempre la misma instancia."""
+    activo: bool = False
+    contenido_html: str = ""
+    actualizado_en: datetime = field(default_factory=lambda: datetime.now(UTC))

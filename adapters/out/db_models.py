@@ -62,6 +62,17 @@ class ContadorDB(SQLModel, table=True):
     valor: int = 0
 
 
+class PromoBarDB(SQLModel, table=True):
+    """Fila única (ver domain.entities.PromoBar): id fijo a 1, siempre
+    la misma fila se lee/sobrescribe."""
+    __tablename__ = "promo_bar"
+
+    id: int = Field(default=1, primary_key=True)
+    activo: bool = False
+    contenido_html: str = ""
+    actualizado_en: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 class LineaPedidoDB(SQLModel, table=True):
     __tablename__ = "pedido_lineas"
 

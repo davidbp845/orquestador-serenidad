@@ -6,12 +6,14 @@ const ctaCita = negocio.cta_cita ?? {
   texto_largo: 'Reservar una cita',
   mensaje: 'Quiero reservar una cita',
 };
+const apiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 ---
 
 <header
   class="sticky top-0 z-10 border-b border-(--color-borde) bg-(--color-superficie)/90 backdrop-blur-sm"
+  data-api-base-url={apiBaseUrl}
 >
-  <div class="mx-auto flex max-w-3xl items-center justify-between px-(--spacing-fluid-s) py-(--spacing-fluid-xs) md:max-w-none md:px-(--spacing-fluid-m)">
+  <div class="mx-auto flex max-w-3xl items-center gap-(--spacing-fluid-s) px-(--spacing-fluid-s) py-(--spacing-fluid-xs) md:max-w-none md:px-(--spacing-fluid-m)">
     <a href="/" class="text-base font-semibold tracking-tight text-(--color-texto)">
       {negocio.logo_url && negocio.logo_compacto_url ? (
         <>
@@ -24,14 +26,41 @@ const ctaCita = negocio.cta_cita ?? {
         negocio.nombre
       )}
     </a>
+    {/* Poblado por el script de más abajo con GET /promobar — vacío y
+        oculto por defecto (ver aplicarVisibilidadPromobar) hasta saber
+        si hay contenido activo, para no reservar hueco de más. */}
+    <div
+      id="promobar-desktop"
+      hidden
+      class="mx-auto min-w-0 max-w-6xl flex-1 truncate text-center text-sm text-(--color-texto)"
+    ></div>
     <button
       type="button"
       id="cta-cita-header"
       data-mensaje={ctaCita.mensaje}
-      class="rounded-full bg-(--color-acento) px-(--spacing-fluid-s) py-(--spacing-fluid-3xs) text-sm font-medium text-white transition-opacity hover:opacity-90"
+      class="ml-auto shrink-0 rounded-full bg-(--color-acento) px-(--spacing-fluid-s) py-(--spacing-fluid-3xs) text-sm font-medium text-white transition-opacity hover:opacity-90"
     >
       <span class="sm:hidden">{ctaCita.texto_corto}</span>
       <span class="hidden sm:inline">{ctaCita.texto_largo}</span>
+    </button>
+  </div>
+  {/* Segunda fila, solo en móvil: en la fila de arriba no queda hueco
+      entre logo y CTA para meter el promobar ahí (issue #78). */}
+  <div
+    id="promobar-movil"
+    hidden
+    class="flex items-center justify-between gap-(--spacing-fluid-2xs) border-t border-(--color-borde) px-(--spacing-fluid-s) py-(--spacing-fluid-3xs)"
+  >
+    <span id="promobar-movil-texto" class="line-clamp-1 text-sm text-(--color-texto)"></span>
+    <button
+      type="button"
+      id="promobar-movil-cerrar"
+      aria-label="Cerrar aviso"
+      class="shrink-0 rounded-full p-(--spacing-fluid-3xs) text-(--color-texto-suave) transition-colors hover:bg-(--color-acento-suave) hover:text-(--color-acento)"
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M18 6 6 18M6 6l12 12" />
+      </svg>
     </button>
   </div>
 </header>
@@ -53,4 +82,60 @@ const ctaCita = negocio.cta_cita ?? {
       window.location.href = '/?cta=cita';
     }
   });
+</script>
+
+<script>
+  // Promobar (issue #78): el contenido ya llega saneado desde el
+  // backend (GET /promobar hace bleach.clean antes de servirlo), así
+  // que aquí solo hace falta decidir DÓNDE mostrarlo — misma fila que
+  // el CTA en desktop, segunda fila propia en móvil (ahí no hay hueco
+  // entre logo y CTA) — y respetar el cierre manual en móvil, que
+  // dura lo que la sesión de pestaña (sessionStorage).
+  const CLAVE_CERRADO_MOVIL = 'orquestador:promobar-cerrado';
+  const PUNTO_CORTE_MOVIL_PX = 640; // mismo breakpoint 'sm' que el resto de esta cabecera
+
+  const cabecera = document.querySelector<HTMLElement>('header[data-api-base-url]');
+  const apiBaseUrl = cabecera?.dataset.apiBaseUrl ?? 'http://localhost:8000';
+  const desktopEl = document.getElementById('promobar-desktop');
+  const movilEl = document.getElementById('promobar-movil');
+  const movilTextoEl = document.getElementById('promobar-movil-texto');
+  const movilCerrarEl = document.getElementById('promobar-movil-cerrar');
+
+  let contenidoHtml: string | null = null; // null = todavía no se sabe si hay algo que mostrar
+
+  function aplicarVisibilidadPromobar() {
+    if (!desktopEl || !movilEl) return;
+    if (!contenidoHtml) {
+      desktopEl.hidden = true;
+      movilEl.hidden = true;
+      return;
+    }
+    const esMovil = window.matchMedia(`(max-width: ${PUNTO_CORTE_MOVIL_PX - 1}px)`).matches;
+    desktopEl.hidden = esMovil;
+    movilEl.hidden = !esMovil || sessionStorage.getItem(CLAVE_CERRADO_MOVIL) === '1';
+  }
+
+  movilCerrarEl?.addEventListener('click', () => {
+    sessionStorage.setItem(CLAVE_CERRADO_MOVIL, '1');
+    if (movilEl) movilEl.hidden = true;
+  });
+
+  window.addEventListener('resize', aplicarVisibilidadPromobar);
+
+  fetch(`${apiBaseUrl}/promobar`)
+    .then((respuesta) => (respuesta.ok ? respuesta.json() : null))
+    .then((datos) => {
+      if (!datos?.activo || !datos.contenido_html) return;
+      const html: string = datos.contenido_html;
+      contenidoHtml = html;
+      if (desktopEl) desktopEl.innerHTML = html;
+      if (movilTextoEl) movilTextoEl.innerHTML = html;
+      aplicarVisibilidadPromobar();
+    })
+    .catch(() => {
+      // Backend inalcanzable (p.ej. aún arrancando): el promobar
+      // simplemente no aparece esta carga, sin reintento — a
+      // diferencia de Testimonios, no es contenido central de la
+      // página, no vale la pena la complejidad de reintentar.
+    });
 </script>

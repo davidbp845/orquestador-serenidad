@@ -16,6 +16,7 @@ from .entities import (
     EstadoPedido,
     LineaPedido,
     Pedido,
+    PromoBar,
     Servicio,
     SlotDisponible,
     Testimonio,
@@ -39,6 +40,7 @@ from .ports import (
     RepositorioContadores,
     RepositorioPedidos,
     RepositorioProfesionales,
+    RepositorioPromoBar,
     RepositorioServicios,
     RepositorioTestimonios,
     SincronizadorCalendario,
@@ -473,6 +475,28 @@ class ListarTestimoniosRecientes:
 
     def ejecutar(self, limite: int = 5) -> list[Testimonio]:
         return sorted(self._testimonios.listar(), key=lambda t: t.creado_en, reverse=True)[:limite]
+
+
+class ObtenerPromoBar:
+    """Lectura pública: el estado actual del promobar para el
+    endpoint del frontend (issue #78)."""
+    def __init__(self, promo_bar: RepositorioPromoBar):
+        self._promo_bar = promo_bar
+
+    def ejecutar(self) -> PromoBar:
+        return self._promo_bar.obtener()
+
+
+class ActualizarPromoBar:
+    """Escritura desde el panel — única vía para cambiar el promobar,
+    no hay tool de LLM ni otro camino de escritura."""
+    def __init__(self, promo_bar: RepositorioPromoBar):
+        self._promo_bar = promo_bar
+
+    def ejecutar(self, activo: bool, contenido_html: str) -> PromoBar:
+        promo_bar = PromoBar(activo=activo, contenido_html=contenido_html)
+        self._promo_bar.guardar(promo_bar)
+        return promo_bar
 
 
 class CrearCliente:

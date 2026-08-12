@@ -264,3 +264,100 @@ def test_testimonios_devuelve_los_del_caso_de_uso(modulo):
     assert respuesta.json() == [
         {"id": 1, "nombre": "Juan", "titulo": "Genial", "descripcion": "Repetiré seguro", "valoracion": 5}
     ]
+
+
+class FakeObtenerPromoBar:
+    def __init__(self, promo_bar):
+        self.promo_bar = promo_bar
+
+    def ejecutar(self):
+        return self.promo_bar
+
+
+def test_promobar_devuelve_inactivo_si_no_hay_caso_de_uso_configurado(cliente):
+    client, _, _ = cliente
+    respuesta = client.get("/promobar")
+    assert respuesta.status_code == 200
+    assert respuesta.json() == {"activo": False, "contenido_html": ""}
+
+
+def test_promobar_devuelve_inactivo_si_no_esta_activo(modulo):
+    from domain.entities import PromoBar
+
+    orquestador = FakeOrquestador()
+    repositorio_sesiones = RepositorioSesionesMemoria()
+    app = modulo.crear_router(
+        orquestador, repositorio_sesiones,
+        obtener_promo_bar=FakeObtenerPromoBar(PromoBar(activo=False, contenido_html="<p>Oferta</p>")),
+    )
+    client = TestClient(app)
+
+    respuesta = client.get("/promobar")
+
+    assert respuesta.status_code == 200
+    assert respuesta.json() == {"activo": False, "contenido_html": ""}
+
+
+def test_promobar_devuelve_el_contenido_saneado_si_esta_activo(modulo):
+    from domain.entities import PromoBar
+
+    orquestador = FakeOrquestador()
+    repositorio_sesiones = RepositorioSesionesMemoria()
+    app = modulo.crear_router(
+        orquestador, repositorio_sesiones,
+        obtener_promo_bar=FakeObtenerPromoBar(
+            PromoBar(activo=True, contenido_html='<p>Oferta con <a href="/x">enlace</a></p>')
+        ),
+    )
+    client = TestClient(app)
+
+    respuesta = client.get("/promobar")
+
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["activo"] is True
+    # <p> no está en la lista blanca de saneado, pero su contenido y el
+    # <a href> sí se conservan.
+    assert cuerpo["contenido_html"] == 'Oferta con <a href="/x">enlace</a>'
+
+
+def test_promobar_elimina_etiquetas_peligrosas(modulo):
+    from domain.entities import PromoBar
+
+    orquestador = FakeOrquestador()
+    repositorio_sesiones = RepositorioSesionesMemoria()
+    app = modulo.crear_router(
+        orquestador, repositorio_sesiones,
+        obtener_promo_bar=FakeObtenerPromoBar(
+            PromoBar(activo=True, contenido_html='<script>alert(1)</script><strong>2x1</strong>')
+        ),
+    )
+    client = TestClient(app)
+
+    respuesta = client.get("/promobar")
+
+    cuerpo = respuesta.json()
+    # bleach quita la etiqueta <script> pero no su texto interior (queda
+    # como texto inerte, no ejecutable) — lo que importa es que la
+    # etiqueta en sí desaparezca, no el texto plano que dejara dentro.
+    assert "<script>" not in cuerpo["contenido_html"]
+    assert "<strong>2x1</strong>" in cuerpo["contenido_html"]
+
+
+def test_promobar_elimina_protocolo_javascript_en_enlaces(modulo):
+    from domain.entities import PromoBar
+
+    orquestador = FakeOrquestador()
+    repositorio_sesiones = RepositorioSesionesMemoria()
+    app = modulo.crear_router(
+        orquestador, repositorio_sesiones,
+        obtener_promo_bar=FakeObtenerPromoBar(
+            PromoBar(activo=True, contenido_html='<a href="javascript:alert(1)">click</a>')
+        ),
+    )
+    client = TestClient(app)
+
+    respuesta = client.get("/promobar")
+
+    cuerpo = respuesta.json()
+    assert "javascript:" not in cuerpo["contenido_html"]

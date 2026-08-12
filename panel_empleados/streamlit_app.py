@@ -40,6 +40,7 @@ from adapters.out.repositorios_memoria import (
     RepositorioContadoresMemoria,
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
+    RepositorioPromoBarMemoria,
     RepositorioServiciosMemoria,
     RepositorioTestimoniosMemoria,
 )
@@ -50,6 +51,7 @@ from domain.exceptions import ClienteYaExiste, TransicionEstadoInvalida, Valorac
 from domain.use_cases import (
     _DIAS_SEMANA_ES,
     _TRANSICIONES_CITA_VALIDAS,
+    ActualizarPromoBar,
     CambiarEstadoCita,
     CambiarEstadoPedido,
     CrearCliente,
@@ -60,6 +62,7 @@ from domain.use_cases import (
     EliminarCliente,
     EliminarTestimonio,
     FusionarClientes,
+    ObtenerPromoBar,
     _clave_orden_fusion,
 )
 
@@ -84,6 +87,7 @@ def _construir_repos():
             RepositorioClientesPostgres,
             RepositorioContadoresPostgres,
             RepositorioPedidosPostgres,
+            RepositorioPromoBarPostgres,
             RepositorioTestimoniosPostgres,
             crear_engine,
         )
@@ -93,16 +97,18 @@ def _construir_repos():
         repo_pedidos = RepositorioPedidosPostgres(engine)
         repo_testimonios = RepositorioTestimoniosPostgres(engine)
         repo_contadores = RepositorioContadoresPostgres(engine)
+        repo_promo_bar = RepositorioPromoBarPostgres(engine)
     else:
         repo_citas = RepositorioCitasMemoria()
         repo_clientes = RepositorioClientesMemoria()
         repo_pedidos = RepositorioPedidosMemoria()
         repo_testimonios = RepositorioTestimoniosMemoria()
         repo_contadores = RepositorioContadoresMemoria()
+        repo_promo_bar = RepositorioPromoBarMemoria()
 
     return (
         config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos,
-        repo_testimonios, repo_contadores,
+        repo_testimonios, repo_contadores, repo_promo_bar,
     )
 
 
@@ -234,7 +240,7 @@ if _clave_panel and not st.session_state.get("autenticado"):
 
 (
     config, repo_servicios, repo_profesionales, repo_citas, repo_clientes, repo_pedidos,
-    repo_testimonios, repo_contadores,
+    repo_testimonios, repo_contadores, repo_promo_bar,
 ) = _construir_repos()
 notificador = _construir_notificador()
 cambiar_estado_pedido = CambiarEstadoPedido(repo_pedidos)
@@ -247,6 +253,8 @@ editar_cliente = EditarCliente(repo_clientes)
 eliminar_cliente = EliminarCliente(repo_clientes)
 detectar_clientes_duplicados = DetectarClientesDuplicados(repo_clientes)
 fusionar_clientes = FusionarClientes(repo_clientes, repo_citas, repo_pedidos)
+obtener_promo_bar = ObtenerPromoBar(repo_promo_bar)
+actualizar_promo_bar = ActualizarPromoBar(repo_promo_bar)
 
 # ---------- Cabecera ----------
 _hoy = date.today()
@@ -260,7 +268,7 @@ with st.sidebar:
     opcion = st.radio(
         "Menú",
         [
-            "📅 Agenda", "📦 Pedidos", "👤 Clientes", "⭐ Testimonios",
+            "📅 Agenda", "📦 Pedidos", "👤 Clientes", "⭐ Testimonios", "📢 Promobar",
             "🔢 Contadores", "🚦 Rate limiting", "🛠️ Herramientas",
         ],
     )
@@ -546,6 +554,27 @@ elif opcion == "⭐ Testimonios":
                 if cancelar:
                     st.session_state[clave_editando] = False
                     st.rerun()
+
+# ---------- Promobar ----------
+elif opcion == "📢 Promobar":
+    st.subheader("Promobar de la cabecera")
+    st.caption(
+        "Aviso u oferta que se muestra en la cabecera del sitio público. Admite HTML "
+        "básico (<a href>, <strong>, <em>, <b>, <i>, <br>, <span>) — cualquier otra "
+        "etiqueta o atributo se elimina al mostrarse, no hace falta escribir HTML "
+        "seguro a mano."
+    )
+    promo_bar_actual = obtener_promo_bar.ejecutar()
+    with st.form("form_promo_bar"):
+        activo = st.checkbox("Activo (visible en la web)", value=promo_bar_actual.activo)
+        contenido_html = st.text_area(
+            "Contenido (HTML)", value=promo_bar_actual.contenido_html, height=150,
+        )
+        guardar = st.form_submit_button("Guardar")
+    if guardar:
+        actualizar_promo_bar.ejecutar(activo, contenido_html)
+        st.success("Promobar actualizado.")
+        st.rerun()
 
 # ---------- Contadores ----------
 elif opcion == "🔢 Contadores":

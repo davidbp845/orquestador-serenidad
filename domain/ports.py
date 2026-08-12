@@ -19,6 +19,7 @@ from .entities import (
     Cliente,
     Pedido,
     Profesional,
+    PromoBar,
     Servicio,
     Testimonio,
 )
@@ -174,6 +175,20 @@ class RepositorioTestimonios(ABC):
         """Ver RepositorioCitas.borrar_todo — misma herramienta de
         panel, mismo alcance de "solo entorno local"."""
         ...
+
+
+class RepositorioPromoBar(ABC):
+    """Fila única (ver PromoBar): no hay id, obtener()/guardar()
+    siempre leen/escriben la misma instancia."""
+
+    @abstractmethod
+    def obtener(self) -> PromoBar:
+        """Nunca devuelve None: si no se ha guardado nada todavía,
+        un PromoBar() con los valores por defecto (activo=False)."""
+        ...
+
+    @abstractmethod
+    def guardar(self, promo_bar: PromoBar) -> None: ...
 
 
 class RepositorioContadores(ABC):

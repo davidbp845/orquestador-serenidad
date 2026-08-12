@@ -14,9 +14,10 @@ from adapters.out.repositorios_postgres import (
     RepositorioClientesPostgres,
     RepositorioContadoresPostgres,
     RepositorioPedidosPostgres,
+    RepositorioPromoBarPostgres,
     RepositorioTestimoniosPostgres,
 )
-from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, Testimonio
+from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, PromoBar, Testimonio
 
 
 def _engine():
@@ -316,6 +317,36 @@ def test_testimonios_borrar_todo():
 
     assert repo.borrar_todo() == 2
     assert repo.listar() == []
+
+
+def test_promo_bar_obtener_sin_guardar_devuelve_valores_por_defecto():
+    repo = RepositorioPromoBarPostgres(_engine())
+
+    promo_bar = repo.obtener()
+
+    assert promo_bar.activo is False
+    assert promo_bar.contenido_html == ""
+
+
+def test_promo_bar_guardar_y_obtener():
+    repo = RepositorioPromoBarPostgres(_engine())
+
+    repo.guardar(PromoBar(activo=True, contenido_html="<p>2x1</p>"))
+    leido = repo.obtener()
+
+    assert leido.activo is True
+    assert leido.contenido_html == "<p>2x1</p>"
+
+
+def test_promo_bar_guardar_sobrescribe_la_misma_fila():
+    repo = RepositorioPromoBarPostgres(_engine())
+    repo.guardar(PromoBar(activo=True, contenido_html="Viejo"))
+
+    repo.guardar(PromoBar(activo=False, contenido_html="Nuevo"))
+    leido = repo.obtener()
+
+    assert leido.activo is False
+    assert leido.contenido_html == "Nuevo"
 
 
 def test_contadores_empieza_en_uno_e_incrementa():

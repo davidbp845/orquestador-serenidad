@@ -17,16 +17,17 @@ from uuid import UUID
 from sqlalchemy import delete, text, update
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, Testimonio
+from domain.entities import Cita, Cliente, EstadoCita, EstadoPedido, LineaPedido, Pedido, PromoBar, Testimonio
 from domain.ports import (
     RepositorioCitas,
     RepositorioClientes,
     RepositorioContadores,
     RepositorioPedidos,
+    RepositorioPromoBar,
     RepositorioTestimonios,
 )
 
-from .db_models import CitaDB, ClienteDB, ContadorDB, LineaPedidoDB, PedidoDB, TestimonioDB
+from .db_models import CitaDB, ClienteDB, ContadorDB, LineaPedidoDB, PedidoDB, PromoBarDB, TestimonioDB
 
 
 def _como_uuid(valor) -> UUID | None:
@@ -265,6 +266,32 @@ class RepositorioTestimoniosPostgres(RepositorioTestimonios):
             descripcion=fila.descripcion, valoracion=fila.valoracion,
             creado_en=fila.creado_en,
         )
+
+
+class RepositorioPromoBarPostgres(RepositorioPromoBar):
+    """Fila única, id fijo a 1 (ver PromoBarDB) — obtener() la crea
+    con los valores por defecto si todavía no existe."""
+
+    def __init__(self, engine):
+        self._engine = engine
+
+    def obtener(self) -> PromoBar:
+        with Session(self._engine) as sesion:
+            fila = sesion.get(PromoBarDB, 1)
+            if fila is None:
+                return PromoBar()
+            return PromoBar(
+                activo=fila.activo, contenido_html=fila.contenido_html,
+                actualizado_en=fila.actualizado_en,
+            )
+
+    def guardar(self, promo_bar: PromoBar) -> None:
+        with Session(self._engine) as sesion:
+            sesion.merge(PromoBarDB(
+                id=1, activo=promo_bar.activo, contenido_html=promo_bar.contenido_html,
+                actualizado_en=promo_bar.actualizado_en,
+            ))
+            sesion.commit()
 
 
 class RepositorioContadoresPostgres(RepositorioContadores):

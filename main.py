@@ -40,6 +40,7 @@ from adapters.out.repositorios_memoria import (
     RepositorioContadoresMemoria,
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
+    RepositorioPromoBarMemoria,
     RepositorioServiciosMemoria,
     RepositorioTestimoniosMemoria,
 )
@@ -55,6 +56,7 @@ from domain.use_cases import (
     ConsultarConocimientoNegocio,
     CrearReserva,
     ListarTestimoniosRecientes,
+    ObtenerPromoBar,
     RegistrarPedido,
 )
 
@@ -188,6 +190,19 @@ def construir_listar_testimonios_recientes() -> ListarTestimoniosRecientes:
     return ListarTestimoniosRecientes(repo_testimonios)
 
 
+def construir_obtener_promo_bar() -> ObtenerPromoBar:
+    # Mismo condicional DATABASE_URL que construir_listar_testimonios_recientes():
+    # el panel escribe el promobar contra Postgres si está configurado,
+    # y el endpoint público debe leer los mismos datos.
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        from adapters.out.repositorios_postgres import RepositorioPromoBarPostgres, crear_engine
+        repo_promo_bar = RepositorioPromoBarPostgres(crear_engine(database_url))
+    else:
+        repo_promo_bar = RepositorioPromoBarMemoria()
+    return ObtenerPromoBar(repo_promo_bar)
+
+
 def construir_limitador_peticiones() -> LimitadorPeticiones:
     # Mismo condicional que construir_repositorio_sesiones() (#49): sin
     # REDIS_URL, cada proceso lleva su propio contador en memoria — un
@@ -204,6 +219,7 @@ def main():
     repositorio_sesiones = construir_repositorio_sesiones()
     limitador_peticiones = construir_limitador_peticiones()
     listar_testimonios_recientes = construir_listar_testimonios_recientes()
+    obtener_promo_bar = construir_obtener_promo_bar()
     # `or` en vez de un default en .get(): si .env define la variable
     # vacía (RATE_LIMIT_CHAT_MAX_PETICIONES=, como queda tras copiar
     # .env.example sin rellenarla), .get() devuelve "" en vez del
@@ -217,6 +233,7 @@ def main():
         limite_peticiones=limite_chat,
         ventana_segundos=ventana_chat,
         listar_testimonios_recientes=listar_testimonios_recientes,
+        obtener_promo_bar=obtener_promo_bar,
     )
 
     if config.get("canales", {}).get("whatsapp"):

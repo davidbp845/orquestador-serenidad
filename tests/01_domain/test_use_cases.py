@@ -13,6 +13,7 @@ from domain.entities import (
     LineaPedido,
     Pedido,
     Profesional,
+    PromoBar,
     Servicio,
     Testimonio,
 )
@@ -29,6 +30,7 @@ from domain.exceptions import (
 )
 from domain.use_cases import (
     _DIAS_SEMANA_ES,
+    ActualizarPromoBar,
     CambiarEstadoCita,
     CambiarEstadoPedido,
     CancelarReserva,
@@ -44,6 +46,7 @@ from domain.use_cases import (
     EliminarTestimonio,
     FusionarClientes,
     ListarTestimoniosRecientes,
+    ObtenerPromoBar,
     RegistrarPedido,
 )
 
@@ -211,6 +214,17 @@ class FakeRepoTestimonios:
         n = len(self._data)
         self._data.clear()
         return n
+
+
+class FakeRepoPromoBar:
+    def __init__(self, promo_bar=None):
+        self._promo_bar = promo_bar or PromoBar()
+
+    def obtener(self):
+        return self._promo_bar
+
+    def guardar(self, promo_bar):
+        self._promo_bar = promo_bar
 
 
 class FakeRepoContadores:
@@ -985,6 +999,47 @@ class TestListarTestimoniosRecientes:
     def test_lista_vacia_si_no_hay_testimonios(self):
         caso = ListarTestimoniosRecientes(FakeRepoTestimonios())
         assert caso.ejecutar() == []
+
+
+class TestObtenerPromoBar:
+    def test_devuelve_valores_por_defecto_si_nunca_se_guardo_nada(self):
+        caso = ObtenerPromoBar(FakeRepoPromoBar())
+
+        resultado = caso.ejecutar()
+
+        assert resultado.activo is False
+        assert resultado.contenido_html == ""
+
+    def test_devuelve_lo_guardado(self):
+        repo = FakeRepoPromoBar(PromoBar(activo=True, contenido_html="<p>Oferta</p>"))
+        caso = ObtenerPromoBar(repo)
+
+        resultado = caso.ejecutar()
+
+        assert resultado.activo is True
+        assert resultado.contenido_html == "<p>Oferta</p>"
+
+
+class TestActualizarPromoBar:
+    def test_guarda_activo_y_contenido(self):
+        repo = FakeRepoPromoBar()
+        caso = ActualizarPromoBar(repo)
+
+        resultado = caso.ejecutar(activo=True, contenido_html="<a href='/x'>Oferta</a>")
+
+        assert resultado.activo is True
+        assert resultado.contenido_html == "<a href='/x'>Oferta</a>"
+        assert repo.obtener() == resultado
+
+    def test_sobrescribe_lo_anterior(self):
+        repo = FakeRepoPromoBar(PromoBar(activo=True, contenido_html="Viejo"))
+        caso = ActualizarPromoBar(repo)
+
+        caso.ejecutar(activo=False, contenido_html="Nuevo")
+
+        actual = repo.obtener()
+        assert actual.activo is False
+        assert actual.contenido_html == "Nuevo"
 
 
 class TestCrearCliente:

@@ -7,6 +7,7 @@ from adapters.out.repositorios_memoria import (
     RepositorioContadoresMemoria,
     RepositorioPedidosMemoria,
     RepositorioProfesionalesMemoria,
+    RepositorioPromoBarMemoria,
     RepositorioServiciosMemoria,
     RepositorioTestimoniosMemoria,
 )
@@ -18,6 +19,7 @@ from domain.entities import (
     LineaPedido,
     Pedido,
     Profesional,
+    PromoBar,
     Servicio,
     Testimonio,
 )
@@ -280,6 +282,25 @@ def test_repositorio_testimonios_borrar_todo():
 
     assert repo.borrar_todo() == 2
     assert repo.listar() == []
+
+
+def test_repositorio_promo_bar_valores_por_defecto():
+    repo = RepositorioPromoBarMemoria()
+
+    promo_bar = repo.obtener()
+
+    assert promo_bar.activo is False
+    assert promo_bar.contenido_html == ""
+
+
+def test_repositorio_promo_bar_guardar_y_obtener():
+    repo = RepositorioPromoBarMemoria()
+
+    repo.guardar(PromoBar(activo=True, contenido_html="<p>2x1</p>"))
+    leido = repo.obtener()
+
+    assert leido.activo is True
+    assert leido.contenido_html == "<p>2x1</p>"
 
 
 def test_repositorio_contadores_empieza_en_uno_e_incrementa():
