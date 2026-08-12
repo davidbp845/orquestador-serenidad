@@ -247,7 +247,14 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
                   <p class="text-(--color-acento)">{'⭐'.repeat(t.valoracion)}</p>
                   <p
                     ref={registrarRefDescripcion(t.id)}
-                    class="mt-(--spacing-fluid-2xs) line-clamp-3 text-sm text-(--color-texto-suave)"
+                    class={`mt-(--spacing-fluid-2xs) text-sm text-(--color-texto-suave) ${
+                      // El ancho de la tarjeta es el mismo en vertical y en
+                      // horizontal con 1 sola visible (misma columna del
+                      // 30% del Hero) — solo hace falta acotar líneas
+                      // cuando de verdad hay varias tarjetas compartiendo
+                      // fila (tablet, visibles > 1), no por defecto.
+                      direccion === 'horizontal' && visibles > 1 ? 'line-clamp-3' : ''
+                    }`}
                   >
                     {t.descripcion}
                   </p>
