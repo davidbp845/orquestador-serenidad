@@ -351,30 +351,41 @@ elif opcion == "📦 Pedidos":
 
 # ---------- Clientes ----------
 elif opcion == "👤 Clientes":
-    st.subheader("Nuevo cliente")
-    # st.form: mismo motivo que en Testimonios — evita envíos con campos
-    # a medio sincronizar, y clear_on_submit vacía el formulario tras
-    # crear en vez de dejar el cliente anterior a medio rellenar.
-    with st.form("form_nuevo_cliente", clear_on_submit=True):
-        nombre_nuevo = st.text_input("Nombre")
-        telefono_nuevo = st.text_input("Teléfono (opcional)")
-        email_nuevo = st.text_input("Email (opcional)")
-        notas_nuevas = st.text_area("Notas (opcional)")
-        crear = st.form_submit_button("Crear cliente")
-    if crear:
-        if not nombre_nuevo.strip():
-            st.error("Rellena el nombre.")
-        else:
-            try:
-                nuevo = crear_cliente.ejecutar(
-                    nombre_nuevo,
-                    telefono=telefono_nuevo or None, email=email_nuevo or None,
-                    notas=notas_nuevas,
-                )
-                st.success(f"Cliente creado con id {nuevo.id}.")
-                st.rerun()
-            except ClienteYaExiste as exc:
-                st.error(str(exc))
+    if not st.session_state.get("mostrar_form_nuevo_cliente"):
+        if st.button("+ Nuevo cliente"):
+            st.session_state["mostrar_form_nuevo_cliente"] = True
+            st.rerun()
+    else:
+        st.subheader("Nuevo cliente")
+        # st.form: mismo motivo que en Testimonios — evita envíos con campos
+        # a medio sincronizar, y clear_on_submit vacía el formulario tras
+        # crear en vez de dejar el cliente anterior a medio rellenar.
+        with st.form("form_nuevo_cliente", clear_on_submit=True):
+            nombre_nuevo = st.text_input("Nombre")
+            telefono_nuevo = st.text_input("Teléfono (opcional)")
+            email_nuevo = st.text_input("Email (opcional)")
+            notas_nuevas = st.text_area("Notas (opcional)")
+            col_crear, col_cancelar = st.columns(2)
+            crear = col_crear.form_submit_button("Crear cliente", use_container_width=True)
+            cancelar = col_cancelar.form_submit_button("Cancelar", use_container_width=True)
+        if crear:
+            if not nombre_nuevo.strip():
+                st.error("Rellena el nombre.")
+            else:
+                try:
+                    nuevo = crear_cliente.ejecutar(
+                        nombre_nuevo,
+                        telefono=telefono_nuevo or None, email=email_nuevo or None,
+                        notas=notas_nuevas,
+                    )
+                    st.success(f"Cliente creado con id {nuevo.id}.")
+                    st.session_state["mostrar_form_nuevo_cliente"] = False
+                    st.rerun()
+                except ClienteYaExiste as exc:
+                    st.error(str(exc))
+        if cancelar:
+            st.session_state["mostrar_form_nuevo_cliente"] = False
+            st.rerun()
 
     st.divider()
     ver_duplicados = st.checkbox("Ver solo duplicados (mismo nombre y teléfono)", key="ver_clientes_duplicados")
