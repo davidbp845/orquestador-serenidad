@@ -31,10 +31,31 @@ const fechaModificacionTexto = fechaModificacion
   data-fuente={`${nota.id}.md`}
   class="rounded-2xl border border-(--color-borde) bg-(--color-superficie) transition-colors duration-300 hover:border-(--color-acento) hover:bg-(--color-acento-suave) [&.destacado]:border-(--color-acento) [&.destacado]:bg-(--color-acento-suave)"
 >
+  {
+    /*
+      Por debajo de `lg` (móvil/tableta) la tarjeta navega directo a la
+      página de la nota — un <a> real, no JS: funciona con clic derecho/
+      "abrir en pestaña nueva" y es más amigable para rastreadores. A
+      partir de `lg` (escritorio) se mantiene el popup de siempre. Los
+      dos elementos existen en el DOM a la vez, alternados por CSS —
+      igual que ya no hay JS que decida el breakpoint en ningún otro
+      sitio de esta rejilla.
+    */
+  }
+  <a
+    href={`/contenido/${nota.id}/`}
+    class="block w-full p-(--spacing-fluid-s) text-left lg:hidden"
+  >
+    <p class="text-xs font-medium uppercase tracking-wide text-(--color-acento)">
+      {nota.data.categoria}
+    </p>
+    <h3 class="mt-(--spacing-fluid-3xs) text-lg font-semibold text-(--color-texto)">{titulo}</h3>
+    {resumen && <p class="mt-(--spacing-fluid-2xs) text-sm text-(--color-texto-suave)">{resumen}</p>}
+  </a>
   <button
     type="button"
     data-abre-dialogo={idDialogo}
-    class="block w-full cursor-pointer appearance-none border-0 bg-transparent p-(--spacing-fluid-s) text-left"
+    class="hidden w-full cursor-pointer appearance-none border-0 bg-transparent p-(--spacing-fluid-s) text-left lg:block"
   >
     <p class="text-xs font-medium uppercase tracking-wide text-(--color-acento)">
       {nota.data.categoria}
