@@ -11,7 +11,7 @@ export default function BurbujaMensaje({ mensaje }: Props) {
   const clases = [
     'max-w-[80%] whitespace-pre-wrap rounded-2xl px-(--spacing-fluid-xs) py-(--spacing-fluid-2xs) text-sm',
     esUsuario
-      ? 'bg-(--color-acento) text-white'
+      ? 'bg-(--color-acento) text-(--color-texto-sobre-acento)'
       : esError
         ? 'border border-red-200 bg-red-50 text-red-700'
         : 'border border-(--color-borde) bg-(--color-superficie) text-(--color-texto)',

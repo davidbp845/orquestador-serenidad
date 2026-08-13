@@ -39,6 +39,7 @@
   --color-borde: #e7e2db;
   --color-acento: #2f6f5e;
   --color-acento-suave: #e5efec;
+  --color-texto-sobre-acento: #ffffff;
 
   /* Tipografía por defecto del skeleton (sin fuente propia del negocio).
      config/business.yaml -> tema.fuente_titulo_url/fuente_cuerpo_url

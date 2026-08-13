@@ -38,7 +38,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8000
       type="button"
       id="cta-cita-header"
       data-mensaje={ctaCita.mensaje}
-      class="ml-auto shrink-0 rounded-full bg-(--color-acento) px-(--spacing-fluid-s) py-(--spacing-fluid-3xs) text-sm font-medium text-white transition-opacity hover:opacity-90"
+      class="ml-auto shrink-0 rounded-full bg-(--color-acento) px-(--spacing-fluid-s) py-(--spacing-fluid-3xs) text-sm font-medium text-(--color-texto-sobre-acento) transition-opacity hover:opacity-90"
     >
       <span class="sm:hidden">{ctaCita.texto_corto}</span>
       <span class="hidden sm:inline">{ctaCita.texto_largo}</span>

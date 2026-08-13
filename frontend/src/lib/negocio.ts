@@ -67,6 +67,7 @@ interface TemaNegocio {
   color_borde?: string;
   color_acento?: string;
   color_acento_suave?: string;
+  color_texto_sobre_acento?: string;
   fuente_titulo_url?: string;
   fuente_cuerpo_url?: string;
 }

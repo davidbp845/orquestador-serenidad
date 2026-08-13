@@ -69,6 +69,10 @@ class TemaConfig(BaseModel):
     color_borde: str | None = None
     color_acento: str | None = None
     color_acento_suave: str | None = None
+    # Color del texto que va encima de color_acento (botones/burbujas de
+    # chat rellenos de acento) — sin él, el frontend usa blanco fijo, que
+    # pierde contraste si el negocio elige un acento claro.
+    color_texto_sobre_acento: str | None = None
     fuente_titulo_url: str | None = None
     fuente_cuerpo_url: str | None = None
 
