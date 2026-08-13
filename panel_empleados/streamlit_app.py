@@ -752,15 +752,17 @@ elif opcion == "📢 Promobar":
 # ---------- Contadores ----------
 elif opcion == "🔢 Contadores":
     st.caption("Vista de solo lectura — consultar no incrementa ningún contador.")
-    contadores = repo_contadores.listar()
+    contadores = sorted(repo_contadores.listar().items())
 
     if not contadores:
         st.info("No hay contadores todavía (se crean al usarse por primera vez).")
 
-    for tipo_entidad, valor in sorted(contadores.items()):
-        with st.container(border=True):
-            st.markdown(f"**{tipo_entidad}**")
-            st.write(valor)
+    columnas = st.columns(2)
+    for i, (tipo_entidad, valor) in enumerate(contadores):
+        with columnas[i % 2]:
+            with st.container(border=True):
+                st.markdown(f"**{tipo_entidad}**")
+                st.write(valor)
 
 # ---------- Rate limiting ----------
 elif opcion == "🚦 Rate limiting":
