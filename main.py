@@ -33,6 +33,7 @@ from adapters.out.llm_anthropic import ProveedorLLMAnthropic
 from adapters.out.llm_cohere import ProveedorLLMCohere
 from adapters.out.llm_mock import ProveedorLLMMock
 from adapters.out.llm_openai import ProveedorLLMOpenAI
+from adapters.out.notificador_sms import NotificadorMensajesSMS
 from adapters.out.notificador_whatsapp import NotificadorMensajesWhatsApp
 from adapters.out.repositorio_sesiones_memoria import RepositorioSesionesMemoria
 from adapters.out.repositorios_memoria import (
@@ -138,18 +139,32 @@ def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
     else:
         notificador = None
 
-    # Canal alternativo atado al teléfono del cliente (#86), usado por
-    # CrearReserva/CancelarReserva cuando no hay telegram_chat_id — ver
-    # notificador_telefono más abajo. Mismas variables WHATSAPP_* que ya
-    # lee main() para el webhook de entrada.
+    # Canal alternativo atado al teléfono del cliente (#86/#85), usado
+    # por CrearReserva/CancelarReserva/CambiarEstadoCita cuando no hay
+    # telegram_chat_id. Si hay credenciales para los dos, se prioriza
+    # WhatsApp (conversación ya abierta, sin coste por mensaje) y SMS
+    # queda de alternativa — nunca los dos a la vez, ver
+    # _enviar_notificacion en domain/use_cases.py.
     whatsapp_access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
     whatsapp_phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
     if whatsapp_access_token and whatsapp_phone_number_id:
-        notificador_telefono = NotificadorMensajesWhatsApp(
+        notificador_whatsapp = NotificadorMensajesWhatsApp(
             whatsapp_access_token, whatsapp_phone_number_id
         )
     else:
-        notificador_telefono = None
+        notificador_whatsapp = None
+
+    twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    twilio_auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    twilio_numero_remitente = os.environ.get("TWILIO_NUMERO_REMITENTE")
+    if twilio_account_sid and twilio_auth_token and twilio_numero_remitente:
+        notificador_sms = NotificadorMensajesSMS(
+            twilio_account_sid, twilio_auth_token, twilio_numero_remitente
+        )
+    else:
+        notificador_sms = None
+
+    notificador_telefono = notificador_whatsapp or notificador_sms
 
     proveedor_llm = os.environ.get("PROVEEDOR_LLM", "anthropic").lower()
     if proveedor_llm == "mock":

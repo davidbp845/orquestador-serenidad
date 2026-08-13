@@ -155,14 +155,23 @@ def _construir_notificador():
 
 @st.cache_resource
 def _construir_notificador_telefono():
-    # Canal alternativo atado al teléfono del cliente (#86), mismo
-    # criterio y mismas variables WHATSAPP_* que main.py::construir_sistema().
+    # Canal alternativo atado al teléfono del cliente (#86/#85), mismo
+    # criterio y mismas variables que main.py::construir_sistema():
+    # WhatsApp si hay credenciales, si no SMS (Twilio), si no ninguno.
     access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
     phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
-    if not (access_token and phone_number_id):
-        return None
-    from adapters.out.notificador_whatsapp import NotificadorMensajesWhatsApp
-    return NotificadorMensajesWhatsApp(access_token, phone_number_id)
+    if access_token and phone_number_id:
+        from adapters.out.notificador_whatsapp import NotificadorMensajesWhatsApp
+        return NotificadorMensajesWhatsApp(access_token, phone_number_id)
+
+    account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    numero_remitente = os.environ.get("TWILIO_NUMERO_REMITENTE")
+    if account_sid and auth_token and numero_remitente:
+        from adapters.out.notificador_sms import NotificadorMensajesSMS
+        return NotificadorMensajesSMS(account_sid, auth_token, numero_remitente)
+
+    return None
 
 
 @st.cache_resource

@@ -215,9 +215,12 @@ def test_construir_sistema_usa_notificador_telegram_si_hay_token(monkeypatch):
     assert cancelar_reserva._notificador is mock_notificador_cls.return_value
 
 
-def test_construir_sistema_sin_credenciales_whatsapp_no_instancia_notificador_telefono(monkeypatch):
+def test_construir_sistema_sin_credenciales_de_ningun_canal_de_telefono_no_instancia_notificador(monkeypatch):
     monkeypatch.delenv("WHATSAPP_ACCESS_TOKEN", raising=False)
     monkeypatch.delenv("WHATSAPP_PHONE_NUMBER_ID", raising=False)
+    monkeypatch.delenv("TWILIO_ACCOUNT_SID", raising=False)
+    monkeypatch.delenv("TWILIO_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("TWILIO_NUMERO_REMITENTE", raising=False)
     with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
          patch("main.RepositorioConocimientoChroma") as mock_chroma_cls:
         mock_llm_cls.return_value = MagicMock()
@@ -235,6 +238,9 @@ def test_construir_sistema_sin_credenciales_whatsapp_no_instancia_notificador_te
 def test_construir_sistema_usa_notificador_whatsapp_si_hay_credenciales(monkeypatch):
     monkeypatch.setenv("WHATSAPP_ACCESS_TOKEN", "access-falso")
     monkeypatch.setenv("WHATSAPP_PHONE_NUMBER_ID", "1234567890")
+    monkeypatch.delenv("TWILIO_ACCOUNT_SID", raising=False)
+    monkeypatch.delenv("TWILIO_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("TWILIO_NUMERO_REMITENTE", raising=False)
     with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
          patch("main.RepositorioConocimientoChroma") as mock_chroma_cls, \
          patch("main.NotificadorMensajesWhatsApp") as mock_notificador_cls:
@@ -251,6 +257,52 @@ def test_construir_sistema_usa_notificador_whatsapp_si_hay_credenciales(monkeypa
     mock_notificador_cls.assert_called_once_with("access-falso", "1234567890")
     assert crear_reserva._notificador_telefono is mock_notificador_cls.return_value
     assert cancelar_reserva._notificador_telefono is mock_notificador_cls.return_value
+
+
+def test_construir_sistema_usa_notificador_sms_si_hay_credenciales_twilio_sin_whatsapp(monkeypatch):
+    monkeypatch.delenv("WHATSAPP_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("WHATSAPP_PHONE_NUMBER_ID", raising=False)
+    monkeypatch.setenv("TWILIO_ACCOUNT_SID", "sid-falso")
+    monkeypatch.setenv("TWILIO_AUTH_TOKEN", "token-falso")
+    monkeypatch.setenv("TWILIO_NUMERO_REMITENTE", "+34900000000")
+    with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
+         patch("main.RepositorioConocimientoChroma") as mock_chroma_cls, \
+         patch("main.NotificadorMensajesSMS") as mock_notificador_cls:
+        mock_llm_cls.return_value = MagicMock()
+        mock_chroma_cls.return_value = MagicMock()
+        mock_notificador_cls.return_value = MagicMock()
+
+        import main
+        orquestador, _ = main.construir_sistema("config/business.yaml")
+
+    crear_reserva = orquestador._ejecutor._casos["crear_reserva"]
+    cancelar_reserva = orquestador._ejecutor._casos["cancelar_reserva"]
+
+    mock_notificador_cls.assert_called_once_with("sid-falso", "token-falso", "+34900000000")
+    assert crear_reserva._notificador_telefono is mock_notificador_cls.return_value
+    assert cancelar_reserva._notificador_telefono is mock_notificador_cls.return_value
+
+
+def test_construir_sistema_prioriza_whatsapp_sobre_sms_si_hay_credenciales_de_los_dos(monkeypatch):
+    monkeypatch.setenv("WHATSAPP_ACCESS_TOKEN", "access-falso")
+    monkeypatch.setenv("WHATSAPP_PHONE_NUMBER_ID", "1234567890")
+    monkeypatch.setenv("TWILIO_ACCOUNT_SID", "sid-falso")
+    monkeypatch.setenv("TWILIO_AUTH_TOKEN", "token-falso")
+    monkeypatch.setenv("TWILIO_NUMERO_REMITENTE", "+34900000000")
+    with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
+         patch("main.RepositorioConocimientoChroma") as mock_chroma_cls, \
+         patch("main.NotificadorMensajesWhatsApp") as mock_whatsapp_cls, \
+         patch("main.NotificadorMensajesSMS") as mock_sms_cls:
+        mock_llm_cls.return_value = MagicMock()
+        mock_chroma_cls.return_value = MagicMock()
+        mock_whatsapp_cls.return_value = MagicMock()
+        mock_sms_cls.return_value = MagicMock()
+
+        import main
+        orquestador, _ = main.construir_sistema("config/business.yaml")
+
+    crear_reserva = orquestador._ejecutor._casos["crear_reserva"]
+    assert crear_reserva._notificador_telefono is mock_whatsapp_cls.return_value
 
 
 def test_construir_repositorio_sesiones_usa_memoria_sin_redis_url(monkeypatch):
