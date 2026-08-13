@@ -49,6 +49,20 @@
   --font-cuerpo: ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Scroll suave para enlaces de ancla (p.ej. "Cómo llegar" del Hero
+   hacia #ubicacion) en vez de saltar de golpe. Respeta
+   prefers-reduced-motion: quien lo tiene activado no recibe la
+   animación. */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   background: var(--color-fondo);
   color: var(--color-texto);
