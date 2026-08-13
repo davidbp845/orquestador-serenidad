@@ -64,21 +64,31 @@ const testimoniosIntervaloMs = Number(import.meta.env.PUBLIC_TESTIMONIOS_INTERVA
   const apiBaseUrl = seccion?.dataset.apiBaseUrl ?? 'http://localhost:8000';
   const valoracionEl = document.getElementById('valoracion-agregada');
 
-  fetch(`${apiBaseUrl}/testimonios`)
-    .then((respuesta) => (respuesta.ok ? respuesta.json() : []))
-    .then((testimonios: Testimonio[]) => {
-      if (!valoracionEl || !Array.isArray(testimonios) || testimonios.length === 0) return;
-      const total = testimonios.length;
-      const media = testimonios.reduce((suma, t) => suma + t.valoracion, 0) / total;
-      const estrellas = '⭐'.repeat(Math.round(media));
-      const textoReseñas = total === 1 ? 'reseña' : 'reseñas';
-      valoracionEl.textContent = ` · ${estrellas} ${media.toFixed(1)} (${total} ${textoReseñas})`;
-      valoracionEl.hidden = false;
-    })
-    .catch(() => {
-      // Backend inalcanzable: la valoración simplemente no aparece esta
-      // carga, sin reintento — mismo criterio que el promobar.
-    });
+  // Mismo criterio que Testimonios (TestimoniosCarrusel.tsx) y el
+  // promobar (Cabecera.astro): el backend puede tardar en arrancar
+  // (Chroma + modelo de embeddings), así que un fallo de red se
+  // reintenta indefinidamente con backoff creciente en vez de rendirse
+  // y dejar la valoración sin aparecer hasta un refresh manual.
+  const REINTENTO_MS_INICIAL = 1500;
+  const REINTENTO_MS_MAXIMO = 15000;
+
+  function cargarValoracion(esperaSiFallaMs: number) {
+    fetch(`${apiBaseUrl}/testimonios`)
+      .then((respuesta) => (respuesta.ok ? respuesta.json() : []))
+      .then((testimonios: Testimonio[]) => {
+        if (!valoracionEl || !Array.isArray(testimonios) || testimonios.length === 0) return;
+        const total = testimonios.length;
+        const media = testimonios.reduce((suma, t) => suma + t.valoracion, 0) / total;
+        const estrellas = '⭐'.repeat(Math.round(media));
+        const textoReseñas = total === 1 ? 'reseña' : 'reseñas';
+        valoracionEl.textContent = ` · ${estrellas} ${media.toFixed(1)} (${total} ${textoReseñas})`;
+        valoracionEl.hidden = false;
+      })
+      .catch(() => {
+        setTimeout(() => cargarValoracion(Math.min(esperaSiFallaMs * 2, REINTENTO_MS_MAXIMO)), esperaSiFallaMs);
+      });
+  }
+  cargarValoracion(REINTENTO_MS_INICIAL);
 </script>
 
 <script define:vars={{ horarioApertura: negocio.horario_apertura ?? {} }}>

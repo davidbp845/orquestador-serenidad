@@ -122,20 +122,30 @@ const apiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8000
 
   window.addEventListener('resize', aplicarVisibilidadPromobar);
 
-  fetch(`${apiBaseUrl}/promobar`)
-    .then((respuesta) => (respuesta.ok ? respuesta.json() : null))
-    .then((datos) => {
-      if (!datos?.activo || !datos.contenido_html) return;
-      const html: string = datos.contenido_html;
-      contenidoHtml = html;
-      if (desktopEl) desktopEl.innerHTML = html;
-      if (movilTextoEl) movilTextoEl.innerHTML = html;
-      aplicarVisibilidadPromobar();
-    })
-    .catch(() => {
-      // Backend inalcanzable (p.ej. aún arrancando): el promobar
-      // simplemente no aparece esta carga, sin reintento — a
-      // diferencia de Testimonios, no es contenido central de la
-      // página, no vale la pena la complejidad de reintentar.
-    });
+  // El backend carga Chroma + el modelo de embeddings antes de escuchar
+  // en el puerto, lo que puede tardar más que un único intento corto —
+  // igual que Testimonios (TestimoniosCarrusel.tsx), un fallo de red se
+  // reintenta indefinidamente con backoff creciente en vez de rendirse
+  // y dejar el promobar sin aparecer hasta un refresh manual. Una
+  // respuesta no-ok (backend arriba pero sin promobar activo) no se
+  // reintenta: es un estado legítimo.
+  const REINTENTO_MS_INICIAL = 1500;
+  const REINTENTO_MS_MAXIMO = 15000;
+
+  function cargarPromobar(esperaSiFallaMs: number) {
+    fetch(`${apiBaseUrl}/promobar`)
+      .then((respuesta) => (respuesta.ok ? respuesta.json() : null))
+      .then((datos) => {
+        if (!datos?.activo || !datos.contenido_html) return;
+        const html: string = datos.contenido_html;
+        contenidoHtml = html;
+        if (desktopEl) desktopEl.innerHTML = html;
+        if (movilTextoEl) movilTextoEl.innerHTML = html;
+        aplicarVisibilidadPromobar();
+      })
+      .catch(() => {
+        setTimeout(() => cargarPromobar(Math.min(esperaSiFallaMs * 2, REINTENTO_MS_MAXIMO)), esperaSiFallaMs);
+      });
+  }
+  cargarPromobar(REINTENTO_MS_INICIAL);
 </script>
