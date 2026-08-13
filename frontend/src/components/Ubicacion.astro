@@ -16,6 +16,23 @@ const src =
   (direccionTexto ? `https://www.google.com/maps?q=${encodeURIComponent(direccionTexto)}&output=embed` : undefined);
 
 const hayTexto = Boolean(direccionTexto || negocio.instrucciones_llegada);
+
+// instrucciones_llegada es texto libre con varias frases separadas por
+// punto (p.ej. "Tren: ... . Desde Plaça de Granollers ... .") — se
+// parte en frases para renderizar cada una en su propio <p> en vez de
+// un único párrafo corrido. Se divide en "punto seguido de espacio" en
+// vez de cualquier punto: un punto sin espacio detrás (p.ej. una línea
+// de bus como "E11.1") no es fin de frase y no debe partir el texto.
+// filter(Boolean) descarta fragmentos vacíos; el punto final se
+// recompone si el split se lo llevó (frase intermedia) o se deja tal
+// cual si ya lo tenía (última frase, sin espacio final que la corte).
+const frasesLlegada = negocio.instrucciones_llegada
+  ? negocio.instrucciones_llegada
+      .split(/\.\s+/)
+      .map((frase) => frase.trim())
+      .filter(Boolean)
+      .map((frase) => (frase.endsWith('.') ? frase : `${frase}.`))
+  : [];
 ---
 
 {src && (
@@ -42,7 +59,7 @@ const hayTexto = Boolean(direccionTexto || negocio.instrucciones_llegada);
       {hayTexto && (
         <div class="text-(--color-texto)">
           {direccionTexto && <p>{direccionTexto}</p>}
-          {negocio.instrucciones_llegada && <p class="mt-(--spacing-fluid-3xs)">{negocio.instrucciones_llegada}</p>}
+          {frasesLlegada.map((frase) => <p class="mt-(--spacing-fluid-3xs)">{frase}</p>)}
         </div>
       )}
     </div>
