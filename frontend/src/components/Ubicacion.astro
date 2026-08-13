@@ -34,7 +34,7 @@ const frasesLlegada = negocio.instrucciones_llegada
       .map((frase) => (frase.endsWith('.') ? frase : `${frase}.`))
   : [];
 
-// "Datos de contacto": WhatsApp/Telegram solo se muestran si el negocio
+// "Contacto": WhatsApp/Telegram solo se muestran si el negocio
 // los tiene activos como canal (config/schema.py::CanalesConfig) — no
 // tiene sentido publicitar un enlace a un canal que el bot no atiende.
 // WhatsApp reutiliza el mismo `telefono` (no hay campo propio); wa.me
@@ -73,7 +73,7 @@ const hayContacto = Boolean(negocio.telefono || mostrarTelegram || negocio.email
           {frasesLlegada.map((frase) => <p class="mt-(--spacing-fluid-2xs)">{frase}</p>)}
           {hayContacto && (
             <>
-              <h3 class="mt-(--spacing-fluid-s) text-lg font-semibold text-(--color-texto)">Datos de contacto</h3>
+              <h3 class="mt-(--spacing-fluid-s) text-lg font-semibold text-(--color-texto)">Contacto</h3>
               <div class="mt-(--spacing-fluid-2xs) flex flex-col gap-(--spacing-fluid-2xs)">
                 {negocio.telefono && (
                   <a
