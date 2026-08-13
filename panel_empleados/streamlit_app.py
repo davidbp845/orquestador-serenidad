@@ -76,7 +76,14 @@ from domain.use_cases import (
 
 load_dotenv()
 
-st.set_page_config(page_title="Panel interno", page_icon="📋", layout="centered")
+# set_page_config debe ser la primera llamada a Streamlit del script, así
+# que la config se carga aquí aparte (barata: solo YAML + validación
+# Pydantic) en vez de esperar a _construir_repos(), que es @st.cache_resource
+# y se llama más tarde — el panel se distingue del frontend por el favicon
+# (📋), no por el título, así que este pasa a ser el nombre del negocio.
+_nombre_negocio = cargar_config(os.environ.get("CONFIG_PATH", "config/business.yaml"))["nombre"]
+
+st.set_page_config(page_title=_nombre_negocio, page_icon="📋", layout="centered")
 
 
 @st.cache_resource
