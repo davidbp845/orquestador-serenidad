@@ -58,7 +58,8 @@ const frasesLlegada = negocio.instrucciones_llegada
       </div>
       {hayTexto && (
         <div class="text-(--color-texto)">
-          {direccionTexto && <p>{direccionTexto}</p>}
+          <h3 class="text-lg font-semibold text-(--color-texto)">Dirección</h3>
+          {direccionTexto && <p class="mt-(--spacing-fluid-2xs)">{direccionTexto}</p>}
           {frasesLlegada.map((frase) => <p class="mt-(--spacing-fluid-2xs)">{frase}</p>)}
         </div>
       )}
