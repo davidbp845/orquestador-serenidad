@@ -16,6 +16,7 @@
     "@astrojs/sitemap": "^3.7.3",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.1.6",
+    "dotenv": "^17.4.2",
     "js-yaml": "^5.2.3",
     "preact": "^10.29.8",
     "tailwindcss": "^4.3.3"

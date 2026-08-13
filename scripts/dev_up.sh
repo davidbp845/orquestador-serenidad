@@ -42,10 +42,20 @@ else
 fi
 
 echo
-if [ -n "${CONFIG_PATH:-}" ]; then
-    echo "CONFIG_PATH=$CONFIG_PATH (negocio alternativo, heredado por los tres procesos)"
+# CONFIG_PATH puede venir del shell (heredada por los tres procesos hijos)
+# o del .env de la raíz (main.py/panel/frontend la cargan cada uno con su
+# propio dotenv, issue #88) — se comprueban ambas fuentes para que el
+# banner no diga "sin definir" cuando en realidad sí va a aplicarse.
+CONFIG_PATH_EFECTIVA="${CONFIG_PATH:-}"
+CONFIG_PATH_ORIGEN="shell"
+if [ -z "$CONFIG_PATH_EFECTIVA" ] && [ -f "$RAIZ_REPO/.env" ]; then
+    CONFIG_PATH_EFECTIVA="$(grep -m1 '^CONFIG_PATH=' "$RAIZ_REPO/.env" | cut -d '=' -f2- | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")"
+    CONFIG_PATH_ORIGEN=".env"
+fi
+if [ -n "$CONFIG_PATH_EFECTIVA" ]; then
+    echo "CONFIG_PATH=$CONFIG_PATH_EFECTIVA (vía $CONFIG_PATH_ORIGEN; negocio alternativo, leído por los tres procesos)"
 else
-    echo "CONFIG_PATH sin definir → negocio por defecto (config/business.yaml)"
+    echo "CONFIG_PATH sin definir (ni en el shell ni en .env) → negocio por defecto (config/business.yaml)"
 fi
 
 echo

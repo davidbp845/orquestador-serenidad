@@ -441,9 +441,12 @@ streamlit run panel_empleados/streamlit_app.py
 
 ## 10. Desplegar con negocio real (`CONFIG_PATH`)
 
-Ver issue #73. Verifica que se puede servir un negocio distinto al de demo
-(Masajes Serenidad) sin forkear el repo ni commitear datos reales encima del
-`business.yaml` de ejemplo.
+Ver issues #73/#88. Verifica que se puede servir un negocio distinto al de
+demo (Masajes Serenidad) sin forkear el repo ni commitear datos reales
+encima del `business.yaml` de ejemplo. `CONFIG_PATH` puede fijarse tanto
+exportándola en el shell como en el `.env` de la raíz (`.env.example`) —
+los tres procesos (`main.py`, panel, frontend) la leen de cualquiera de
+las dos fuentes desde #88.
 
 - [ ] Copiar `config/business.yaml` a una ruta fuera del repo y cambiar al
       menos `nombre`.
