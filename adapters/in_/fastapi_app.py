@@ -8,12 +8,12 @@ from __future__ import annotations
 import json
 import os
 
-import bleach
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from adapters.out.promobar_html import sanear_html_promobar
 from application.orchestrator import OrquestadorAgente, SesionConversacion
 from application.ports import RepositorioSesiones
 from domain.use_cases import ListarTestimoniosRecientes, ObtenerPromoBar
@@ -24,27 +24,6 @@ from .rate_limit import (
     LimitadorPeticiones,
     LimitadorPeticionesMemoria,
 )
-
-# El contenido del promobar lo escribe quien tenga acceso al panel
-# (formulario de HTML libre, issue #78) pero se sirve tal cual a
-# cualquier visitante público de la web — nunca se puede devolver sin
-# pasar por esta lista blanca. strip=True (en vez de escapar) para que
-# una etiqueta no permitida desaparezca en vez de mostrarse como texto
-# literal roto; sin atributo "target" ni "rel" en <a>, deliberadamente,
-# para no tener que razonar sobre reverse tabnabbing.
-_PROMOBAR_TAGS_PERMITIDAS = ["a", "strong", "em", "b", "i", "s", "br", "span"]
-_PROMOBAR_ATRIBUTOS_PERMITIDOS = {"a": ["href"]}
-_PROMOBAR_PROTOCOLOS_PERMITIDOS = ["http", "https"]
-
-
-def _sanear_html_promobar(html: str) -> str:
-    return bleach.clean(
-        html,
-        tags=_PROMOBAR_TAGS_PERMITIDAS,
-        attributes=_PROMOBAR_ATRIBUTOS_PERMITIDOS,
-        protocols=_PROMOBAR_PROTOCOLOS_PERMITIDOS,
-        strip=True,
-    )
 
 app = FastAPI(title="Orquestador agéntico — chat web")
 
@@ -176,7 +155,7 @@ def crear_router(
         if promo_bar is None:
             return PromoBarSalida(activo=False, contenido_html="")
         return PromoBarSalida(
-            activo=True, contenido_html=_sanear_html_promobar(promo_bar.contenido_html),
+            activo=True, contenido_html=sanear_html_promobar(promo_bar.contenido_html),
         )
 
     @app.get("/health")

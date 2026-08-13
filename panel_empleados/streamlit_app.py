@@ -35,6 +35,7 @@ from adapters.in_.rate_limit import (
     LimitadorPeticionesRedis,
 )
 from adapters.out.obsidian_ingest import procesar_vault
+from adapters.out.promobar_html import sanear_html_promobar
 from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
     RepositorioClientesMemoria,
@@ -239,6 +240,20 @@ def _contador_caracteres_promobar(contenido_html: str) -> None:
         st.caption(f"⚠️ {n} caracteres ({guia}).")
     else:
         st.caption(f"{n} caracteres ({guia}).")
+
+
+def _previsualizar_promobar(contenido_html: str) -> None:
+    # Mismo saneado que se aplica antes de servir el promobar al
+    # visitante público (GET /promobar, adapters/in_/fastapi_app.py) —
+    # si aquí se renderizara el HTML tal cual lo escribe el admin, la
+    # vista previa podría mostrar etiquetas que luego desaparecen en
+    # producción (o dar una falsa sensación de qué es seguro escribir).
+    st.caption("Vista previa:")
+    if not contenido_html.strip():
+        st.caption("(sin contenido)")
+        return
+    with st.container(border=True):
+        st.markdown(sanear_html_promobar(contenido_html), unsafe_allow_html=True)
 
 
 def _tarjeta_cita(cita, repo_servicios, repo_profesionales, repo_clientes, cambiar_estado_cita) -> None:
@@ -656,6 +671,7 @@ elif opcion == "📢 Promobar":
             "Contenido (HTML)", height=150, key="contenido_nuevo_promo_bar",
         )
         _contador_caracteres_promobar(contenido_html)
+        _previsualizar_promobar(contenido_html)
         with st.form("form_nuevo_promo_bar"):
             nombre = st.text_input("Nombre (solo para identificarlo aquí, no se muestra en la web)")
             col_crear, col_cancelar = st.columns(2)
@@ -689,7 +705,7 @@ elif opcion == "📢 Promobar":
                 if promo_bar.activo:
                     titulo += " 🟢 Activo"
                 st.markdown(titulo)
-                st.caption(promo_bar.contenido_html or "(sin contenido)")
+                _previsualizar_promobar(promo_bar.contenido_html)
                 col_activar, col_editar, col_eliminar = st.columns(3)
                 if col_activar.button(
                     "Activar", key=f"btn_activar_{promo_bar.id}",
@@ -714,6 +730,7 @@ elif opcion == "📢 Promobar":
                     key=f"contenido_editar_promo_bar_{promo_bar.id}",
                 )
                 _contador_caracteres_promobar(contenido_editado)
+                _previsualizar_promobar(contenido_editado)
                 with st.form(f"form_editar_promo_bar_{promo_bar.id}"):
                     nombre_editado = st.text_input("Nombre", value=promo_bar.nombre)
                     col_guardar, col_cancelar = st.columns(2)
