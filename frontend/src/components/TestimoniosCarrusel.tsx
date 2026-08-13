@@ -255,7 +255,11 @@ export default function TestimoniosCarrusel({ apiBaseUrl, intervaloMs }: Props) 
                       // compartiendo fila (tablet, visibles > 1) — pero
                       // incluso sin competir por espacio, un testimonio no
                       // debe poder crecer sin límite y desbordar la tarjeta.
-                      direccion === 'horizontal' && visibles > 1 ? 'line-clamp-3' : 'line-clamp-6'
+                      // Con varias tarjetas por fila el ancho es menor, así
+                      // que el mismo texto ocupa más líneas — line-clamp-4
+                      // en vez de 3 compensa aprox. esa línea de más antes
+                      // de necesitar "Leer más".
+                      direccion === 'horizontal' && visibles > 1 ? 'line-clamp-4' : 'line-clamp-6'
                     }`}
                   >
                     {t.descripcion}
