@@ -4,6 +4,7 @@ from datetime import date, datetime
 from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
     RepositorioClientesMemoria,
+    RepositorioCodigosVerificacionMemoria,
     RepositorioContadoresMemoria,
     RepositorioNotasClienteMemoria,
     RepositorioPedidosMemoria,
@@ -15,6 +16,7 @@ from adapters.out.repositorios_memoria import (
 from domain.entities import (
     Cita,
     Cliente,
+    CodigoVerificacion,
     EstadoCita,
     EstadoPedido,
     LineaPedido,
@@ -286,6 +288,35 @@ def test_repositorio_notas_cliente_borrar_todo():
 
     assert repo.borrar_todo() == 2
     assert repo.listar_de_cliente("c1") == []
+
+
+def test_repositorio_codigos_verificacion_guardar_y_obtener():
+    repo = RepositorioCodigosVerificacionMemoria()
+    codigo = CodigoVerificacion(
+        telefono="600111222", codigo="123456", expira_en=datetime(2026, 1, 1, 12, 0),
+    )
+
+    repo.guardar(codigo)
+
+    assert repo.obtener("600111222") == codigo
+    assert repo.obtener("no_existe") is None
+
+
+def test_repositorio_codigos_verificacion_un_codigo_nuevo_sobrescribe_al_anterior():
+    repo = RepositorioCodigosVerificacionMemoria()
+    repo.guardar(CodigoVerificacion(telefono="600111222", codigo="111111", expira_en=datetime(2026, 1, 1)))
+    repo.guardar(CodigoVerificacion(telefono="600111222", codigo="222222", expira_en=datetime(2026, 1, 1)))
+
+    assert repo.obtener("600111222").codigo == "222222"
+
+
+def test_repositorio_codigos_verificacion_eliminar():
+    repo = RepositorioCodigosVerificacionMemoria()
+    repo.guardar(CodigoVerificacion(telefono="600111222", codigo="123456", expira_en=datetime(2026, 1, 1)))
+
+    repo.eliminar("600111222")
+
+    assert repo.obtener("600111222") is None
 
 
 def test_repositorio_testimonios_guardar_obtener_listar():

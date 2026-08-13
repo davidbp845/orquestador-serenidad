@@ -170,6 +170,21 @@ class NotaCliente:
 
 
 @dataclass
+class CodigoVerificacion:
+    """Código de un solo uso para comprobar que quien dicta un teléfono
+    en el chat es realmente su dueño (#84), antes de que crear_reserva/
+    guardar_nota_cliente confíen en ese teléfono para identificar o
+    crear un Cliente. Clave natural = telefono (un código activo por
+    teléfono, uno nuevo sobrescribe al anterior)."""
+    telefono: str
+    codigo: str
+    expira_en: datetime
+
+    def expirado(self, ahora: datetime | None = None) -> bool:
+        return (ahora or datetime.now(UTC)) >= self.expira_en
+
+
+@dataclass
 class PromoBar:
     """Aviso/oferta editable desde el panel, mostrado en la cabecera
     del frontend público (issue #78). Colección (issue #81): puede

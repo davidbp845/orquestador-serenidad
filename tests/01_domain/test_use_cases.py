@@ -1,13 +1,14 @@
 """Tests de casos de uso de dominio usando fakes en memoria que
 implementan los puertos de domain/ports.py — sin mocks pesados, tal
 y como sugiere el README."""
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 
 import pytest
 
 from domain.entities import (
     Cita,
     Cliente,
+    CodigoVerificacion,
     EstadoCita,
     EstadoPedido,
     LineaPedido,
@@ -19,6 +20,7 @@ from domain.entities import (
     Testimonio,
 )
 from domain.exceptions import (
+    CanalVerificacionNoDisponible,
     CitaNoExiste,
     ClienteNoExiste,
     ClienteYaExiste,
@@ -51,11 +53,13 @@ from domain.use_cases import (
     EliminarPromoBar,
     EliminarTestimonio,
     FusionarClientes,
+    GenerarCodigoVerificacion,
     ListarNotasCliente,
     ListarPromoBars,
     ListarTestimoniosRecientes,
     ObtenerPromoBar,
     RegistrarPedido,
+    VerificarCodigo,
 )
 
 # pytest recolecta por defecto cualquier clase de nivel superior cuyo
@@ -98,6 +102,20 @@ class FakeNotificadorMensajes:
         if self._lanza:
             raise RuntimeError("fallo simulado del notificador")
         self.enviados.append((destinatario_id, texto))
+
+
+class FakeRepoCodigosVerificacion:
+    def __init__(self):
+        self._data: dict[str, CodigoVerificacion] = {}
+
+    def guardar(self, codigo):
+        self._data[codigo.telefono] = codigo
+
+    def obtener(self, telefono):
+        return self._data.get(telefono)
+
+    def eliminar(self, telefono):
+        self._data.pop(telefono, None)
 
 
 class FakeRepoServicios:
@@ -1477,3 +1495,127 @@ class TestListarNotasCliente:
     def test_vacio_si_el_cliente_no_tiene_notas(self):
         caso = ListarNotasCliente(FakeRepoNotasCliente())
         assert caso.ejecutar("c1") == []
+
+
+class TestCodigoVerificacion:
+    def test_no_expirado_antes_de_la_fecha_de_expiracion(self):
+        codigo = CodigoVerificacion(
+            telefono="600111222", codigo="123456", expira_en=datetime(2026, 1, 1, 12, 0, tzinfo=UTC),
+        )
+        assert codigo.expirado(datetime(2026, 1, 1, 11, 59, tzinfo=UTC)) is False
+
+    def test_expirado_en_o_despues_de_la_fecha_de_expiracion(self):
+        codigo = CodigoVerificacion(
+            telefono="600111222", codigo="123456", expira_en=datetime(2026, 1, 1, 12, 0, tzinfo=UTC),
+        )
+        assert codigo.expirado(datetime(2026, 1, 1, 12, 0, tzinfo=UTC)) is True
+        assert codigo.expirado(datetime(2026, 1, 1, 12, 1, tzinfo=UTC)) is True
+
+
+class TestGenerarCodigoVerificacion:
+    def test_guarda_y_envia_un_codigo_de_seis_digitos(self):
+        codigos = FakeRepoCodigosVerificacion()
+        notificador = FakeNotificadorMensajes()
+        caso = GenerarCodigoVerificacion(codigos, notificador)
+
+        caso.ejecutar("600111222")
+
+        guardado = codigos.obtener("600111222")
+        assert guardado is not None
+        assert len(guardado.codigo) == 6
+        assert guardado.codigo.isdigit()
+        assert len(notificador.enviados) == 1
+        destinatario, texto = notificador.enviados[0]
+        assert destinatario == "600111222"
+        assert guardado.codigo in texto
+
+    def test_expira_en_el_futuro_segun_la_duracion_configurada(self):
+        codigos = FakeRepoCodigosVerificacion()
+        caso = GenerarCodigoVerificacion(codigos, FakeNotificadorMensajes(), duracion_minutos=5)
+
+        antes = datetime.now(UTC)
+        caso.ejecutar("600111222")
+        despues = datetime.now(UTC)
+
+        guardado = codigos.obtener("600111222")
+        assert antes + timedelta(minutes=5) <= guardado.expira_en <= despues + timedelta(minutes=5)
+
+    def test_sin_notificador_lanza_canal_no_disponible(self):
+        caso = GenerarCodigoVerificacion(FakeRepoCodigosVerificacion(), None)
+        with pytest.raises(CanalVerificacionNoDisponible):
+            caso.ejecutar("600111222")
+
+    def test_un_codigo_nuevo_sobrescribe_al_anterior_del_mismo_telefono(self):
+        codigos = FakeRepoCodigosVerificacion()
+        caso = GenerarCodigoVerificacion(codigos, FakeNotificadorMensajes())
+
+        caso.ejecutar("600111222")
+        primero = codigos.obtener("600111222").codigo
+        caso.ejecutar("600111222")
+        segundo = codigos.obtener("600111222").codigo
+
+        # Con 10^6 combinaciones la probabilidad de colisión es
+        # despreciable pero no nula — el test importante es que solo
+        # queda un código guardado por teléfono, no que cambie.
+        assert len(codigos._data) == 1
+        assert isinstance(primero, str) and isinstance(segundo, str)
+
+
+class TestVerificarCodigo:
+    def test_codigo_correcto_y_vigente_verifica(self):
+        codigos = FakeRepoCodigosVerificacion()
+        codigos.guardar(CodigoVerificacion(
+            telefono="600111222", codigo="123456",
+            expira_en=datetime.now(UTC) + timedelta(minutes=10),
+        ))
+        caso = VerificarCodigo(codigos)
+
+        assert caso.ejecutar("600111222", "123456") is True
+
+    def test_codigo_incorrecto_no_verifica(self):
+        codigos = FakeRepoCodigosVerificacion()
+        codigos.guardar(CodigoVerificacion(
+            telefono="600111222", codigo="123456",
+            expira_en=datetime.now(UTC) + timedelta(minutes=10),
+        ))
+        caso = VerificarCodigo(codigos)
+
+        assert caso.ejecutar("600111222", "000000") is False
+
+    def test_codigo_expirado_no_verifica_aunque_coincida(self):
+        codigos = FakeRepoCodigosVerificacion()
+        codigos.guardar(CodigoVerificacion(
+            telefono="600111222", codigo="123456",
+            expira_en=datetime.now(UTC) - timedelta(seconds=1),
+        ))
+        caso = VerificarCodigo(codigos)
+
+        assert caso.ejecutar("600111222", "123456") is False
+
+    def test_sin_codigo_guardado_no_verifica(self):
+        caso = VerificarCodigo(FakeRepoCodigosVerificacion())
+        assert caso.ejecutar("600111222", "123456") is False
+
+    def test_el_codigo_se_borra_tras_el_intento_aunque_acierte(self):
+        codigos = FakeRepoCodigosVerificacion()
+        codigos.guardar(CodigoVerificacion(
+            telefono="600111222", codigo="123456",
+            expira_en=datetime.now(UTC) + timedelta(minutes=10),
+        ))
+        caso = VerificarCodigo(codigos)
+
+        caso.ejecutar("600111222", "123456")
+
+        assert codigos.obtener("600111222") is None
+
+    def test_el_codigo_se_borra_tras_el_intento_aunque_falle(self):
+        codigos = FakeRepoCodigosVerificacion()
+        codigos.guardar(CodigoVerificacion(
+            telefono="600111222", codigo="123456",
+            expira_en=datetime.now(UTC) + timedelta(minutes=10),
+        ))
+        caso = VerificarCodigo(codigos)
+
+        caso.ejecutar("600111222", "000000")
+
+        assert codigos.obtener("600111222") is None

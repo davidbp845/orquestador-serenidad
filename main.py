@@ -39,6 +39,7 @@ from adapters.out.repositorio_sesiones_memoria import RepositorioSesionesMemoria
 from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
     RepositorioClientesMemoria,
+    RepositorioCodigosVerificacionMemoria,
     RepositorioContadoresMemoria,
     RepositorioNotasClienteMemoria,
     RepositorioPedidosMemoria,
@@ -59,9 +60,11 @@ from domain.use_cases import (
     ComprobarDisponibilidad,
     ConsultarConocimientoNegocio,
     CrearReserva,
+    GenerarCodigoVerificacion,
     ListarTestimoniosRecientes,
     ObtenerPromoBar,
     RegistrarPedido,
+    VerificarCodigo,
 )
 
 logging.basicConfig(
@@ -120,6 +123,19 @@ def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
         repo_notas_cliente = RepositorioNotasClienteMemoria()
 
     conocimiento = RepositorioConocimientoChroma()
+
+    # Códigos de verificación (#84): TTL corto, mismo condicional
+    # REDIS_URL que construir_repositorio_sesiones() — con Redis expiran
+    # solos (SETEX), en memoria los limpia VerificarCodigo al comprobar
+    # CodigoVerificacion.expirado().
+    redis_url = os.environ.get("REDIS_URL")
+    if redis_url:
+        from adapters.out.repositorio_codigos_verificacion_redis import (
+            RepositorioCodigosVerificacionRedis,
+        )
+        repo_codigos_verificacion = RepositorioCodigosVerificacionRedis(redis_url)
+    else:
+        repo_codigos_verificacion = RepositorioCodigosVerificacionMemoria()
 
     credenciales_calendario = os.environ.get("GOOGLE_CALENDAR_CREDENTIALS_JSON")
     calendar_id = os.environ.get("GOOGLE_CALENDAR_ID")
@@ -188,6 +204,8 @@ def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
     registrar_pedido = RegistrarPedido(repo_pedidos, repo_servicios)
     consultar_conocimiento = ConsultarConocimientoNegocio(conocimiento)
     anadir_nota_cliente = AñadirNotaCliente(repo_notas_cliente, repo_clientes, repo_contadores)
+    generar_codigo_verificacion = GenerarCodigoVerificacion(repo_codigos_verificacion, notificador_telefono)
+    verificar_codigo = VerificarCodigo(repo_codigos_verificacion)
 
     ejecutor = EjecutorHerramientas({
         "comprobar_disponibilidad": disponibilidad,
@@ -196,6 +214,8 @@ def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
         "registrar_pedido": registrar_pedido,
         "consultar_conocimiento": consultar_conocimiento,
         "anadir_nota_cliente": anadir_nota_cliente,
+        "generar_codigo_verificacion": generar_codigo_verificacion,
+        "verificar_codigo": verificar_codigo,
     })
 
     system_prompt = construir_system_prompt(config)

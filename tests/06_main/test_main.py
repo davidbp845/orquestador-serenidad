@@ -29,6 +29,7 @@ def test_construir_sistema_conecta_las_piezas():
     herramientas_esperadas = {
         "comprobar_disponibilidad", "crear_reserva", "cancelar_reserva",
         "registrar_pedido", "consultar_conocimiento", "anadir_nota_cliente",
+        "generar_codigo_verificacion", "verificar_codigo",
     }
     assert set(orquestador._ejecutor._casos.keys()) == herramientas_esperadas
     assert "Centro de Masajes Serenidad" in orquestador._system_prompt
@@ -137,6 +138,58 @@ def test_construir_sistema_usa_repos_postgres_si_hay_database_url(monkeypatch):
     assert isinstance(cancelar_reserva._citas, RepositorioCitasPostgres)
     assert isinstance(registrar_pedido._pedidos, RepositorioPedidosPostgres)
     assert isinstance(anadir_nota_cliente._notas, RepositorioNotasClientePostgres)
+
+
+def test_construir_sistema_usa_codigos_verificacion_en_memoria_sin_redis_url(monkeypatch):
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
+         patch("main.RepositorioConocimientoChroma") as mock_chroma_cls:
+        mock_llm_cls.return_value = MagicMock()
+        mock_chroma_cls.return_value = MagicMock()
+
+        import main
+        orquestador, _ = main.construir_sistema("config/business.yaml")
+
+    from adapters.out.repositorios_memoria import RepositorioCodigosVerificacionMemoria
+    generar_codigo = orquestador._ejecutor._casos["generar_codigo_verificacion"]
+    verificar_codigo = orquestador._ejecutor._casos["verificar_codigo"]
+    assert isinstance(generar_codigo._codigos, RepositorioCodigosVerificacionMemoria)
+    assert generar_codigo._codigos is verificar_codigo._codigos
+
+
+def test_construir_sistema_usa_codigos_verificacion_redis_si_hay_redis_url(monkeypatch):
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379")
+    with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
+         patch("main.RepositorioConocimientoChroma") as mock_chroma_cls, \
+         patch("adapters.out.repositorio_codigos_verificacion_redis.Redis"):
+        mock_llm_cls.return_value = MagicMock()
+        mock_chroma_cls.return_value = MagicMock()
+
+        import main
+        orquestador, _ = main.construir_sistema("config/business.yaml")
+
+    from adapters.out.repositorio_codigos_verificacion_redis import (
+        RepositorioCodigosVerificacionRedis,
+    )
+    generar_codigo = orquestador._ejecutor._casos["generar_codigo_verificacion"]
+    assert isinstance(generar_codigo._codigos, RepositorioCodigosVerificacionRedis)
+
+
+def test_construir_sistema_pasa_el_notificador_telefono_a_generar_codigo_verificacion(monkeypatch):
+    monkeypatch.setenv("WHATSAPP_ACCESS_TOKEN", "access-falso")
+    monkeypatch.setenv("WHATSAPP_PHONE_NUMBER_ID", "1234567890")
+    with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
+         patch("main.RepositorioConocimientoChroma") as mock_chroma_cls, \
+         patch("main.NotificadorMensajesWhatsApp") as mock_notificador_cls:
+        mock_llm_cls.return_value = MagicMock()
+        mock_chroma_cls.return_value = MagicMock()
+        mock_notificador_cls.return_value = MagicMock()
+
+        import main
+        orquestador, _ = main.construir_sistema("config/business.yaml")
+
+    generar_codigo = orquestador._ejecutor._casos["generar_codigo_verificacion"]
+    assert generar_codigo._notificador is mock_notificador_cls.return_value
 
 
 def test_construir_sistema_sin_calendario_configurado(monkeypatch):

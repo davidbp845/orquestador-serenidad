@@ -67,6 +67,17 @@ class ValoracionInvalida(DominioError):
         self.valoracion = valoracion
 
 
+class CanalVerificacionNoDisponible(DominioError):
+    """GenerarCodigoVerificacion no tiene ningún NotificadorMensajes de
+    teléfono configurado (#84) — no hay por dónde enviar el código."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "No hay ningún canal (WhatsApp o SMS) configurado para enviar "
+            "el código de verificación."
+        )
+
+
 class TransicionEstadoInvalida(DominioError):
     """Genérica para cualquier entidad con máquina de estados (Pedido,
     Cita...) — el mensaje no asume cuál, solo reporta los estados."""

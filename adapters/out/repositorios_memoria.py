@@ -13,6 +13,7 @@ from uuid import UUID
 from domain.entities import (
     Cita,
     Cliente,
+    CodigoVerificacion,
     EstadoPedido,
     NotaCliente,
     Pedido,
@@ -24,6 +25,7 @@ from domain.entities import (
 from domain.ports import (
     RepositorioCitas,
     RepositorioClientes,
+    RepositorioCodigosVerificacion,
     RepositorioContadores,
     RepositorioNotasCliente,
     RepositorioPedidos,
@@ -147,6 +149,20 @@ class RepositorioNotasClienteMemoria(RepositorioNotasCliente):
         n = len(self._data)
         self._data.clear()
         return n
+
+
+class RepositorioCodigosVerificacionMemoria(RepositorioCodigosVerificacion):
+    def __init__(self):
+        self._data: dict[str, CodigoVerificacion] = {}
+
+    def guardar(self, codigo: CodigoVerificacion) -> None:
+        self._data[codigo.telefono] = codigo
+
+    def obtener(self, telefono: str) -> CodigoVerificacion | None:
+        return self._data.get(telefono)
+
+    def eliminar(self, telefono: str) -> None:
+        self._data.pop(telefono, None)
 
 
 class RepositorioTestimoniosMemoria(RepositorioTestimonios):

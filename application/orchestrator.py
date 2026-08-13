@@ -37,6 +37,12 @@ class SesionConversacion:
     # (ver EjecutorHerramientas.ejecutar) en vez de diferir la nota a la
     # espera de un cliente_id que podría no llegar nunca.
     cliente_id_conocido: str | None = None
+    # Teléfonos verificados en esta conversación (#84) — con código, o
+    # exentos por canal (Telegram, o WhatsApp cuando coincide con el
+    # número real de la sesión). crear_reserva/guardar_nota_cliente los
+    # exigen aquí antes de identificar/crear un Cliente por ese teléfono
+    # (ver EjecutorHerramientas._telefono_verificado).
+    telefonos_verificados: set[str] = field(default_factory=set)
 
 
 class OrquestadorAgente:

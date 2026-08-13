@@ -39,7 +39,9 @@ TOOLS_SCHEMA = [
         "description": (
             "Crea una reserva/cita confirmada para un cliente. Necesita "
             "el nombre completo y el teléfono del cliente — pídeselos "
-            "antes de llamar a esta herramienta si no los tienes."
+            "antes de llamar a esta herramienta si no los tienes. El "
+            "teléfono tiene que estar verificado en esta conversación "
+            "(ver verificar_telefono) o falla pidiéndotelo."
         ),
         "input_schema": {
             "type": "object",
@@ -51,6 +53,40 @@ TOOLS_SCHEMA = [
                 "inicio": {"type": "string", "description": "ISO 8601"},
             },
             "required": ["servicio_id", "profesional_id", "nombre", "telefono", "inicio"],
+        },
+    },
+    {
+        "name": "verificar_telefono",
+        "description": (
+            "Comprueba si un teléfono ya está verificado en esta "
+            "conversación, antes de usarlo con crear_reserva o "
+            "guardar_nota_cliente para identificar a un cliente nuevo. "
+            "Si el canal ya autentica al cliente (Telegram, o WhatsApp "
+            "cuando el teléfono coincide con el número desde el que "
+            "escribe), no hace falta nada más. Si no, se envía un código "
+            "de un solo uso a ese teléfono: pídeselo al cliente y "
+            "confírmalo con confirmar_codigo_verificacion antes de "
+            "continuar."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"telefono": {"type": "string"}},
+            "required": ["telefono"],
+        },
+    },
+    {
+        "name": "confirmar_codigo_verificacion",
+        "description": (
+            "Confirma el código de un solo uso que el cliente ha "
+            "recibido tras llamar a verificar_telefono."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "telefono": {"type": "string"},
+                "codigo": {"type": "string"},
+            },
+            "required": ["telefono", "codigo"],
         },
     },
     {
@@ -97,7 +133,8 @@ TOOLS_SCHEMA = [
             "identificar al cliente igual que crear_reserva: si ya conoces "
             "su cliente_id en esta conversación (por ejemplo, por una "
             "reserva anterior), indícalo; si no, pídele el nombre completo "
-            "y el teléfono y pásalos como nombre y telefono."
+            "y el teléfono (verificado, ver verificar_telefono) y pásalos "
+            "como nombre y telefono."
         ),
         "input_schema": {
             "type": "object",
@@ -129,6 +166,19 @@ class EjecutorHerramientas:
     def __init__(self, casos_de_uso: dict):
         self._casos = casos_de_uso
 
+    def _telefono_verificado(
+        self, telefono: str, canal: str | None, usuario_id: str | None, sesion: SesionConversacion | None,
+    ) -> bool:
+        # Excepciones por canal (#84): Telegram ya autentica la cuenta
+        # (aunque no el teléfono dictado en sí); WhatsApp autentica el
+        # número solo si coincide con el que usa para escribir (usuario_id
+        # en ese canal ya ES el número real, ver adapters/in_/whatsapp_webhook.py).
+        if canal == "telegram":
+            return True
+        if canal == "whatsapp" and usuario_id == telefono:
+            return True
+        return sesion is not None and telefono in sesion.telefonos_verificados
+
     def ejecutar(
         self,
         nombre_tool: str,
@@ -156,11 +206,19 @@ class EjecutorHerramientas:
                 }
 
             if nombre_tool == "crear_reserva":
+                telefono = entrada["telefono"]
+                if not self._telefono_verificado(telefono, canal, usuario_id, sesion):
+                    return {
+                        "error": (
+                            "Teléfono sin verificar: llama primero a "
+                            "verificar_telefono con este mismo número."
+                        )
+                    }
                 kwargs = {
                     "servicio_id": entrada["servicio_id"],
                     "profesional_id": entrada["profesional_id"],
                     "nombre": entrada["nombre"],
-                    "telefono": entrada["telefono"],
+                    "telefono": telefono,
                     "inicio": datetime.fromisoformat(entrada["inicio"]),
                 }
                 # El chat_id de Telegram solo se conoce (y solo tiene
@@ -224,6 +282,13 @@ class EjecutorHerramientas:
                 nombre = entrada.get("nombre")
                 telefono = entrada.get("telefono")
                 if nombre and telefono:
+                    if not self._telefono_verificado(telefono, canal, usuario_id, sesion):
+                        return {
+                            "error": (
+                                "Teléfono sin verificar: llama primero a "
+                                "verificar_telefono con este mismo número."
+                            )
+                        }
                     nota = self._casos["anadir_nota_cliente"].ejecutar_identificando(
                         nombre=nombre, telefono=telefono, texto=texto
                     )
@@ -237,6 +302,22 @@ class EjecutorHerramientas:
                         "lo conoces en esta conversación."
                     )
                 }
+
+            if nombre_tool == "verificar_telefono":
+                telefono = entrada["telefono"]
+                if self._telefono_verificado(telefono, canal, usuario_id, sesion):
+                    if sesion is not None:
+                        sesion.telefonos_verificados.add(telefono)
+                    return {"verificado": True}
+                self._casos["generar_codigo_verificacion"].ejecutar(telefono)
+                return {"verificado": False, "codigo_enviado": True}
+
+            if nombre_tool == "confirmar_codigo_verificacion":
+                telefono = entrada["telefono"]
+                verificado = self._casos["verificar_codigo"].ejecutar(telefono, entrada["codigo"])
+                if verificado and sesion is not None:
+                    sesion.telefonos_verificados.add(telefono)
+                return {"verificado": verificado}
 
             if nombre_tool == "consultar_conocimiento_negocio":
                 return self._casos["consultar_conocimiento"].ejecutar(

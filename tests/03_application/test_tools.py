@@ -6,11 +6,13 @@ from application.tools import TOOLS_SCHEMA, EjecutorHerramientas
 from domain.entities import Cita, EstadoCita, EstadoPedido, LineaPedido, NotaCliente, Pedido, SlotDisponible
 
 
-def test_tools_schema_declara_las_cinco_herramientas():
+def test_tools_schema_declara_las_siete_herramientas():
     nombres = {t["name"] for t in TOOLS_SCHEMA}
     assert nombres == {
         "comprobar_disponibilidad",
         "crear_reserva",
+        "verificar_telefono",
+        "confirmar_codigo_verificacion",
         "registrar_pedido",
         "consultar_conocimiento_negocio",
         "guardar_nota_cliente",
@@ -64,6 +66,7 @@ def test_crear_reserva_devuelve_cita_id_cliente_id_y_estado():
     caso = Mock()
     caso.ejecutar.return_value = cita
     ejecutor = EjecutorHerramientas({"crear_reserva": caso})
+    sesion = SesionConversacion(canal="web", usuario_id="u1", telefonos_verificados={"600111222"})
 
     resultado = ejecutor.ejecutar("crear_reserva", {
         "servicio_id": "masaje",
@@ -71,7 +74,7 @@ def test_crear_reserva_devuelve_cita_id_cliente_id_y_estado():
         "nombre": "Juan",
         "telefono": "600111222",
         "inicio": "2026-08-03T09:00:00",
-    })
+    }, sesion=sesion)
 
     caso.ejecutar.assert_called_once_with(
         servicio_id="masaje", profesional_id="ana", nombre="Juan", telefono="600111222",
@@ -112,6 +115,7 @@ def test_crear_reserva_por_web_no_pasa_telegram_chat_id():
     caso = Mock()
     caso.ejecutar.return_value = cita
     ejecutor = EjecutorHerramientas({"crear_reserva": caso})
+    sesion = SesionConversacion(canal="web", usuario_id="u1", telefonos_verificados={"600111222"})
 
     ejecutor.ejecutar(
         "crear_reserva",
@@ -124,12 +128,99 @@ def test_crear_reserva_por_web_no_pasa_telegram_chat_id():
         },
         canal="web",
         usuario_id="u1",
+        sesion=sesion,
     )
 
     caso.ejecutar.assert_called_once_with(
         servicio_id="masaje", profesional_id="ana", nombre="Juan", telefono="600111222",
         inicio=datetime(2026, 8, 3, 9, 0),
     )
+
+
+def test_crear_reserva_con_telefono_sin_verificar_devuelve_error():
+    caso = Mock()
+    ejecutor = EjecutorHerramientas({"crear_reserva": caso})
+
+    resultado = ejecutor.ejecutar(
+        "crear_reserva",
+        {
+            "servicio_id": "masaje",
+            "profesional_id": "ana",
+            "nombre": "Juan",
+            "telefono": "600111222",
+            "inicio": "2026-08-03T09:00:00",
+        },
+        canal="web",
+        usuario_id="u1",
+    )
+
+    caso.ejecutar.assert_not_called()
+    assert "error" in resultado
+
+
+def test_crear_reserva_por_telegram_no_necesita_verificacion_previa():
+    cita = Cita.nueva(1, "masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    caso = Mock()
+    caso.ejecutar.return_value = cita
+    ejecutor = EjecutorHerramientas({"crear_reserva": caso})
+
+    resultado = ejecutor.ejecutar(
+        "crear_reserva",
+        {
+            "servicio_id": "masaje",
+            "profesional_id": "ana",
+            "nombre": "Juan",
+            "telefono": "600111222",
+            "inicio": "2026-08-03T09:00:00",
+        },
+        canal="telegram",
+        usuario_id="chat123",
+    )
+
+    assert "error" not in resultado
+
+
+def test_crear_reserva_por_whatsapp_con_telefono_igual_al_usuario_no_necesita_verificacion():
+    cita = Cita.nueva(1, "masaje", "ana", "cliente1", datetime(2026, 8, 3, 9, 0), datetime(2026, 8, 3, 10, 0))
+    caso = Mock()
+    caso.ejecutar.return_value = cita
+    ejecutor = EjecutorHerramientas({"crear_reserva": caso})
+
+    resultado = ejecutor.ejecutar(
+        "crear_reserva",
+        {
+            "servicio_id": "masaje",
+            "profesional_id": "ana",
+            "nombre": "Juan",
+            "telefono": "34600111222",
+            "inicio": "2026-08-03T09:00:00",
+        },
+        canal="whatsapp",
+        usuario_id="34600111222",
+    )
+
+    assert "error" not in resultado
+
+
+def test_crear_reserva_por_whatsapp_con_telefono_distinto_al_usuario_exige_verificacion():
+    caso = Mock()
+    ejecutor = EjecutorHerramientas({"crear_reserva": caso})
+
+    resultado = ejecutor.ejecutar(
+        "crear_reserva",
+        {
+            "servicio_id": "masaje",
+            "profesional_id": "ana",
+            "nombre": "Juan",
+            "telefono": "600999888",
+            "inicio": "2026-08-03T09:00:00",
+        },
+        canal="whatsapp",
+        usuario_id="34600111222",
+    )
+
+    caso.ejecutar.assert_not_called()
+    assert "error" in resultado
 
 
 def test_registrar_pedido_construye_lineas_pedido():
@@ -183,7 +274,7 @@ def test_guardar_nota_cliente_sin_cliente_id_con_nombre_y_telefono_identifica_al
     caso = Mock()
     caso.ejecutar_identificando.return_value = nota
     ejecutor = EjecutorHerramientas({"anadir_nota_cliente": caso})
-    sesion = SesionConversacion(canal="web", usuario_id="u1")
+    sesion = SesionConversacion(canal="web", usuario_id="u1", telefonos_verificados={"600111222"})
 
     resultado = ejecutor.ejecutar(
         "guardar_nota_cliente",
@@ -196,6 +287,20 @@ def test_guardar_nota_cliente_sin_cliente_id_con_nombre_y_telefono_identifica_al
     )
     assert sesion.cliente_id_conocido == "cliente1"
     assert resultado == {"nota_id": nota.id, "cliente_id": nota.cliente_id}
+
+
+def test_guardar_nota_cliente_con_nombre_y_telefono_sin_verificar_devuelve_error():
+    caso = Mock()
+    ejecutor = EjecutorHerramientas({"anadir_nota_cliente": caso})
+
+    resultado = ejecutor.ejecutar(
+        "guardar_nota_cliente",
+        {"texto": "prefiere profesional Ana", "nombre": "Juan", "telefono": "600111222"},
+        canal="web",
+    )
+
+    caso.ejecutar_identificando.assert_not_called()
+    assert "error" in resultado
 
 
 def test_guardar_nota_cliente_sin_identificacion_devuelve_error():
@@ -260,7 +365,7 @@ def test_crear_reserva_deja_el_cliente_id_conocido_en_la_sesion():
     caso_reserva = Mock()
     caso_reserva.ejecutar.return_value = cita
     ejecutor = EjecutorHerramientas({"crear_reserva": caso_reserva})
-    sesion = SesionConversacion(canal="web", usuario_id="u1")
+    sesion = SesionConversacion(canal="web", usuario_id="u1", telefonos_verificados={"600111222"})
 
     ejecutor.ejecutar(
         "crear_reserva",
@@ -272,6 +377,76 @@ def test_crear_reserva_deja_el_cliente_id_conocido_en_la_sesion():
     )
 
     assert sesion.cliente_id_conocido == "cliente1"
+
+
+def test_verificar_telefono_por_telegram_no_genera_codigo():
+    caso_codigo = Mock()
+    ejecutor = EjecutorHerramientas({"generar_codigo_verificacion": caso_codigo})
+    sesion = SesionConversacion(canal="telegram", usuario_id="chat123")
+
+    resultado = ejecutor.ejecutar(
+        "verificar_telefono", {"telefono": "600111222"}, canal="telegram", sesion=sesion,
+    )
+
+    caso_codigo.ejecutar.assert_not_called()
+    assert resultado == {"verificado": True}
+    assert "600111222" in sesion.telefonos_verificados
+
+
+def test_verificar_telefono_por_whatsapp_con_mismo_numero_no_genera_codigo():
+    caso_codigo = Mock()
+    ejecutor = EjecutorHerramientas({"generar_codigo_verificacion": caso_codigo})
+
+    resultado = ejecutor.ejecutar(
+        "verificar_telefono", {"telefono": "34600111222"},
+        canal="whatsapp", usuario_id="34600111222",
+    )
+
+    caso_codigo.ejecutar.assert_not_called()
+    assert resultado == {"verificado": True}
+
+
+def test_verificar_telefono_por_web_genera_y_envia_codigo():
+    caso_codigo = Mock()
+    ejecutor = EjecutorHerramientas({"generar_codigo_verificacion": caso_codigo})
+    sesion = SesionConversacion(canal="web", usuario_id="u1")
+
+    resultado = ejecutor.ejecutar(
+        "verificar_telefono", {"telefono": "600111222"}, canal="web", sesion=sesion,
+    )
+
+    caso_codigo.ejecutar.assert_called_once_with("600111222")
+    assert resultado == {"verificado": False, "codigo_enviado": True}
+    assert sesion.telefonos_verificados == set()
+
+
+def test_confirmar_codigo_verificacion_correcto_marca_el_telefono_como_verificado():
+    caso_verificar = Mock()
+    caso_verificar.ejecutar.return_value = True
+    ejecutor = EjecutorHerramientas({"verificar_codigo": caso_verificar})
+    sesion = SesionConversacion(canal="web", usuario_id="u1")
+
+    resultado = ejecutor.ejecutar(
+        "confirmar_codigo_verificacion", {"telefono": "600111222", "codigo": "123456"}, sesion=sesion,
+    )
+
+    caso_verificar.ejecutar.assert_called_once_with("600111222", "123456")
+    assert resultado == {"verificado": True}
+    assert sesion.telefonos_verificados == {"600111222"}
+
+
+def test_confirmar_codigo_verificacion_incorrecto_no_marca_nada():
+    caso_verificar = Mock()
+    caso_verificar.ejecutar.return_value = False
+    ejecutor = EjecutorHerramientas({"verificar_codigo": caso_verificar})
+    sesion = SesionConversacion(canal="web", usuario_id="u1")
+
+    resultado = ejecutor.ejecutar(
+        "confirmar_codigo_verificacion", {"telefono": "600111222", "codigo": "000000"}, sesion=sesion,
+    )
+
+    assert resultado == {"verificado": False}
+    assert sesion.telefonos_verificados == set()
 
 
 def test_consultar_conocimiento_negocio():

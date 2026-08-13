@@ -6,12 +6,14 @@ invocar como "herramientas" (tools) del LLM.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+import secrets
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from .entities import (
     Cita,
     Cliente,
+    CodigoVerificacion,
     EstadoCita,
     EstadoPedido,
     LineaPedido,
@@ -23,6 +25,7 @@ from .entities import (
     Testimonio,
 )
 from .exceptions import (
+    CanalVerificacionNoDisponible,
     CitaNoExiste,
     ClienteNoExiste,
     ClienteYaExiste,
@@ -38,6 +41,7 @@ from .ports import (
     NotificadorMensajes,
     RepositorioCitas,
     RepositorioClientes,
+    RepositorioCodigosVerificacion,
     RepositorioConocimiento,
     RepositorioContadores,
     RepositorioNotasCliente,
@@ -48,6 +52,10 @@ from .ports import (
     RepositorioTestimonios,
     SincronizadorCalendario,
 )
+
+# Duración del código de verificación (#84) — corta a propósito, es una
+# comprobación de "acabas de recibir esto", no una sesión larga.
+DURACION_CODIGO_VERIFICACION_MINUTOS = 10
 
 logger = logging.getLogger(__name__)
 
@@ -786,3 +794,53 @@ class ListarNotasCliente:
 
     def ejecutar(self, cliente_id: str) -> list[NotaCliente]:
         return sorted(self._notas.listar_de_cliente(cliente_id), key=lambda n: n.creado_en, reverse=True)
+
+
+class GenerarCodigoVerificacion:
+    """Genera y envía un código de un solo uso para comprobar que el
+    cliente es dueño del teléfono que dicta en el chat (#84) — paso
+    previo a que crear_reserva/guardar_nota_cliente confíen en ese
+    teléfono. El envío reutiliza el canal de teléfono ya resuelto en
+    #85/#86 (WhatsApp o SMS); sin ninguno configurado no hay por dónde
+    mandarlo."""
+
+    def __init__(
+        self,
+        codigos: RepositorioCodigosVerificacion,
+        notificador: NotificadorMensajes | None,
+        duracion_minutos: int = DURACION_CODIGO_VERIFICACION_MINUTOS,
+    ):
+        self._codigos = codigos
+        self._notificador = notificador
+        self._duracion_minutos = duracion_minutos
+
+    def ejecutar(self, telefono: str) -> None:
+        if self._notificador is None:
+            raise CanalVerificacionNoDisponible()
+
+        codigo = f"{secrets.randbelow(1_000_000):06d}"
+        expira_en = datetime.now(UTC) + timedelta(minutes=self._duracion_minutos)
+        self._codigos.guardar(CodigoVerificacion(telefono=telefono, codigo=codigo, expira_en=expira_en))
+        self._notificador.enviar(
+            telefono,
+            f"Tu código de verificación es {codigo}. Caduca en "
+            f"{self._duracion_minutos} minutos.",
+        )
+
+
+class VerificarCodigo:
+    """Comprueba un código contra el guardado para ese teléfono. De un
+    solo uso: se borra tras el intento, acierte o no, para que un
+    código ya usado (o ya fallado) no se pueda reintentar indefinidamente."""
+
+    def __init__(self, codigos: RepositorioCodigosVerificacion):
+        self._codigos = codigos
+
+    def ejecutar(self, telefono: str, codigo: str) -> bool:
+        guardado = self._codigos.obtener(telefono)
+        if guardado is None:
+            return False
+        self._codigos.eliminar(telefono)
+        if guardado.expirado():
+            return False
+        return guardado.codigo == codigo

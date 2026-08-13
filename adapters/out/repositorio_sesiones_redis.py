@@ -31,19 +31,23 @@ class RepositorioSesionesRedis(RepositorioSesiones):
             canal=canal, usuario_id=usuario_id,
             historial=datos.get("historial", []),
             cliente_id_conocido=datos.get("cliente_id_conocido"),
+            telefonos_verificados=set(datos.get("telefonos_verificados", [])),
         )
 
     def guardar(self, sesion: SesionConversacion) -> None:
-        # cliente_id_conocido (#77) también tiene que sobrevivir entre
-        # peticiones: antes solo se serializaba historial, así que se
-        # perdía en cuanto la sesión daba una vuelta por Redis (el
-        # siguiente obtener() la reconstruía sin ese campo) —
-        # silenciosamente, sin error, con REDIS_URL configurada.
+        # cliente_id_conocido (#77) y telefonos_verificados (#84)
+        # también tienen que sobrevivir entre peticiones: antes solo se
+        # serializaba historial, así que se perdían en cuanto la sesión
+        # daba una vuelta por Redis (el siguiente obtener() la
+        # reconstruía sin esos campos) — silenciosamente, sin error, con
+        # REDIS_URL configurada. set no es serializable a JSON
+        # directamente, se guarda como lista.
         self._cliente.set(
             self._clave(sesion.canal, sesion.usuario_id),
             json.dumps({
                 "historial": sesion.historial,
                 "cliente_id_conocido": sesion.cliente_id_conocido,
+                "telefonos_verificados": list(sesion.telefonos_verificados),
             }),
         )
 

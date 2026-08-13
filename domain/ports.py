@@ -17,6 +17,7 @@ from uuid import UUID
 from .entities import (
     Cita,
     Cliente,
+    CodigoVerificacion,
     NotaCliente,
     Pedido,
     Profesional,
@@ -259,6 +260,27 @@ class RepositorioContadores(ABC):
         panel, mismo alcance de "solo entorno local". Reinicia todos
         los contadores, no solo uno."""
         ...
+
+
+class RepositorioCodigosVerificacion(ABC):
+    """Almacén de corta duración para CodigoVerificacion (#84), clave =
+    teléfono. No decide expiración por sí mismo (eso lo comprueba
+    VerificarCodigo con CodigoVerificacion.expirado()) — implementaciones
+    con TTL nativo (Redis) pueden además dejar que la entrada expire
+    sola, pero no es obligatorio: un obtener() de una entrada caducada
+    que no se haya limpiado sola debe devolverse igual, y es
+    VerificarCodigo quien la rechaza."""
+
+    @abstractmethod
+    def guardar(self, codigo: CodigoVerificacion) -> None:
+        """Sobrescribe cualquier código anterior para el mismo teléfono."""
+        ...
+
+    @abstractmethod
+    def obtener(self, telefono: str) -> CodigoVerificacion | None: ...
+
+    @abstractmethod
+    def eliminar(self, telefono: str) -> None: ...
 
 
 # ---------- Puertos de salida: conocimiento e IA ----------

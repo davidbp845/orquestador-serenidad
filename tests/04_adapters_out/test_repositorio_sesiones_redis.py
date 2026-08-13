@@ -69,12 +69,13 @@ def test_obtener_tolera_una_sesion_guardada_sin_cliente_id_conocido():
     assert sesion.cliente_id_conocido is None
 
 
-def test_guardar_serializa_historial_y_cliente_id_conocido():
+def test_guardar_serializa_historial_cliente_id_conocido_y_telefonos_verificados():
     repo, mock_cliente = _construir_con_cliente_falso()
     sesion = SesionConversacion(
         canal="telegram", usuario_id="u2",
         historial=[{"role": "user", "content": "hola"}],
         cliente_id_conocido="c1",
+        telefonos_verificados={"600111222"},
     )
 
     repo.guardar(sesion)
@@ -84,8 +85,30 @@ def test_guardar_serializa_historial_y_cliente_id_conocido():
         json.dumps({
             "historial": [{"role": "user", "content": "hola"}],
             "cliente_id_conocido": "c1",
+            "telefonos_verificados": ["600111222"],
         }),
     )
+
+
+def test_obtener_deserializa_los_telefonos_verificados_guardados():
+    repo, mock_cliente = _construir_con_cliente_falso()
+    mock_cliente.get.return_value = json.dumps({
+        "historial": [], "cliente_id_conocido": None,
+        "telefonos_verificados": ["600111222"],
+    })
+
+    sesion = repo.obtener("web", "u1")
+
+    assert sesion.telefonos_verificados == {"600111222"}
+
+
+def test_obtener_tolera_una_sesion_guardada_sin_telefonos_verificados():
+    repo, mock_cliente = _construir_con_cliente_falso()
+    mock_cliente.get.return_value = json.dumps({"historial": [], "cliente_id_conocido": "c1"})
+
+    sesion = repo.obtener("web", "u1")
+
+    assert sesion.telefonos_verificados == set()
 
 
 def test_guardar_y_obtener_redondean_el_cliente_id_conocido_sin_perderlo():
@@ -98,8 +121,12 @@ def test_guardar_y_obtener_redondean_el_cliente_id_conocido_sin_perderlo():
     mock_cliente.get.side_effect = lambda clave: almacen.get(clave)
     repo = RepositorioSesionesRedis("redis://localhost:6379", cliente=mock_cliente)
 
-    sesion = SesionConversacion(canal="web", usuario_id="u1", cliente_id_conocido="c1")
+    sesion = SesionConversacion(
+        canal="web", usuario_id="u1", cliente_id_conocido="c1",
+        telefonos_verificados={"600111222"},
+    )
     repo.guardar(sesion)
     recuperada = repo.obtener("web", "u1")
 
     assert recuperada.cliente_id_conocido == "c1"
+    assert recuperada.telefonos_verificados == {"600111222"}
