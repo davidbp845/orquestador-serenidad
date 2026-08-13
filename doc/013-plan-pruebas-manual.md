@@ -23,6 +23,14 @@ en vez de solo dejarla sin marcar.
 - [ ] Sin `CONFIG_PATH` definida (comportamiento por defecto): backend, panel
       y frontend usan `config/business.yaml` — ver sección 10 para probar el
       override.
+- [ ] **Importante para la sección 1.3**: desde que existe la verificación de
+      teléfono (ver sección 7.3), `crear_reserva`/`guardar_nota_cliente` con
+      un teléfono nuevo por chat web exigen verificarlo primero — necesitas
+      **o bien** `WHATSAPP_*`/`TWILIO_*` configuradas (sección 7), **o bien**
+      probar ese flujo por Telegram (sección 6), que está exento. Sin ninguna
+      de las dos cosas, `crear_reserva` por chat web se queda bloqueada en el
+      paso de verificación — es el comportamiento esperado, no un bug, pero
+      cambia lo que hace falta preparar antes de la sección 1.
 
 Repite todo este plan (o al menos las secciones 1-4) una segunda vez con
 `PROVEEDOR_LLM=anthropic` (o `cohere`/`openai` si es lo que hay configurado
@@ -74,8 +82,11 @@ sesión/historial; cambia de `usuario_id` para empezar una conversación nueva.
 ### 1.3 `crear_reserva`
 - [ ] Completar un flujo natural: preguntar disponibilidad → elegir una
       hora ofrecida → confirmar datos de cliente (nombre/teléfono si los
-      pide) → reserva creada. Comprobar que la respuesta final es un
-      resumen cálido (servicio, día, hora), no un "reserva creada" seco.
+      pide) → **verificar el teléfono si el agente lo pide** (primera vez que
+      aparece ese número en la conversación y el canal no está exento — ver
+      sección 7.3 para el detalle) → reserva creada. Comprobar que la
+      respuesta final es un resumen cálido (servicio, día, hora), no un
+      "reserva creada" seco.
 - [ ] Verificar la reserva por fuera del chat: abrir el panel interno
       (sección 8.1) y comprobar que la cita aparece en Agenda con los
       datos correctos, incluido el **nombre del cliente** junto a su id.
@@ -239,7 +250,12 @@ o de prompt. Compara contra lo descrito en `config/business.yaml`.
 
 ---
 
-## 7. WhatsApp (opcional — requiere `WHATSAPP_*` + túnel público)
+## 7. WhatsApp, SMS y verificación de teléfono
+
+Issue de referencia con el paso a paso completo de credenciales/prerrequisitos
+para esta sección entera: **#87**.
+
+### 7.1 Webhook de entrada — WhatsApp (opcional — requiere `WHATSAPP_*` + túnel público)
 
 - [ ] `GET /webhook/whatsapp` con los parámetros `hub.mode=subscribe`,
       `hub.verify_token=<WHATSAPP_VERIFY_TOKEN>`, `hub.challenge=<valor>`
@@ -252,6 +268,52 @@ o de prompt. Compara contra lo descrito en `config/business.yaml`.
       mensaje llega al número de WhatsApp de prueba.
 - [ ] Firma HMAC del payload (`WHATSAPP_APP_SECRET`) inválida → la petición
       se rechaza, no se procesa como mensaje válido.
+
+### 7.2 Notificaciones salientes — WhatsApp y SMS (opcional — requiere `WHATSAPP_ACCESS_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID` y/o `TWILIO_*`)
+
+No hace falta `canales.whatsapp: true` ni el webhook de 7.1 activo para esto:
+el notificador saliente se instancia solo por las variables de entorno,
+independiente del canal de entrada.
+
+- [ ] Con `WHATSAPP_ACCESS_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID` definidas,
+      completar una reserva por chat web con un teléfono ya verificado (ver
+      7.3) → el mensaje de confirmación de la reserva llega al WhatsApp de
+      prueba.
+- [ ] Repetir con `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/
+      `TWILIO_NUMERO_REMITENTE` en vez de las de WhatsApp (recuerda que una
+      cuenta trial de Twilio solo manda SMS a números verificados en su
+      panel) → el mensaje llega por SMS.
+- [ ] Con las credenciales de los dos canales definidas a la vez → se usa
+      WhatsApp, no SMS (prioridad fija en `main.py`, no aleatoria).
+- [ ] Cancelar esa cita desde el panel interno (sección 8.1) → llega el
+      aviso de cancelación por el mismo canal.
+- [ ] Confirmar una cita desde el panel (transición a `CONFIRMADA`) → llega
+      el aviso de confirmación.
+- [ ] Sin `WHATSAPP_*`/`TWILIO_*` ni `telegram_chat_id` para ese cliente →
+      no se manda ninguna notificación y el flujo no se rompe (best-effort).
+
+### 7.3 Verificación de teléfono (opcional — requiere 7.2, o probar por Telegram)
+
+- [ ] Por chat web, reservar (1.3) o guardar una nota de cliente (
+      `guardar_nota_cliente`) con un teléfono que no haya aparecido antes en
+      esa conversación, en un canal no exento → el agente llama a
+      `verificar_telefono`, avisa de que ha enviado un código, y no completa
+      la acción hasta confirmarlo con `confirmar_codigo_verificacion`.
+- [ ] Dar un código incorrecto → el agente lo indica y permite reintentar,
+      sin insistir más de 2-3 veces (según la instrucción del prompt de
+      sistema) antes de ofrecer derivar a una persona.
+- [ ] Dar el código correcto → la acción pendiente (reserva o nota) se
+      completa con normalidad.
+- [ ] Repetir una segunda acción (p.ej. una nota tras haber reservado) para
+      el mismo `cliente_id` ya conocido en la misma conversación → no vuelve
+      a pedir verificación.
+- [ ] Por Telegram (sección 6) → nunca pide código, aunque sea la primera
+      vez que ese teléfono aparece en el sistema.
+- [ ] Por WhatsApp (7.1), dando como teléfono el mismo número desde el que
+      se escribe → no pide código. Dando un número distinto → sí lo pide.
+- [ ] Sin `WHATSAPP_*` ni `TWILIO_*` configuradas y fuera de Telegram/
+      WhatsApp-mismo-número → `verificar_telefono` devuelve un error claro
+      (no hay canal disponible para mandar el código), el chat no se rompe.
 
 ---
 
@@ -442,8 +504,9 @@ Si no hay tiempo para el plan completo, como mínimo:
 
 1. [ ] `GET /health` → 200.
 2. [ ] Pregunta de precio por chat → dato correcto + cierre comercial.
-3. [ ] Flujo completo de reserva → cita visible en el panel (Agenda), con
-       nombre de cliente correcto.
+3. [ ] Flujo completo de reserva (por Telegram, o con `WHATSAPP_*`/
+       `TWILIO_*` configuradas para poder verificar el teléfono — ver 7.3) →
+       cita visible en el panel (Agenda), con nombre de cliente correcto.
 4. [ ] Un caso comercial "difícil" (sección 2) al azar → tono correcto.
 5. [ ] Vistazo rápido a `http://localhost:4321`: Testimonios, CTA de
        cabecera y márgenes se ven correctos, sin nada pegado al borde.
