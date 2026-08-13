@@ -34,8 +34,11 @@ realmente en un despliegue con solo algunas activadas.
 | `Pedido` + `LineaPedido` | Postgres (tablas `pedidos` + `pedido_lineas`) si `DATABASE_URL`; si no, memoria | Opcional |
 | Fragmentos del vault (conocimiento/RAG) | Chroma (base vectorial local, carpeta `./chroma_data` por defecto) | Siempre, independiente de `DATABASE_URL` |
 | `SesionConversacion` (historial de chat) | Redis si `REDIS_URL`; si no, memoria (RAM) — puerto `RepositorioSesiones` | Opcional (desde #18) |
+| `CodigoVerificacion` (código de un solo uso para comprobar un teléfono) | Redis si `REDIS_URL` (TTL nativo vía `SETEX`); si no, memoria (RAM) — puerto `RepositorioCodigosVerificacion` | Opcional (desde #84) |
 | Evento espejo en Google Calendar | Google Calendar (sistema externo, no es BBDD del proyecto) | Opcional, solo si `GOOGLE_CALENDAR_CREDENTIALS_JSON`/`GOOGLE_CALENDAR_ID` están configurados |
 | Mensaje de confirmación/cancelación por Telegram | Telegram (sistema externo, no se persiste en absoluto — es un envío, no un dato guardado) | Opcional, solo si `TELEGRAM_BOT_TOKEN` está configurado (desde #38) |
+| Mensaje de confirmación/cancelación por WhatsApp | WhatsApp (sistema externo, no se persiste) | Opcional, solo si `WHATSAPP_ACCESS_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID` están configurados (desde #86) |
+| Mensaje de confirmación/cancelación o código de verificación por SMS | SMS vía Twilio (sistema externo, no se persiste) | Opcional, solo si `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_NUMERO_REMITENTE` están configurados (desde #85) |
 
 **Bases de datos en juego:**
 
@@ -43,15 +46,18 @@ realmente en un despliegue con solo algunas activadas.
   de pedido.
 - **Chroma** (siempre, local) → conocimiento del negocio para el RAG.
 - **Redis** (opcional vía `REDIS_URL`) → historial de sesiones de
-  conversación.
+  conversación, y códigos de verificación de teléfono de corta duración
+  (#84).
 - **RAM del proceso** → servicios, profesionales (siempre); también
-  citas/clientes/pedidos si no hay `DATABASE_URL`, y sesiones de conversación
-  si no hay `REDIS_URL`.
+  citas/clientes/pedidos si no hay `DATABASE_URL`, sesiones de conversación
+  si no hay `REDIS_URL`, y códigos de verificación si tampoco hay `REDIS_URL`.
 - **Google Calendar** (externo, opcional) → solo espejo de citas, no fuente de
   verdad propia.
-- **Telegram** (externo, opcional) → no almacena nada del sistema; es el canal
-  de salida de las notificaciones best-effort que dispara `CrearReserva`/
-  `CancelarReserva`.
+- **Telegram, WhatsApp y SMS (Twilio)** (externos, opcionales) → no almacenan
+  nada del sistema; son los canales de salida de las notificaciones
+  best-effort que disparan `CrearReserva`/`CancelarReserva`/
+  `CambiarEstadoCita`, y del código de verificación de teléfono (#84) —
+  Telegram desde #38, WhatsApp desde #86, SMS desde #85.
 
 Este mapa es una foto respecto a la versión original del issue #36
 (2026-08-07): en aquel momento las sesiones de conversación no tenían ni
@@ -137,6 +143,12 @@ implementaciones. No es un cambio de *dónde* vive `Cita` — sigue siendo la
 misma tabla `citas` de siempre — solo de qué formas se puede consultar; se
 documenta aquí porque es el tipo de cambio que este documento existe para no
 perder de vista.
+
+**`NotificadorMensajes` gana una implementación de WhatsApp, reutilizable como canal proactivo (#86, cerrado).** Hasta este punto la única notificación real era `NotificadorMensajesTelegram` (#38 arriba); WhatsApp solo sabía responder dentro del propio ciclo del webhook (`adapters/in_/whatsapp_webhook.py`), sin ninguna forma de avisar de forma proactiva. Se extrajo esa lógica de envío a `NotificadorMensajesWhatsApp` (`adapters/out/notificador_whatsapp.py`), que implementa el mismo puerto `NotificadorMensajes` y se reutiliza tanto para responder al webhook como para notificar desde el dominio. `CrearReserva`/`CancelarReserva`/`CambiarEstadoCita` ganan un segundo notificador opcional, `notificador_telefono`, usado cuando el cliente no tiene `telegram_chat_id` — con prioridad Telegram sobre teléfono, nunca los dos canales a la vez para el mismo aviso.
+
+**SMS (Twilio) como segunda opción de canal de teléfono (#85, cerrado).** Mismo puerto `NotificadorMensajes`, nueva implementación `NotificadorMensajesSMS` (`adapters/out/notificador_sms.py`) sobre el SDK de Twilio. `notificador_telefono` (ver #86) se resuelve como WhatsApp si hay credenciales, o si no SMS — nunca los dos a la vez. No añade ninguna tabla ni entidad nueva: solo un segundo adaptador de salida best-effort, igual que Telegram/WhatsApp, sin persistencia propia.
+
+**Verificación de teléfono con código de un solo uso, nueva entidad efímera (#84, cerrado).** Hasta este punto `crear_reserva`/`guardar_nota_cliente` (ver `NotaCliente` más abajo) confiaban en el teléfono dictado en el chat sin ninguna prueba de que fuera su dueño. Nueva entidad `CodigoVerificacion` (`telefono`, `codigo`, `expira_en`) con puerto propio `RepositorioCodigosVerificacion`, mismo patrón dual que `SesionConversacion` (#18 arriba): `RepositorioCodigosVerificacionMemoria` o `RepositorioCodigosVerificacionRedis` según `REDIS_URL`, esta última con TTL nativo vía `SETEX` en vez de depender de una limpieza manual. `SesionConversacion` gana `telefonos_verificados: set[str]` para recordar, dentro de la misma conversación, qué teléfonos ya se comprobaron — con excepción por canal: Telegram y WhatsApp (cuando el teléfono coincide con el número real de la sesión) no piden código, el resto sí.
 
 **Decisión explícita de no crear una tabla N:M (#8, cerrado, no aplica).** La
 relación entre un `Profesional` y los servicios que ofrece sigue siendo una

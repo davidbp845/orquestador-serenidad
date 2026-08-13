@@ -510,6 +510,36 @@ de Telegram nunca impide crear o cancelar una reserva en el sistema propio.
 está definido. Email como canal de notificación quedó fuera de alcance (ver
 #12), descartado por ahora sin un caso de uso claro que lo dispare.
 
+**WhatsApp y SMS se suman como canal de notificación (#86 y #85, cerrados):**
+hasta este punto un cliente que reservaba por web chat (sin cuenta de
+Telegram conocida) no recibía ningún aviso proactivo. #86 extrajo la llamada
+a la Graph API de WhatsApp que ya vivía dentro del webhook de entrada
+(`adapters/in_/whatsapp_webhook.py`) a un adaptador propio,
+`NotificadorMensajesWhatsApp` (`adapters/out/notificador_whatsapp.py`),
+implementando el mismo puerto `NotificadorMensajes` — reutilizado tanto para
+responder al webhook como para notificar desde `CrearReserva`/
+`CancelarReserva`/`CambiarEstadoCita`, que ganan un segundo notificador
+opcional, `notificador_telefono`, con el teléfono del cliente como
+destinatario. #85 añadió `NotificadorMensajesSMS`
+(`adapters/out/notificador_sms.py`) sobre el SDK de Twilio, como alternativa
+cuando no hay credenciales de WhatsApp. La decisión de canal, en ambos casos,
+es sin fan-out: Telegram tiene prioridad si el cliente ya está vinculado, si
+no WhatsApp, si no SMS — nunca se manda el mismo aviso por dos canales a la
+vez.
+
+**Verificación de teléfono con código de un solo uso (#84, cerrado):** hasta
+este punto `crear_reserva` y `guardar_nota_cliente` (ver #77 en
+`doc/003-modelo-datos.md`) confiaban en el teléfono que el cliente dictaba en
+el chat sin ninguna prueba de que fuera suyo — cualquiera podía teclear el
+teléfono de otra persona y reservar o anotar algo a su nombre. #84 añade una
+entidad nueva, `CodigoVerificacion`, y dos herramientas del LLM
+(`verificar_telefono`, `confirmar_codigo_verificacion`): antes de identificar
+a un cliente nuevo por teléfono, se envía un código de un solo uso por el
+canal disponible (#86/#85) y hay que confirmarlo, con excepción para los
+canales que ya autentican por sí mismos (Telegram siempre, WhatsApp solo si
+el teléfono dictado coincide con el número real de la sesión). Ver
+`doc/003-modelo-datos.md` para el detalle de dónde vive `CodigoVerificacion`.
+
 **Roadmap no construido — autoedición del vault por el propietario (#25):**
 al analizar #25 se detectó que el flujo actual de contenido (propietario edita
 `.md` en Obsidian → ingesta RAG + build de Astro leen el mismo archivo) exige
@@ -596,20 +626,31 @@ para desarrollo que no deberían llegar tal cual a producción.
 
 | Estado | Issues |
 |---|---|
-| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #18, #19 (parcial/incremental), #20, #23 (cerrado sin implementar — signup de Hugging Face bloqueado, aviso cosmético, ver sección 3), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #37 (movido a `doc/007-despliegue.md`), #38, #39, #40, #41, #43, #46 |
-| **Listo para empezar (Ready)** | #17 (reclasificado — canal de entrada más, no integración comercial, ver el propio issue) |
-| **Backlog** | #21, #22 |
+| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #17, #18, #19 (parcial/incremental), #20, #23 (cerrado sin implementar — signup de Hugging Face bloqueado, aviso cosmético, ver sección 3), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #37 (movido a `doc/007-despliegue.md`), #38, #39, #40, #41, #43, #46, #84, #85, #86 |
+| **Backlog / abiertos** | #48, #71, #72, #76 |
 
-De 37 issues etiquetados `Fase I`, 34 están cerrados. Lo único que queda por
-delante es **calidad conversacional** (#21, #22 — el modelo ya funciona,
-pero afinar el tono comercial y automatizar su verificación es trabajo
-continuo) y **#17**, un canal de entrada más (WhatsApp) ya analizado y
-documentado, listo para empezar cuando haya hueco. Las notificaciones
-proactivas al cliente (#38), la revisión del modelo de datos (#36), el
-Postgres real de desarrollo (#41), la CI rota en `main` (#42, sin label
-`Fase I` por ser un fallo de infraestructura de CI, no de alcance — fuera de
-este recuento), la documentación inicial completa (#20), el checklist de
-producción (#37), el vault de ejemplo versionado (#46) y el ciclo de vida
-completo de la Cita (#43) ya están resueltos — ver la
+> Nota: esta tabla se dejó de actualizar issue a issue en algún punto después
+> del #46 — #17 (canal WhatsApp de entrada) ya está implementado en el código
+> (`adapters/in_/whatsapp_webhook.py`) aunque nunca se narró aquí su cierre,
+> #21 y #22 también están cerrados pese a seguir listados como backlog, y hay
+> issues intermedios (#47–#83, ej. #52 identidad de cliente, #77 notas
+> estructuradas) resueltos y no reflejados en este resumen. Se corrige lo
+> verificable (conteo real vía `gh issue list --label "Fase I"`: 77
+> etiquetados `Fase I`, 73 cerrados a día de hoy) y se añaden #17, #84, #85 y
+> #86 (los últimos tres con su narrativa completa arriba, en la sección 9);
+> una pasada completa del resumen, con narrativa para cada issue intermedio,
+> queda pendiente aparte.
+
+De 77 issues etiquetados `Fase I`, 73 están cerrados. Abiertos hoy: #48
+(probar WhatsApp en local con un número de prueba de Meta, seguimiento de
+#17), y tres de ajustes finos de interfaz (#71 panel interno, #72 y #76
+frontend cliente) sin narrativa propia en este documento todavía. Las
+notificaciones proactivas al cliente (#38, y su ampliación a WhatsApp/SMS en
+#86/#85), la verificación de teléfono (#84), la revisión del modelo de datos
+(#36), el Postgres real de desarrollo (#41), la CI rota en `main` (#42, sin
+label `Fase I` por ser un fallo de infraestructura de CI, no de alcance —
+fuera de este recuento), la documentación inicial completa (#20), el
+checklist de producción (#37), el vault de ejemplo versionado (#46) y el
+ciclo de vida completo de la Cita (#43) ya están resueltos — ver la
 sección 9,
 `doc/003-modelo-datos.md` y `doc/007-despliegue.md` respectivamente.
