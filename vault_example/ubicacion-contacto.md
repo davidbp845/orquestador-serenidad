@@ -9,11 +9,14 @@ resumen: "Dirección, cómo llegar, teléfono, email y accesibilidad del centro.
 # Ubicación y contacto
 
 **Dirección:** Calle de la Serenidad, 12, 28010 Madrid
+
 **Cómo llegar:** Metro Bilbao (líneas 1 y 4), salida Calle Fuencarral.
 Parking público a 200m (Parking Trafalgar).
 
 **Teléfono:** +34 910 000 000
+
 **Email:** hola@masajesserenity.example
+
 **Telegram:** disponible para reservas y consultas rápidas — mismo
 asistente que el chat web.
 
