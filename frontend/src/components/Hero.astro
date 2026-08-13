@@ -15,7 +15,7 @@ const testimoniosIntervaloMs = Number(import.meta.env.PUBLIC_TESTIMONIOS_INTERVA
 >
   <div class="text-center">
     <h1 class="text-3xl font-bold text-(--color-texto)">{negocio.hero_titulo ?? negocio.nombre}</h1>
-    <p class="mt-(--spacing-fluid-2xs) text-(--color-texto-suave)">
+    <p class="mt-(--spacing-fluid-2xs) text-(--color-texto)">
       {negocio.hero_subtitulo}
       {/* Poblado por el script de más abajo con GET /testimonios — vacío
           y oculto por defecto hasta saber si hay reseñas, igual que el
@@ -27,7 +27,7 @@ const testimoniosIntervaloMs = Number(import.meta.env.PUBLIC_TESTIMONIOS_INTERVA
     <p class="mt-(--spacing-fluid-2xs) flex items-center justify-center gap-(--spacing-fluid-s) text-sm">
       <a
         href="/contenido/servicios/"
-        class="text-(--color-acento) underline-offset-4 hover:underline"
+        class="text-(--color-texto) underline-offset-4 hover:underline"
       >
         Ver precios
       </a>
@@ -39,7 +39,7 @@ const testimoniosIntervaloMs = Number(import.meta.env.PUBLIC_TESTIMONIOS_INTERVA
           id="enlace-llamar"
           href={`tel:${negocio.telefono}`}
           hidden
-          class="text-(--color-acento) underline-offset-4 hover:underline"
+          class="text-(--color-texto) underline-offset-4 hover:underline"
         >
           Llamar
         </a>
