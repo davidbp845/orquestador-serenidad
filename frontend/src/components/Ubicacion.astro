@@ -33,6 +33,16 @@ const frasesLlegada = negocio.instrucciones_llegada
       .filter(Boolean)
       .map((frase) => (frase.endsWith('.') ? frase : `${frase}.`))
   : [];
+
+// "Datos de contacto": WhatsApp/Telegram solo se muestran si el negocio
+// los tiene activos como canal (config/schema.py::CanalesConfig) — no
+// tiene sentido publicitar un enlace a un canal que el bot no atiende.
+// WhatsApp reutiliza el mismo `telefono` (no hay campo propio); wa.me
+// exige el número sin "+" ni espacios/guiones.
+const telefonoWhatsapp = negocio.telefono?.replace(/[^\d]/g, '');
+const mostrarWhatsapp = Boolean(telefonoWhatsapp && negocio.canales?.whatsapp);
+const mostrarTelegram = Boolean(negocio.telegram_usuario && negocio.canales?.telegram);
+const hayContacto = Boolean(negocio.telefono || mostrarTelegram || negocio.email);
 ---
 
 {src && (
@@ -61,6 +71,63 @@ const frasesLlegada = negocio.instrucciones_llegada
           <h3 class="text-lg font-semibold text-(--color-texto)">Dirección</h3>
           {direccionTexto && <p class="mt-(--spacing-fluid-2xs)">{direccionTexto}</p>}
           {frasesLlegada.map((frase) => <p class="mt-(--spacing-fluid-2xs)">{frase}</p>)}
+          {hayContacto && (
+            <>
+              <h3 class="mt-(--spacing-fluid-s) text-lg font-semibold text-(--color-texto)">Datos de contacto</h3>
+              <div class="mt-(--spacing-fluid-2xs) flex flex-col gap-(--spacing-fluid-2xs)">
+                {negocio.telefono && (
+                  <a
+                    href={`tel:${negocio.telefono}`}
+                    class="flex items-center gap-(--spacing-fluid-3xs) text-(--color-texto) hover:text-(--color-acento)"
+                  >
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M22.5303 5.53033C22.8232 5.23744 22.8232 4.76256 22.5303 4.46967L19.5303 1.46967C19.2374 1.17678 18.7626 1.17678 18.4697 1.46967C18.1768 1.76256 18.1768 2.23744 18.4697 2.53033L20.1893 4.25H16C15.5858 4.25 15.25 4.58579 15.25 5C15.25 5.41421 15.5858 5.75 16 5.75H20.1893L18.4697 7.46967C18.1768 7.76256 18.1768 8.23744 18.4697 8.53033C18.7626 8.82322 19.2374 8.82322 19.5303 8.53033L22.5303 5.53033Z" />
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M4.06343 1.25L7.81435 1.25C8.12672 1.25 8.40638 1.44361 8.51634 1.73599L9.97178 5.60588C10.02 5.73398 10.0322 5.87281 10.0071 6.00735L9.2778 9.91931C10.1742 12.0273 11.6548 13.4439 14.1104 14.7146L17.9754 13.9657C18.1126 13.9391 18.2545 13.9514 18.3851 14.0012L22.2669 15.4804C22.5577 15.5912 22.7498 15.87 22.7498 16.1812L22.7498 19.7655C22.7498 21.391 21.3176 22.7101 19.6424 22.3456C16.5888 21.6811 10.9315 19.9923 6.9695 16.0303C3.17436 12.2352 1.90282 6.99252 1.47478 4.15869C1.23055 2.54172 2.52735 1.25 4.06343 1.25Z" />
+                    </svg>
+                    <span>{negocio.telefono}</span>
+                  </a>
+                )}
+                {mostrarWhatsapp && (
+                  <a
+                    href={`https://wa.me/${telefonoWhatsapp}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex items-center gap-(--spacing-fluid-3xs) text-(--color-texto) hover:text-(--color-acento)"
+                  >
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                    </svg>
+                    <span>{negocio.telefono}</span>
+                  </a>
+                )}
+                {mostrarTelegram && (
+                  <a
+                    href={`https://t.me/${negocio.telegram_usuario}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex items-center gap-(--spacing-fluid-3xs) text-(--color-texto) hover:text-(--color-acento)"
+                  >
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                    </svg>
+                    <span>{negocio.telegram_usuario}</span>
+                  </a>
+                )}
+                {negocio.email && (
+                  <a
+                    href={`mailto:${negocio.email}`}
+                    class="flex items-center gap-(--spacing-fluid-3xs) text-(--color-texto) hover:text-(--color-acento)"
+                  >
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M7 9L12 12.5L17 9" />
+                      <path d="M2 17V7C2 5.89543 2.89543 5 4 5H20C21.1046 5 22 5.89543 22 7V17C22 18.1046 21.1046 19 20 19H4C2.89543 19 2 18.1046 2 17Z" />
+                    </svg>
+                    <span>{negocio.email}</span>
+                  </a>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

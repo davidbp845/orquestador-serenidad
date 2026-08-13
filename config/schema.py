@@ -123,6 +123,11 @@ class ConfigNegocio(BaseModel):
     instrucciones_llegada: str | None = None
     telefono: str | None = None
     email: str | None = None
+    # Usuario de Telegram (sin @ ni URL, p.ej. "heruka_life") para el
+    # enlace público t.me/<usuario> en "Datos de contacto"
+    # (frontend/src/components/Ubicacion.astro) — distinto de
+    # canales.telegram, que solo indica si el bot atiende ese canal.
+    telegram_usuario: str | None = None
     # Horario de apertura del negocio (para SEO), distinto de
     # horario_semanal por profesional: mismas claves de día
     # (lunes..domingo) y mismo formato ["HH:MM", "HH:MM"].

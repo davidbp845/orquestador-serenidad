@@ -77,6 +77,16 @@ interface TemaNegocio {
 // JSON-LD de SEO (DatosEstructurados.astro) — ver issue #75.
 type HorarioApertura = Record<string, [string, string]>;
 
+// Qué canales atiende el orquestador (config/schema.py::CanalesConfig) —
+// usado en el frontend solo para decidir si mostrar los enlaces de
+// WhatsApp/Telegram en "Datos de contacto" (Ubicacion.astro), no para
+// nada del propio chat web (ese siempre está disponible aquí).
+interface CanalesNegocio {
+  web?: boolean;
+  telegram?: boolean;
+  whatsapp?: boolean;
+}
+
 interface ConfigNegocio {
   nombre: string;
   tono?: string;
@@ -88,12 +98,14 @@ interface ConfigNegocio {
   imagen_fondo_url?: string;
   tema?: TemaNegocio;
   cta_cita?: CtaCitaConfig;
+  canales?: CanalesNegocio;
   vault_obsidian?: string;
   direccion?: DireccionNegocio;
   mapa_url?: string;
   instrucciones_llegada?: string;
   telefono?: string;
   email?: string;
+  telegram_usuario?: string;
   horario_apertura?: HorarioApertura;
 }
 
