@@ -778,6 +778,19 @@ elif opcion == "🚦 Rate limiting":
 elif opcion == "🛠️ Herramientas":
     st.subheader("Base de conocimiento (RAG)")
     st.write("Reindexa el vault de Obsidian tras editar precios, horarios u otro contenido.")
+
+    resumen_rag = _construir_conocimiento().resumen()
+    if resumen_rag["total"] == 0:
+        st.caption("Sin fragmentos indexados todavía.")
+    else:
+        st.caption(
+            f"{resumen_rag['total']} fragmentos indexados de "
+            f"{len(resumen_rag['por_fuente'])} notas."
+        )
+        with st.expander("Ver detalle por nota"):
+            for fuente, n in sorted(resumen_rag["por_fuente"].items()):
+                st.write(f"- {fuente}: {n}")
+
     if st.button("Reindexar conocimiento"):
         with st.spinner("Reindexando..."):
             try:

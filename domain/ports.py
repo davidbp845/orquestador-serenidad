@@ -303,6 +303,14 @@ class RepositorioConocimiento(ABC):
         el resto del frontmatter, ej. 'categoria', 'publicar_web')."""
         ...
 
+    @abstractmethod
+    def resumen(self) -> dict:
+        """Lectura de solo consulta (no busca ni recalcula embeddings),
+        pensada para el panel interno: {"total": int, "por_fuente":
+        {fuente: nº de fragmentos}}. Vacío (total=0, por_fuente={}) si
+        no hay nada indexado todavía."""
+        ...
+
 
 class ProveedorLLM(ABC):
     """Adaptador hacia el proveedor de modelo (Anthropic, u otro)."""

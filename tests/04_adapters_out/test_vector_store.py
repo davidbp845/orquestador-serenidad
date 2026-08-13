@@ -143,3 +143,33 @@ def test_buscar_con_fuentes_sin_resultados_devuelve_lista_vacia():
     mock_coleccion.query.return_value = {"documents": [], "metadatas": []}
 
     assert repo.buscar_con_fuentes("consulta") == []
+
+
+def test_resumen_cuenta_fragmentos_por_fuente():
+    repo, _, mock_coleccion, _, _ = _construir_con_mocks()
+    mock_coleccion.get.return_value = {
+        "metadatas": [
+            {"fuente": "servicios.md", "categoria": "servicios"},
+            {"fuente": "servicios.md", "categoria": "servicios"},
+            {"fuente": "faq.md", "categoria": "faq"},
+        ]
+    }
+
+    resultado = repo.resumen()
+
+    mock_coleccion.get.assert_called_once_with(include=["metadatas"])
+    assert resultado == {"total": 3, "por_fuente": {"servicios.md": 2, "faq.md": 1}}
+
+
+def test_resumen_sin_fragmentos_indexados():
+    repo, _, mock_coleccion, _, _ = _construir_con_mocks()
+    mock_coleccion.get.return_value = {"metadatas": []}
+
+    assert repo.resumen() == {"total": 0, "por_fuente": {}}
+
+
+def test_resumen_metadata_sin_fuente_se_agrupa_aparte():
+    repo, _, mock_coleccion, _, _ = _construir_con_mocks()
+    mock_coleccion.get.return_value = {"metadatas": [{"categoria": "faq"}]}
+
+    assert repo.resumen() == {"total": 1, "por_fuente": {"?": 1}}

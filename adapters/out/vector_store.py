@@ -4,6 +4,7 @@ el mismo puerto."""
 from __future__ import annotations
 
 import os
+from collections import Counter
 
 import chromadb
 from chromadb.utils import embedding_functions
@@ -73,3 +74,10 @@ class RepositorioConocimientoChroma(RepositorioConocimiento):
             {"texto": doc, **(meta or {})}
             for doc, meta in zip(documentos, metadatos, strict=True)
         ]
+
+    def resumen(self) -> dict:
+        # Solo metadatos, sin documentos/embeddings — barato incluso con
+        # un vault grande, no recalcula nada.
+        metadatos = self._coleccion.get(include=["metadatas"]).get("metadatas") or []
+        por_fuente = Counter(m.get("fuente", "?") for m in metadatos)
+        return {"total": len(metadatos), "por_fuente": dict(por_fuente)}
