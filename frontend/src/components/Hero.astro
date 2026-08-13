@@ -44,6 +44,17 @@ const testimoniosIntervaloMs = Number(import.meta.env.PUBLIC_TESTIMONIOS_INTERVA
           Llamar
         </a>
       )}
+      {(negocio.mapa_url || negocio.direccion) && (
+        // Misma condición que Ubicacion.astro para decidir si renderiza
+        // su sección (id="ubicacion") — sin mapa_url ni direccion, ese
+        // ancla no existe.
+        <a
+          href="#ubicacion"
+          class="text-(--color-texto) underline-offset-4 hover:underline"
+        >
+          Cómo llegar
+        </a>
+      )}
     </p>
   </div>
   <div class="mt-(--spacing-fluid-s) grid grid-cols-1 gap-(--spacing-fluid-s) lg:grid-cols-[7fr_3fr]">
