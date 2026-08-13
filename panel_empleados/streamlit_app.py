@@ -298,6 +298,12 @@ def _tarjeta_cita(cita, repo_servicios, repo_profesionales, repo_clientes, cambi
 # sesión de Streamlit. No es un sistema de usuarios/roles — identidad
 # por persona queda fuera de alcance de este panel.
 _clave_panel = os.environ.get("PANEL_EMPLEADOS_PASSWORD")
+# ENTORNO_LOCAL=true (mismo opt-in explícito que ya usa Herramientas
+# para el borrado de datos) salta el formulario: quien arranca el panel
+# en local ya conoce la contraseña porque está en su propio .env, así
+# que pedirla en cada sesión de Streamlit es fricción sin más seguridad.
+if _clave_panel and os.environ.get("ENTORNO_LOCAL", "").lower() == "true":
+    st.session_state["autenticado"] = True
 if _clave_panel and not st.session_state.get("autenticado"):
     st.title("🔒 Acceso al panel")
     # st.form en vez de un text_input + button sueltos: sin form, el
