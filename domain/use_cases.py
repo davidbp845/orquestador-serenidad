@@ -697,6 +697,28 @@ class AñadirNotaCliente:
     def ejecutar(self, cliente_id: str, texto: str) -> NotaCliente:
         if self._clientes.obtener(cliente_id) is None:
             raise ClienteNoExiste(cliente_id)
+        return self._crear_nota(cliente_id, texto)
+
+    def ejecutar_identificando(self, nombre: str, telefono: str, texto: str) -> NotaCliente:
+        """Variante para cuando todavía no se conoce el cliente_id (tool
+        guardar_nota_cliente del LLM antes de la primera reserva de la
+        conversación) — identifica al cliente por teléfono igual que
+        CrearReserva (busca por teléfono, crea si no existe, actualiza el
+        nombre si ya existía), en vez de exigir un cliente_id que la
+        conversación aún no tiene. Evita el mecanismo de notas diferidas
+        que existía antes (`notas_pendientes` en `SesionConversacion`),
+        que perdía la nota en silencio si la conversación terminaba sin
+        llegar a reservar."""
+        cliente = self._clientes.buscar_por_telefono(telefono)
+        if cliente is None:
+            nuevo_id_cliente = str(self._contadores.siguiente_valor("cliente"))
+            cliente = Cliente(id=nuevo_id_cliente, nombre=nombre, telefono=telefono)
+        else:
+            cliente.nombre = nombre
+        self._clientes.guardar(cliente)
+        return self._crear_nota(cliente.id, texto)
+
+    def _crear_nota(self, cliente_id: str, texto: str) -> NotaCliente:
         nuevo_id = self._contadores.siguiente_valor("nota_cliente")
         nota = NotaCliente.nueva(nuevo_id, cliente_id, texto)
         self._notas.crear(nota)

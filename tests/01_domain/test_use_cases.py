@@ -1353,6 +1353,29 @@ class TestAñadirNotaCliente:
 
         assert (n1.id, n2.id) == (1, 2)
 
+    def test_ejecutar_identificando_crea_cliente_nuevo_si_el_telefono_no_existe(self):
+        repo_clientes = FakeRepoClientes()
+        repo_notas = FakeRepoNotasCliente()
+        caso = AñadirNotaCliente(repo_notas, repo_clientes, FakeRepoContadores())
+
+        nota = caso.ejecutar_identificando(nombre="Juan", telefono="600111222", texto="Alérgico")
+
+        cliente = repo_clientes.buscar_por_telefono("600111222")
+        assert cliente is not None
+        assert cliente.nombre == "Juan"
+        assert nota.cliente_id == cliente.id
+        assert nota.texto == "Alérgico"
+
+    def test_ejecutar_identificando_reutiliza_cliente_existente_por_telefono(self):
+        repo_clientes = FakeRepoClientes([Cliente(id="c1", nombre="Juan Viejo", telefono="600111222")])
+        repo_notas = FakeRepoNotasCliente()
+        caso = AñadirNotaCliente(repo_notas, repo_clientes, FakeRepoContadores())
+
+        nota = caso.ejecutar_identificando(nombre="Juan Nuevo", telefono="600111222", texto="Alérgico")
+
+        assert nota.cliente_id == "c1"
+        assert repo_clientes.obtener("c1").nombre == "Juan Nuevo"
+
 
 class TestListarNotasCliente:
     def test_lista_solo_las_notas_del_cliente_pedido_mas_reciente_primero(self):

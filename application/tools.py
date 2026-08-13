@@ -93,12 +93,11 @@ TOOLS_SCHEMA = [
         "description": (
             "Guarda una anotación relevante sobre el cliente para futuras "
             "conversaciones (una alergia, una preferencia de profesional, "
-            "una incidencia) — no para resumir cada mensaje. Si en esta "
-            "conversación todavía no conoces el cliente_id del cliente "
-            "(porque aún no se ha reservado con crear_reserva), llama a "
-            "esta herramienta igualmente sin indicar cliente_id: la nota "
-            "queda pendiente y se guarda automáticamente en cuanto "
-            "crear_reserva resuelva quién es el cliente."
+            "una incidencia) — no para resumir cada mensaje. Necesita "
+            "identificar al cliente igual que crear_reserva: si ya conoces "
+            "su cliente_id en esta conversación (por ejemplo, por una "
+            "reserva anterior), indícalo; si no, pídele el nombre completo "
+            "y el teléfono y pásalos como nombre y telefono."
         ),
         "input_schema": {
             "type": "object",
@@ -107,6 +106,14 @@ TOOLS_SCHEMA = [
                 "cliente_id": {
                     "type": "string",
                     "description": "Omítelo si todavía no lo conoces en esta conversación.",
+                },
+                "nombre": {
+                    "type": "string",
+                    "description": "Nombre completo del cliente. Obligatorio si no indicas cliente_id.",
+                },
+                "telefono": {
+                    "type": "string",
+                    "description": "Teléfono del cliente. Obligatorio si no indicas cliente_id.",
                 },
             },
             "required": ["texto"],
@@ -171,15 +178,6 @@ class EjecutorHerramientas:
                     # Recordado para guardar_nota_cliente (#77) — ver
                     # SesionConversacion.cliente_id_conocido.
                     sesion.cliente_id_conocido = cita.cliente_id
-                    # Vuelca cualquier nota que se hubiera quedado
-                    # pendiente en la sesión por no conocer todavía el
-                    # cliente_id — ya se conoce.
-                    if sesion.notas_pendientes:
-                        for texto_pendiente in sesion.notas_pendientes:
-                            self._casos["anadir_nota_cliente"].ejecutar(
-                                cliente_id=cita.cliente_id, texto=texto_pendiente,
-                            )
-                        sesion.notas_pendientes.clear()
                 return {
                     "cita_id": cita.id_visible,
                     "cliente_id": cita.cliente_id,
@@ -217,15 +215,28 @@ class EjecutorHerramientas:
                         cliente_id=cliente_id, texto=texto
                     )
                     return {"nota_id": nota.id, "cliente_id": nota.cliente_id}
-                # Sin cliente_id todavía: se difiere en el buffer de la
-                # sesión (ver el flush en crear_reserva más arriba). Sin
-                # sesión (ej. llamada directa fuera del orquestador) no
-                # hay dónde guardarla — se informa al LLM en vez de
-                # perder el texto en silencio.
-                if sesion is not None:
-                    sesion.notas_pendientes.append(texto)
-                    return {"guardada": "pendiente_de_cliente_id"}
-                return {"error": "Falta cliente_id y no hay sesión donde diferir la nota."}
+                # Sin cliente_id todavía: igual que crear_reserva, la nota
+                # exige identificar al cliente por nombre+teléfono en vez
+                # de guardarse "a ciegas" o quedar diferida a la espera de
+                # una reserva que podría no llegar nunca (mecanismo
+                # anterior, `notas_pendientes`, que perdía la nota en
+                # silencio si la sesión terminaba sin reservar).
+                nombre = entrada.get("nombre")
+                telefono = entrada.get("telefono")
+                if nombre and telefono:
+                    nota = self._casos["anadir_nota_cliente"].ejecutar_identificando(
+                        nombre=nombre, telefono=telefono, texto=texto
+                    )
+                    if sesion is not None:
+                        sesion.cliente_id_conocido = nota.cliente_id
+                    return {"nota_id": nota.id, "cliente_id": nota.cliente_id}
+                return {
+                    "error": (
+                        "Falta identificar al cliente: pide su nombre "
+                        "completo y teléfono, o indica cliente_id si ya "
+                        "lo conoces en esta conversación."
+                    )
+                }
 
             if nombre_tool == "consultar_conocimiento_negocio":
                 return self._casos["consultar_conocimiento"].ejecutar(

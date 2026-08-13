@@ -34,7 +34,7 @@ def test_obtener_devuelve_none_si_no_existe():
 def test_obtener_deserializa_el_historial_guardado():
     repo, mock_cliente = _construir_con_cliente_falso()
     mock_cliente.get.return_value = json.dumps(
-        {"historial": [{"role": "user", "content": "hola"}], "notas_pendientes": [], "cliente_id_conocido": None}
+        {"historial": [{"role": "user", "content": "hola"}], "cliente_id_conocido": None}
     )
 
     sesion = repo.obtener("web", "u1")
@@ -44,30 +44,13 @@ def test_obtener_deserializa_el_historial_guardado():
     )
 
 
-def test_obtener_deserializa_las_notas_pendientes_guardadas():
-    # #77: antes solo se serializaba historial, así que el buffer de
-    # guardar_nota_cliente se perdía en cuanto la sesión daba una
-    # vuelta por Redis entre dos turnos de la conversación.
-    repo, mock_cliente = _construir_con_cliente_falso()
-    mock_cliente.get.return_value = json.dumps({
-        "historial": [], "notas_pendientes": ["alérgica al aceite de almendras dulces"],
-        "cliente_id_conocido": None,
-    })
-
-    sesion = repo.obtener("web", "u1")
-
-    assert sesion.notas_pendientes == ["alérgica al aceite de almendras dulces"]
-
-
 def test_obtener_deserializa_el_cliente_id_conocido_guardado():
-    # Igual que notas_pendientes: si crear_reserva ya resolvió un
-    # cliente_id en un turno anterior, tiene que sobrevivir a la vuelta
-    # por Redis para que guardar_nota_cliente pueda reutilizarlo en un
-    # turno posterior de la misma conversación (#77).
+    # Si crear_reserva ya resolvió un cliente_id en un turno anterior,
+    # tiene que sobrevivir a la vuelta por Redis para que
+    # guardar_nota_cliente pueda reutilizarlo en un turno posterior de
+    # la misma conversación (#77).
     repo, mock_cliente = _construir_con_cliente_falso()
-    mock_cliente.get.return_value = json.dumps(
-        {"historial": [], "notas_pendientes": [], "cliente_id_conocido": "c1"}
-    )
+    mock_cliente.get.return_value = json.dumps({"historial": [], "cliente_id_conocido": "c1"})
 
     sesion = repo.obtener("web", "u1")
 
@@ -79,20 +62,18 @@ def test_obtener_tolera_una_sesion_guardada_sin_cliente_id_conocido():
     # añadir cliente_id_conocido (#77) — no debe romper con KeyError,
     # solo faltarle ese campo concreto (vuelve a None).
     repo, mock_cliente = _construir_con_cliente_falso()
-    mock_cliente.get.return_value = json.dumps({"historial": [], "notas_pendientes": ["x"]})
+    mock_cliente.get.return_value = json.dumps({"historial": []})
 
     sesion = repo.obtener("web", "u1")
 
-    assert sesion.notas_pendientes == ["x"]
     assert sesion.cliente_id_conocido is None
 
 
-def test_guardar_serializa_historial_notas_pendientes_y_cliente_id_conocido():
+def test_guardar_serializa_historial_y_cliente_id_conocido():
     repo, mock_cliente = _construir_con_cliente_falso()
     sesion = SesionConversacion(
         canal="telegram", usuario_id="u2",
         historial=[{"role": "user", "content": "hola"}],
-        notas_pendientes=["prefiere profesional Ana"],
         cliente_id_conocido="c1",
     )
 
@@ -102,13 +83,12 @@ def test_guardar_serializa_historial_notas_pendientes_y_cliente_id_conocido():
         "sesion:telegram:u2",
         json.dumps({
             "historial": [{"role": "user", "content": "hola"}],
-            "notas_pendientes": ["prefiere profesional Ana"],
             "cliente_id_conocido": "c1",
         }),
     )
 
 
-def test_guardar_y_obtener_redondean_notas_pendientes_y_cliente_id_conocido_sin_perderlas():
+def test_guardar_y_obtener_redondean_el_cliente_id_conocido_sin_perderlo():
     # Round-trip contra un "Redis" falso de verdad (dict), no solo
     # comprobando las llamadas mockeadas por separado — es la forma
     # más directa de probar que el bug de #77 no vuelve a colarse.
@@ -118,12 +98,8 @@ def test_guardar_y_obtener_redondean_notas_pendientes_y_cliente_id_conocido_sin_
     mock_cliente.get.side_effect = lambda clave: almacen.get(clave)
     repo = RepositorioSesionesRedis("redis://localhost:6379", cliente=mock_cliente)
 
-    sesion = SesionConversacion(
-        canal="web", usuario_id="u1",
-        notas_pendientes=["alergia al aceite"], cliente_id_conocido="c1",
-    )
+    sesion = SesionConversacion(canal="web", usuario_id="u1", cliente_id_conocido="c1")
     repo.guardar(sesion)
     recuperada = repo.obtener("web", "u1")
 
-    assert recuperada.notas_pendientes == ["alergia al aceite"]
     assert recuperada.cliente_id_conocido == "c1"

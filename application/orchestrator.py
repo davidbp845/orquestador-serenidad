@@ -28,24 +28,14 @@ class SesionConversacion:
     canal: str
     usuario_id: str
     historial: list[dict] = field(default_factory=list)
-    # Buffer de textos de guardar_nota_cliente (#77) para cuando el LLM
-    # todavía no conoce el cliente_id en esta conversación — se vuelca a
-    # NotaCliente en cuanto crear_reserva lo resuelve en la misma sesión
-    # (ver EjecutorHerramientas.ejecutar). Si la sesión termina sin
-    # reservar, se pierde junto con el resto del historial — sin
-    # infraestructura nueva, mismo criterio que ya aplica hoy a las
-    # sesiones sin Redis.
-    notas_pendientes: list[str] = field(default_factory=list)
     # Último cliente_id resuelto por crear_reserva en esta conversación
-    # (#77). No depender solo de que el LLM reutilice el cliente_id que
-    # recibió como resultado de crear_reserva — si la nota llega
-    # *después* de la reserva en la misma conversación (orden habitual:
-    # reservas primero, comentarios sueltos después) y el modelo omite
-    # cliente_id en guardar_nota_cliente por seguir la instrucción del
-    # prompt sobre "cliente_id todavía no conocido" al pie de la letra,
-    # EjecutorHerramientas.ejecutar lo resuelve solo desde aquí en vez
-    # de dejar la nota colgada en notas_pendientes para siempre (no hay
-    # ningún crear_reserva posterior que la vuelque).
+    # (#77) — para que guardar_nota_cliente lo reutilice sin que el LLM
+    # tenga que pasarlo explícitamente si la nota llega *después* de la
+    # reserva en la misma conversación (orden habitual: reservas primero,
+    # comentarios sueltos después). Si no hay reserva previa en la sesión,
+    # guardar_nota_cliente exige nombre+telefono igual que crear_reserva
+    # (ver EjecutorHerramientas.ejecutar) en vez de diferir la nota a la
+    # espera de un cliente_id que podría no llegar nunca.
     cliente_id_conocido: str | None = None
 
 
