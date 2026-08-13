@@ -436,6 +436,18 @@ def test_repositorio_contadores_borrar_todo():
     assert repo.siguiente_valor("testimonio") == 1
 
 
+def test_repositorio_contadores_borrar_todo_excluye_los_tipos_indicados():
+    repo = RepositorioContadoresMemoria()
+    repo.siguiente_valor("testimonio")
+    repo.siguiente_valor("promo_bar")
+    repo.siguiente_valor("cliente")
+
+    assert repo.borrar_todo(excluir={"testimonio", "promo_bar"}) == 1
+    assert repo.listar() == {"testimonio": 1, "promo_bar": 1}
+    assert repo.siguiente_valor("cliente") == 1
+    assert repo.siguiente_valor("testimonio") == 2
+
+
 def test_repositorio_contadores_es_imposible_repetir_valor_bajo_concurrencia():
     """La garantía real que pide el issue: N hilos pidiendo
     siguiente_valor("testimonio") a la vez nunca devuelven el mismo

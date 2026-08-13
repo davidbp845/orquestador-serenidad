@@ -426,9 +426,12 @@ class RepositorioContadoresPostgres(RepositorioContadores):
             filas = sesion.exec(select(ContadorDB)).all()
             return {fila.tipo_entidad: fila.valor for fila in filas}
 
-    def borrar_todo(self) -> int:
+    def borrar_todo(self, excluir: set[str] = frozenset()) -> int:
         with Session(self._engine) as sesion:
-            n = sesion.execute(delete(ContadorDB)).rowcount
+            consulta = delete(ContadorDB)
+            if excluir:
+                consulta = consulta.where(ContadorDB.tipo_entidad.notin_(excluir))
+            n = sesion.execute(consulta).rowcount
             sesion.commit()
             return n
 

@@ -230,11 +230,12 @@ class RepositorioContadoresMemoria(RepositorioContadores):
         with self._lock:
             return dict(self._data)
 
-    def borrar_todo(self) -> int:
+    def borrar_todo(self, excluir: set[str] = frozenset()) -> int:
         with self._lock:
-            n = len(self._data)
-            self._data.clear()
-            return n
+            tipos_a_borrar = [t for t in self._data if t not in excluir]
+            for tipo in tipos_a_borrar:
+                del self._data[tipo]
+            return len(tipos_a_borrar)
 
 
 class RepositorioPedidosMemoria(RepositorioPedidos):

@@ -455,6 +455,18 @@ def test_contadores_borrar_todo():
     assert repo.siguiente_valor("testimonio") == 1
 
 
+def test_contadores_borrar_todo_excluye_los_tipos_indicados():
+    repo = RepositorioContadoresPostgres(_engine())
+    repo.siguiente_valor("testimonio")
+    repo.siguiente_valor("promo_bar")
+    repo.siguiente_valor("cliente")
+
+    assert repo.borrar_todo(excluir={"testimonio", "promo_bar"}) == 1
+    assert repo.listar() == {"testimonio": 1, "promo_bar": 1}
+    assert repo.siguiente_valor("cliente") == 1
+    assert repo.siguiente_valor("testimonio") == 2
+
+
 # No hay test de concurrencia real aquí (a diferencia de
 # RepositorioContadoresMemoria en test_repositorios_memoria.py):
 # probado con un motor SQLite en memoria compartido entre hilos

@@ -255,10 +255,14 @@ class RepositorioContadores(ABC):
         ...
 
     @abstractmethod
-    def borrar_todo(self) -> int:
+    def borrar_todo(self, excluir: set[str] = frozenset()) -> int:
         """Ver RepositorioCitas.borrar_todo — misma herramienta de
         panel, mismo alcance de "solo entorno local". Reinicia todos
-        los contadores, no solo uno."""
+        los contadores excepto los tipos en `excluir` — necesario para
+        que el panel pueda dejar intactos testimonio/promo_bar (datos
+        editoriales, no transaccionales, que esta herramienta no borra)
+        sin dejar su contador desincronizado con las filas que sí
+        sobreviven."""
         ...
 
 

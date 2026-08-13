@@ -800,10 +800,12 @@ elif opcion == "🛠️ Herramientas":
         )
     else:
         st.warning(
-            "Borra TODAS las citas, clientes, pedidos y líneas de pedido, "
-            "testimonios y notas de cliente, reinicia todos los contadores, "
-            "y cancela los eventos de Google Calendar asociados (si hay uno "
-            "configurado). Acción irreversible."
+            "Borra TODAS las citas, clientes, pedidos y líneas de pedido y "
+            "notas de cliente, reinicia sus contadores, y cancela los "
+            "eventos de Google Calendar asociados (si hay uno configurado). "
+            "Testimonios y el promobar no se tocan — son contenido "
+            "editorial independiente, no datos transaccionales. Acción "
+            "irreversible."
         )
         confirmar = st.checkbox("Sí, quiero borrar todos los datos")
         if st.button("Borrar todos los datos", type="primary", disabled=not confirmar):
@@ -824,13 +826,16 @@ elif opcion == "🛠️ Herramientas":
                 n_citas = repo_citas.borrar_todo()
                 n_clientes = repo_clientes.borrar_todo()
                 n_pedidos = repo_pedidos.borrar_todo()
-                n_testimonios = repo_testimonios.borrar_todo()
                 n_notas_cliente = repo_notas_cliente.borrar_todo()
-                n_contadores = repo_contadores.borrar_todo()
+                # testimonio/promo_bar excluidos: sus filas no se borran
+                # (contenido editorial, no transaccional — ver arriba), así
+                # que su contador tampoco debe reiniciarse o el próximo
+                # creado colisionaría de id con uno ya existente.
+                n_contadores = repo_contadores.borrar_todo(excluir={"testimonio", "promo_bar"})
 
             st.success(
                 f"Borrado: {n_citas} citas, {n_clientes} clientes, "
-                f"{n_pedidos} pedidos (con sus líneas), {n_testimonios} testimonios, "
+                f"{n_pedidos} pedidos (con sus líneas), "
                 f"{n_notas_cliente} notas de cliente, "
                 f"{n_contadores} contadores reiniciados."
             )
