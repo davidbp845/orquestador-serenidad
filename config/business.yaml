@@ -14,7 +14,7 @@ logo_compacto_url: "/logo-compacto.svg"
 # Título y subtítulo de la sección del chat en la home (frontend/src/components/Hero.astro).
 # hero_titulo es opcional: sin él, el frontend usa "nombre" como título.
 hero_titulo: "Masajes y experiencias de lujo"
-hero_subtitulo: "Reserva en menos de 2 minutos, sin llamadas ni esperas."
+hero_subtitulo: "Reserva en menos de 2 minutos, sin llamadas ni esperas"
 
 # Paleta de colores del frontend (todo opcional; sin este bloque se usa
 # la paleta neutra por defecto de global.css). Valores explícitos aquí
