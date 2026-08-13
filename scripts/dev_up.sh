@@ -42,6 +42,13 @@ else
 fi
 
 echo
+if [ -n "${CONFIG_PATH:-}" ]; then
+    echo "CONFIG_PATH=$CONFIG_PATH (negocio alternativo, heredado por los tres procesos)"
+else
+    echo "CONFIG_PATH sin definir → negocio por defecto (config/business.yaml)"
+fi
+
+echo
 echo "Arrancando backend, frontend y panel interno..."
 
 PIDS=()
