@@ -14,6 +14,8 @@ const direccionTexto = negocio.direccion
 const src =
   negocio.mapa_url ??
   (direccionTexto ? `https://www.google.com/maps?q=${encodeURIComponent(direccionTexto)}&output=embed` : undefined);
+
+const hayTexto = Boolean(direccionTexto || negocio.instrucciones_llegada);
 ---
 
 {src && (
@@ -22,11 +24,11 @@ const src =
     class="mx-auto max-w-3xl px-(--spacing-fluid-s) py-(--spacing-fluid-l) md:max-w-none md:px-(--spacing-fluid-m)"
   >
     <h2 class="text-xl font-semibold text-(--color-texto)">Cómo llegar</h2>
-    <div class="mt-(--spacing-fluid-s) grid grid-cols-1 gap-(--spacing-fluid-s) md:grid-cols-2 md:items-start">
+    <div class="mt-(--spacing-fluid-s) grid grid-cols-1 gap-(--spacing-fluid-s) md:grid-cols-2 md:items-start xl:grid-cols-4">
       <div
         class:list={[
           'aspect-video w-full overflow-hidden rounded-2xl border border-(--color-borde)',
-          { 'md:col-span-2': !direccionTexto && !negocio.instrucciones_llegada },
+          hayTexto ? 'xl:col-span-2' : 'md:col-span-2 xl:col-span-4',
         ]}
       >
         <iframe
@@ -37,7 +39,7 @@ const src =
           class="h-full w-full"
         />
       </div>
-      {(direccionTexto || negocio.instrucciones_llegada) && (
+      {hayTexto && (
         <div class="text-(--color-texto)">
           {direccionTexto && <p>{direccionTexto}</p>}
           {negocio.instrucciones_llegada && <p class="mt-(--spacing-fluid-3xs)">{negocio.instrucciones_llegada}</p>}
