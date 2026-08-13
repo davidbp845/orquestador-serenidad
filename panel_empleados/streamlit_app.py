@@ -154,6 +154,18 @@ def _construir_notificador():
 
 
 @st.cache_resource
+def _construir_notificador_telefono():
+    # Canal alternativo atado al teléfono del cliente (#86), mismo
+    # criterio y mismas variables WHATSAPP_* que main.py::construir_sistema().
+    access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+    phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    if not (access_token and phone_number_id):
+        return None
+    from adapters.out.notificador_whatsapp import NotificadorMensajesWhatsApp
+    return NotificadorMensajesWhatsApp(access_token, phone_number_id)
+
+
+@st.cache_resource
 def _construir_calendario():
     # Mismo condicional que main.py:104-113 — solo lo usa la
     # herramienta de borrado de datos (sección Herramientas) para
@@ -278,8 +290,9 @@ if _clave_panel and not st.session_state.get("autenticado"):
     repo_testimonios, repo_contadores, repo_promo_bar, repo_notas_cliente,
 ) = _construir_repos()
 notificador = _construir_notificador()
+notificador_telefono = _construir_notificador_telefono()
 cambiar_estado_pedido = CambiarEstadoPedido(repo_pedidos)
-cambiar_estado_cita = CambiarEstadoCita(repo_citas, repo_clientes, notificador)
+cambiar_estado_cita = CambiarEstadoCita(repo_citas, repo_clientes, notificador, notificador_telefono)
 crear_testimonio = CrearTestimonio(repo_testimonios, repo_contadores)
 editar_testimonio = EditarTestimonio(repo_testimonios)
 eliminar_testimonio = EliminarTestimonio(repo_testimonios)

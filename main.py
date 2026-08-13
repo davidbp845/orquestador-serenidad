@@ -33,6 +33,7 @@ from adapters.out.llm_anthropic import ProveedorLLMAnthropic
 from adapters.out.llm_cohere import ProveedorLLMCohere
 from adapters.out.llm_mock import ProveedorLLMMock
 from adapters.out.llm_openai import ProveedorLLMOpenAI
+from adapters.out.notificador_whatsapp import NotificadorMensajesWhatsApp
 from adapters.out.repositorio_sesiones_memoria import RepositorioSesionesMemoria
 from adapters.out.repositorios_memoria import (
     RepositorioCitasMemoria,
@@ -137,6 +138,19 @@ def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
     else:
         notificador = None
 
+    # Canal alternativo atado al teléfono del cliente (#86), usado por
+    # CrearReserva/CancelarReserva cuando no hay telegram_chat_id — ver
+    # notificador_telefono más abajo. Mismas variables WHATSAPP_* que ya
+    # lee main() para el webhook de entrada.
+    whatsapp_access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+    whatsapp_phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    if whatsapp_access_token and whatsapp_phone_number_id:
+        notificador_telefono = NotificadorMensajesWhatsApp(
+            whatsapp_access_token, whatsapp_phone_number_id
+        )
+    else:
+        notificador_telefono = None
+
     proveedor_llm = os.environ.get("PROVEEDOR_LLM", "anthropic").lower()
     if proveedor_llm == "mock":
         llm = ProveedorLLMMock()
@@ -151,9 +165,11 @@ def construir_sistema(ruta_config: str | None = None) -> OrquestadorAgente:
     disponibilidad = ComprobarDisponibilidad(repo_servicios, repo_profesionales, repo_citas)
     crear_reserva = CrearReserva(
         repo_servicios, repo_profesionales, repo_citas, repo_clientes,
-        disponibilidad, repo_contadores, calendario, notificador,
+        disponibilidad, repo_contadores, calendario, notificador, notificador_telefono,
     )
-    cancelar_reserva = CancelarReserva(repo_citas, calendario, repo_clientes, notificador)
+    cancelar_reserva = CancelarReserva(
+        repo_citas, calendario, repo_clientes, notificador, notificador_telefono,
+    )
     registrar_pedido = RegistrarPedido(repo_pedidos, repo_servicios)
     consultar_conocimiento = ConsultarConocimientoNegocio(conocimiento)
     anadir_nota_cliente = AñadirNotaCliente(repo_notas_cliente, repo_clientes, repo_contadores)
@@ -249,9 +265,10 @@ def main():
         phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
         app_secret = os.environ.get("WHATSAPP_APP_SECRET")
         if verify_token and access_token and phone_number_id and app_secret:
+            notificador_whatsapp = NotificadorMensajesWhatsApp(access_token, phone_number_id)
             crear_router_whatsapp(
                 app, orquestador, repositorio_sesiones,
-                verify_token, access_token, phone_number_id, app_secret,
+                verify_token, notificador_whatsapp, app_secret,
             )
             logger.info("Webhook de WhatsApp registrado en /webhook/whatsapp.")
         else:

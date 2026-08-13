@@ -215,6 +215,44 @@ def test_construir_sistema_usa_notificador_telegram_si_hay_token(monkeypatch):
     assert cancelar_reserva._notificador is mock_notificador_cls.return_value
 
 
+def test_construir_sistema_sin_credenciales_whatsapp_no_instancia_notificador_telefono(monkeypatch):
+    monkeypatch.delenv("WHATSAPP_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("WHATSAPP_PHONE_NUMBER_ID", raising=False)
+    with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
+         patch("main.RepositorioConocimientoChroma") as mock_chroma_cls:
+        mock_llm_cls.return_value = MagicMock()
+        mock_chroma_cls.return_value = MagicMock()
+
+        import main
+        orquestador, _ = main.construir_sistema("config/business.yaml")
+
+    crear_reserva = orquestador._ejecutor._casos["crear_reserva"]
+    cancelar_reserva = orquestador._ejecutor._casos["cancelar_reserva"]
+    assert crear_reserva._notificador_telefono is None
+    assert cancelar_reserva._notificador_telefono is None
+
+
+def test_construir_sistema_usa_notificador_whatsapp_si_hay_credenciales(monkeypatch):
+    monkeypatch.setenv("WHATSAPP_ACCESS_TOKEN", "access-falso")
+    monkeypatch.setenv("WHATSAPP_PHONE_NUMBER_ID", "1234567890")
+    with patch("main.ProveedorLLMAnthropic") as mock_llm_cls, \
+         patch("main.RepositorioConocimientoChroma") as mock_chroma_cls, \
+         patch("main.NotificadorMensajesWhatsApp") as mock_notificador_cls:
+        mock_llm_cls.return_value = MagicMock()
+        mock_chroma_cls.return_value = MagicMock()
+        mock_notificador_cls.return_value = MagicMock()
+
+        import main
+        orquestador, _ = main.construir_sistema("config/business.yaml")
+
+    crear_reserva = orquestador._ejecutor._casos["crear_reserva"]
+    cancelar_reserva = orquestador._ejecutor._casos["cancelar_reserva"]
+
+    mock_notificador_cls.assert_called_once_with("access-falso", "1234567890")
+    assert crear_reserva._notificador_telefono is mock_notificador_cls.return_value
+    assert cancelar_reserva._notificador_telefono is mock_notificador_cls.return_value
+
+
 def test_construir_repositorio_sesiones_usa_memoria_sin_redis_url(monkeypatch):
     monkeypatch.delenv("REDIS_URL", raising=False)
 

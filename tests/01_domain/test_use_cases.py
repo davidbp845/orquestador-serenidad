@@ -616,6 +616,63 @@ class TestCrearReserva:
 
         assert repo_citas._data[cita.id] is cita
 
+    def test_notifica_por_telefono_si_no_hay_telegram_chat_id(self):
+        # #86: cuando el cliente no tiene telegram_chat_id, el canal de
+        # teléfono (WhatsApp/SMS) es la alternativa, con cliente.telefono
+        # como destinatario en vez de un chat_id.
+        repo_servicios = FakeRepoServicios([_servicio(duracion=30)])
+        repo_profesionales = FakeRepoProfesionales([_profesional()])
+        repo_citas = FakeRepoCitas()
+        repo_clientes = FakeRepoClientes()
+        notificador_telefono = FakeNotificadorMensajes()
+        disponibilidad = ComprobarDisponibilidad(repo_servicios, repo_profesionales, repo_citas)
+        caso = CrearReserva(
+            repo_servicios, repo_profesionales, repo_citas, repo_clientes, disponibilidad,
+            FakeRepoContadores(), notificador_telefono=notificador_telefono,
+        )
+
+        caso.ejecutar("masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)))
+
+        assert len(notificador_telefono.enviados) == 1
+        assert notificador_telefono.enviados[0][0] == "600111222"
+
+    def test_prioriza_telegram_sobre_notificador_telefono_si_ambos_disponibles(self):
+        repo_servicios = FakeRepoServicios([_servicio(duracion=30)])
+        repo_profesionales = FakeRepoProfesionales([_profesional()])
+        repo_citas = FakeRepoCitas()
+        repo_clientes = FakeRepoClientes()
+        notificador = FakeNotificadorMensajes()
+        notificador_telefono = FakeNotificadorMensajes()
+        disponibilidad = ComprobarDisponibilidad(repo_servicios, repo_profesionales, repo_citas)
+        caso = CrearReserva(
+            repo_servicios, repo_profesionales, repo_citas, repo_clientes, disponibilidad,
+            FakeRepoContadores(), notificador=notificador, notificador_telefono=notificador_telefono,
+        )
+
+        caso.ejecutar(
+            "masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)),
+            telegram_chat_id="chat123",
+        )
+
+        assert len(notificador.enviados) == 1
+        assert notificador_telefono.enviados == []
+
+    def test_no_falla_si_el_notificador_telefono_lanza_excepcion(self):
+        repo_servicios = FakeRepoServicios([_servicio(duracion=30)])
+        repo_profesionales = FakeRepoProfesionales([_profesional()])
+        repo_citas = FakeRepoCitas()
+        repo_clientes = FakeRepoClientes()
+        notificador_telefono = FakeNotificadorMensajes(lanza=True)
+        disponibilidad = ComprobarDisponibilidad(repo_servicios, repo_profesionales, repo_citas)
+        caso = CrearReserva(
+            repo_servicios, repo_profesionales, repo_citas, repo_clientes, disponibilidad,
+            FakeRepoContadores(), notificador_telefono=notificador_telefono,
+        )
+
+        cita = caso.ejecutar("masaje", "ana", "Juan", "600111222", datetime.combine(_LUNES, time(9, 0)))
+
+        assert repo_citas._data[cita.id] is cita
+
 
 class TestCancelarReserva:
     def test_delega_en_el_repositorio(self):
@@ -719,6 +776,23 @@ class TestCancelarReserva:
         CancelarReserva(repo_citas, clientes=repo_clientes, notificador=notificador).ejecutar(cita.id)
 
         assert repo_citas.canceladas == [cita.id]
+
+    def test_notifica_cancelacion_por_telefono_si_no_hay_telegram_chat_id(self):
+        cita = Cita.nueva(
+            1, "masaje", "ana", "cliente1",
+            datetime.combine(_LUNES, time(9, 0)), datetime.combine(_LUNES, time(9, 30)),
+        )
+        repo_citas = FakeRepoCitas([cita])
+        repo_clientes = FakeRepoClientes()
+        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan", telefono="600111222"))
+        notificador_telefono = FakeNotificadorMensajes()
+
+        CancelarReserva(
+            repo_citas, clientes=repo_clientes, notificador_telefono=notificador_telefono,
+        ).ejecutar(cita.id)
+
+        assert len(notificador_telefono.enviados) == 1
+        assert notificador_telefono.enviados[0][0] == "600111222"
 
 
 class TestCambiarEstadoCita:
@@ -849,6 +923,20 @@ class TestCambiarEstadoCita:
         )
 
         assert actualizada.estado == EstadoCita.CONFIRMADA
+
+    def test_notifica_al_confirmar_por_telefono_si_no_hay_telegram_chat_id(self):
+        cita = self._cita_pendiente()
+        repo_citas = FakeRepoCitas([cita])
+        repo_clientes = FakeRepoClientes()
+        repo_clientes.guardar(Cliente(id="cliente1", nombre="Juan", telefono="600111222"))
+        notificador_telefono = FakeNotificadorMensajes()
+
+        CambiarEstadoCita(
+            repo_citas, repo_clientes, notificador_telefono=notificador_telefono,
+        ).ejecutar(cita.id, EstadoCita.CONFIRMADA)
+
+        assert len(notificador_telefono.enviados) == 1
+        assert notificador_telefono.enviados[0][0] == "600111222"
 
 
 class TestRegistrarPedido:

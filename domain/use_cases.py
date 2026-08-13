@@ -128,6 +128,7 @@ class CrearReserva:
         contadores: RepositorioContadores,
         calendario: SincronizadorCalendario | None = None,
         notificador: NotificadorMensajes | None = None,
+        notificador_telefono: NotificadorMensajes | None = None,
     ):
         self._servicios = servicios
         self._profesionales = profesionales
@@ -137,6 +138,10 @@ class CrearReserva:
         self._contadores = contadores
         self._calendario = calendario
         self._notificador = notificador
+        # Canal alternativo atado al teléfono (WhatsApp #86 o SMS #85),
+        # usado cuando el cliente no tiene telegram_chat_id — ver
+        # _enviar_notificacion.
+        self._notificador_telefono = notificador_telefono
 
     def ejecutar(
         self,
@@ -202,7 +207,7 @@ class CrearReserva:
 
         self._citas.guardar(cita)
 
-        if self._notificador is not None:
+        if self._notificador is not None or self._notificador_telefono is not None:
             self._notificar_confirmacion(cita, servicio)
 
         return cita
@@ -211,20 +216,35 @@ class CrearReserva:
         # Best-effort, igual que la sincronización con el calendario: un
         # fallo al notificar no debe deshacer ni bloquear la reserva ya
         # creada.
-        assert self._notificador is not None  # solo se llama tras comprobarlo
         cliente = self._clientes.obtener(cita.cliente_id)
-        if cliente is None or not cliente.telegram_chat_id:
+        if cliente is None:
             return
-        try:
-            self._notificador.enviar(
-                cliente.telegram_chat_id,
-                f"Reserva confirmada ({cita.id_visible}): {servicio.nombre} el "
-                f"{cita.inicio:%d/%m/%Y} a las {cita.inicio:%H:%M}.",
-            )
-        except Exception:
-            logger.exception(
-                "No se pudo notificar la confirmación de la cita %s", cita.id
-            )
+        texto = (
+            f"Reserva confirmada ({cita.id_visible}): {servicio.nombre} el "
+            f"{cita.inicio:%d/%m/%Y} a las {cita.inicio:%H:%M}."
+        )
+        self._enviar_notificacion(cliente, texto, cita.id)
+
+    def _enviar_notificacion(self, cliente: Cliente, texto: str, cita_id: int) -> None:
+        # Prioridad: Telegram si el cliente ya está vinculado (gratuito,
+        # ya conversó por ahí); si no, el canal de teléfono disponible
+        # (WhatsApp #86 o SMS #85) — no fan-out, para no duplicar el
+        # mismo aviso por dos canales a la vez.
+        if self._notificador is not None and cliente.telegram_chat_id:
+            try:
+                self._notificador.enviar(cliente.telegram_chat_id, texto)
+                return
+            except Exception:
+                logger.exception(
+                    "No se pudo notificar (Telegram) la cita %s", cita_id
+                )
+        if self._notificador_telefono is not None and cliente.telefono:
+            try:
+                self._notificador_telefono.enviar(cliente.telefono, texto)
+            except Exception:
+                logger.exception(
+                    "No se pudo notificar (teléfono) la cita %s", cita_id
+                )
 
 
 class CancelarReserva:
@@ -234,15 +254,18 @@ class CancelarReserva:
         calendario: SincronizadorCalendario | None = None,
         clientes: RepositorioClientes | None = None,
         notificador: NotificadorMensajes | None = None,
+        notificador_telefono: NotificadorMensajes | None = None,
     ):
         self._citas = citas
         self._calendario = calendario
         self._clientes = clientes
         self._notificador = notificador
+        self._notificador_telefono = notificador_telefono
 
     def ejecutar(self, cita_id: int) -> None:
+        hay_notificador = self._notificador is not None or self._notificador_telefono is not None
         cita = None
-        if self._calendario is not None or self._notificador is not None:
+        if self._calendario is not None or hay_notificador:
             cita = self._citas.obtener(cita_id)
 
         if self._calendario is not None and cita is not None and cita.evento_calendario_id:
@@ -255,28 +278,41 @@ class CancelarReserva:
                     cita_id,
                 )
 
-        if self._notificador is not None and cita is not None:
+        if hay_notificador and cita is not None:
             self._notificar_cancelacion(cita)
 
         self._citas.cancelar(cita_id)
 
     def _notificar_cancelacion(self, cita: Cita) -> None:
-        assert self._notificador is not None  # solo se llama tras comprobarlo
         if self._clientes is None:
             return
         cliente = self._clientes.obtener(cita.cliente_id)
-        if cliente is None or not cliente.telegram_chat_id:
+        if cliente is None:
             return
-        try:
-            self._notificador.enviar(
-                cliente.telegram_chat_id,
-                f"Tu reserva ({cita.id_visible}) del {cita.inicio:%d/%m/%Y} a las "
-                f"{cita.inicio:%H:%M} ha sido cancelada.",
-            )
-        except Exception:
-            logger.exception(
-                "No se pudo notificar la cancelación de la cita %s", cita.id
-            )
+        texto = (
+            f"Tu reserva ({cita.id_visible}) del {cita.inicio:%d/%m/%Y} a las "
+            f"{cita.inicio:%H:%M} ha sido cancelada."
+        )
+        self._enviar_notificacion(cliente, texto, cita.id)
+
+    def _enviar_notificacion(self, cliente: Cliente, texto: str, cita_id: int) -> None:
+        # Mismo criterio que CrearReserva._enviar_notificacion: prioridad
+        # Telegram, canal de teléfono como alternativa, no fan-out.
+        if self._notificador is not None and cliente.telegram_chat_id:
+            try:
+                self._notificador.enviar(cliente.telegram_chat_id, texto)
+                return
+            except Exception:
+                logger.exception(
+                    "No se pudo notificar (Telegram) la cancelación de la cita %s", cita_id
+                )
+        if self._notificador_telefono is not None and cliente.telefono:
+            try:
+                self._notificador_telefono.enviar(cliente.telefono, texto)
+            except Exception:
+                logger.exception(
+                    "No se pudo notificar (teléfono) la cancelación de la cita %s", cita_id
+                )
 
 
 # Transiciones válidas del ciclo de vida de una cita. Confirmar, marcar
@@ -306,10 +342,12 @@ class CambiarEstadoCita:
         citas: RepositorioCitas,
         clientes: RepositorioClientes | None = None,
         notificador: NotificadorMensajes | None = None,
+        notificador_telefono: NotificadorMensajes | None = None,
     ):
         self._citas = citas
         self._clientes = clientes
         self._notificador = notificador
+        self._notificador_telefono = notificador_telefono
 
     def ejecutar(self, cita_id: int, nuevo_estado: EstadoCita) -> Cita:
         cita = self._citas.obtener(cita_id)
@@ -322,7 +360,8 @@ class CambiarEstadoCita:
         cita.estado = nuevo_estado
         self._citas.guardar(cita)
 
-        if nuevo_estado == EstadoCita.CONFIRMADA and self._notificador is not None:
+        hay_notificador = self._notificador is not None or self._notificador_telefono is not None
+        if nuevo_estado == EstadoCita.CONFIRMADA and hay_notificador:
             self._notificar_confirmacion(cita)
 
         return cita
@@ -331,22 +370,35 @@ class CambiarEstadoCita:
         # Best-effort, igual que las notificaciones de CrearReserva/
         # CancelarReserva: un fallo aquí no debe deshacer la transición
         # ya aplicada.
-        assert self._notificador is not None  # solo se llama tras comprobarlo
         if self._clientes is None:
             return
         cliente = self._clientes.obtener(cita.cliente_id)
-        if cliente is None or not cliente.telegram_chat_id:
+        if cliente is None:
             return
-        try:
-            self._notificador.enviar(
-                cliente.telegram_chat_id,
-                f"Tu reserva ({cita.id_visible}) del {cita.inicio:%d/%m/%Y} a las "
-                f"{cita.inicio:%H:%M} ha sido confirmada.",
-            )
-        except Exception:
-            logger.exception(
-                "No se pudo notificar la confirmación de la cita %s", cita.id
-            )
+        texto = (
+            f"Tu reserva ({cita.id_visible}) del {cita.inicio:%d/%m/%Y} a las "
+            f"{cita.inicio:%H:%M} ha sido confirmada."
+        )
+        self._enviar_notificacion(cliente, texto, cita.id)
+
+    def _enviar_notificacion(self, cliente: Cliente, texto: str, cita_id: int) -> None:
+        # Mismo criterio que CrearReserva._enviar_notificacion: prioridad
+        # Telegram, canal de teléfono como alternativa, no fan-out.
+        if self._notificador is not None and cliente.telegram_chat_id:
+            try:
+                self._notificador.enviar(cliente.telegram_chat_id, texto)
+                return
+            except Exception:
+                logger.exception(
+                    "No se pudo notificar (Telegram) la confirmación de la cita %s", cita_id
+                )
+        if self._notificador_telefono is not None and cliente.telefono:
+            try:
+                self._notificador_telefono.enviar(cliente.telefono, texto)
+            except Exception:
+                logger.exception(
+                    "No se pudo notificar (teléfono) la confirmación de la cita %s", cita_id
+                )
 
 
 class RegistrarPedido:

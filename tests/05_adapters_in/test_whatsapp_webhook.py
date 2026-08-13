@@ -2,7 +2,9 @@
 en cada test para tener un `app` limpio (crear_router() añade rutas
 sobre un `app` de módulo compartido), y luego se registran las rutas
 de WhatsApp sobre ese mismo `app` con crear_router_whatsapp(). No hay
-red real: el envío de la respuesta a la API de Meta se mockea."""
+red real: el envío de la respuesta a la API de Meta se mockea contra
+httpx.post en adapters.out.notificador_whatsapp, que es donde vive
+ahora la llamada (#86)."""
 import hashlib
 import hmac
 import importlib
@@ -66,13 +68,15 @@ def modulo():
 @pytest.fixture
 def contexto(modulo):
     from adapters.in_.whatsapp_webhook import crear_router_whatsapp
+    from adapters.out.notificador_whatsapp import NotificadorMensajesWhatsApp
 
     orquestador = FakeOrquestador()
     repositorio_sesiones = RepositorioSesionesMemoria()
+    notificador = NotificadorMensajesWhatsApp(ACCESS_TOKEN, PHONE_NUMBER_ID)
     app = modulo.crear_router(orquestador, repositorio_sesiones)
     crear_router_whatsapp(
         app, orquestador, repositorio_sesiones,
-        VERIFY_TOKEN, ACCESS_TOKEN, PHONE_NUMBER_ID, APP_SECRET,
+        VERIFY_TOKEN, notificador, APP_SECRET,
     )
     return TestClient(app), orquestador, repositorio_sesiones
 
@@ -103,7 +107,7 @@ def test_mensaje_de_texto_llama_al_orquestador_y_envia_la_respuesta(contexto):
     orquestador.respuesta = "¡Hola! ¿En qué te ayudo?"
     cuerpo = json.dumps(_payload_mensaje("34600111222", "hola")).encode()
 
-    with patch("adapters.in_.whatsapp_webhook.httpx.post") as mock_post:
+    with patch("adapters.out.notificador_whatsapp.httpx.post") as mock_post:
         mock_post.return_value = MagicMock(status_code=200)
         respuesta = client.post(
             "/webhook/whatsapp",
@@ -218,7 +222,7 @@ def test_reutiliza_la_sesion_del_mismo_numero(contexto):
 
     for texto in ("primero", "segundo"):
         cuerpo = json.dumps(_payload_mensaje("34600111222", texto)).encode()
-        with patch("adapters.in_.whatsapp_webhook.httpx.post"):
+        with patch("adapters.out.notificador_whatsapp.httpx.post"):
             client.post(
                 "/webhook/whatsapp",
                 content=cuerpo,
