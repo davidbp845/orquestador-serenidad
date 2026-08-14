@@ -177,7 +177,7 @@ instrucciones_comerciales: |
 
   "¡Genial, nos vemos el jueves! Si necesitas cambiar algo, aquí estoy."
 
-vault_obsidian: "./vault_negocio"
+vault_obsidian: "./vault_example"
 
 direccion:
   calle: "Calle de la Serenidad, 12"
