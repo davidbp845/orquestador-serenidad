@@ -31,6 +31,13 @@ chroma_data/
 # esta línea conscientemente.
 vault_negocio/
 
+# Assets estáticos reales de un negocio concreto (logo, fuentes .woff2,
+# fotos) referenciados desde config/data/*.yaml (logo_url, fuente_*_url,
+# etc. — issue #96). Mismo motivo que config/data y vault_negocio/: no
+# son del repo público del esqueleto. Los assets de la demo (logo.svg,
+# favicon...) siguen en la raíz de frontend/public/, sí versionados.
+frontend/public/negocio/
+
 # Editores
 .vscode/
 .idea/
