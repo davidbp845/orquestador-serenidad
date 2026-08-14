@@ -145,3 +145,9 @@ body.tiene-fondo::before {
   padding: var(--spacing-fluid-3xs) var(--spacing-fluid-2xs);
   text-align: left;
 }
+.contenido-nota img {
+  display: block;
+  max-width: min(100%, 22rem);
+  margin: var(--spacing-fluid-2xs) auto;
+  border-radius: 1rem;
+}
