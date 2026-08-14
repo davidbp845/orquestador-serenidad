@@ -10,7 +10,7 @@ interface Props {
 }
 
 const { nota } = Astro.props;
-const titulo = extraerTitulo(nota.body ?? '', nota.id);
+const titulo = nota.data.titulo_corto ?? extraerTitulo(nota.body ?? '', nota.id);
 const resumen = nota.data.resumen;
 const { Content } = await render(nota);
 const idDialogo = `contenido-${nota.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;

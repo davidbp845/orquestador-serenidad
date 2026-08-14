@@ -19,6 +19,10 @@ const vault = defineCollection({
       tags: z.array(z.string()).optional(),
       publicar_web: z.boolean().default(false),
       orden: z.number().optional(),
+      // Título corto para la tarjeta de la sección de contenido público
+      // (la home); si no está presente, la tarjeta cae al H1 de la nota.
+      // La página completa de la nota siempre usa el H1, no este campo.
+      titulo_corto: z.string().optional(),
       // Texto corto para la tarjeta de la sección de contenido público;
       // el cuerpo completo de la nota se muestra al abrirla. Solo hace
       // falta si la nota se publica en la web.
