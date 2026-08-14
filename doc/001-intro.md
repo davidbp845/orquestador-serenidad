@@ -19,6 +19,13 @@ tener un asistente para una peluquería o un restaurante sin tocar una línea
 de `domain/` ni de `application/`. `doc/006-extender-a-otro-negocio.md`
 recorre ese proceso paso a paso con un ejemplo concreto.
 
+<img src="assets/orquestador-serenidad.png" alt="Home del frontend público del negocio demo 'Masajes Serenidad': chat con una pregunta de precios respondida por el asistente, reseñas de clientes y sección de contenido público (servicios, FAQ, equipo)" width="100%" />
+
+El chat, las reseñas y la rejilla de contenido de la captura vienen del
+mismo negocio demo con el que se prueba el sistema — nada hardcodeado para
+la captura: es exactamente lo que genera `config/business.yaml` +
+`vault_example/` tal cual están en este repo.
+
 ## Para quién es esto
 
 Para un negocio pequeño que quiere que un cliente pueda reservar, preguntar

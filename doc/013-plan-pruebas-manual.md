@@ -332,6 +332,9 @@ streamlit run panel_empleados/streamlit_app.py
       horizontal.
 
 ### 8.1 Agenda
+
+<img src="assets/panel-agenda.png" alt="Panel interno, sección Agenda: vista Semana con navegación Anterior/Hoy/Siguiente y una cita de masaje descontracturante de 45 min con Ana García, estado finalizada" width="100%" />
+
 - [ ] Vista **Día**: muestra las citas de hoy (las creadas en la sección 1
       deberían aparecer aquí). Botones "◀ Anterior" / "Hoy" / "Siguiente ▶"
       navegan correctamente por días.
@@ -353,6 +356,9 @@ streamlit run panel_empleados/streamlit_app.py
       sin capturar.
 
 ### 8.3 Clientes
+
+<img src="assets/panel-clientes.png" alt="Panel interno, sección Clientes: buscador por nombre o teléfono, checkbox de solo duplicados, y una tarjeta de cliente con teléfono, sin email, sin Telegram vinculado y una nota" width="100%" />
+
 - [ ] El cliente creado al reservar por chat aparece en la lista, con
       teléfono/email si se dieron, y su `id` generado automáticamente por
       el contador (no escrito a mano).
@@ -372,6 +378,9 @@ streamlit run panel_empleados/streamlit_app.py
       con la lista ya vacía).
 
 ### 8.4 Rate limiting (panel)
+
+<img src="assets/panel-rate-limiting.png" alt="Panel interno, sección Rate limiting: límite configurado de 20 peticiones por 60 segundos por usuario_id, sin peticiones registradas en la ventana actual" width="100%" />
+
 - [ ] **Sin `REDIS_URL`**: la sección muestra el aviso de que no está
       disponible sin Redis (el panel es un proceso aparte sin memoria
       compartida con `main.py`).
@@ -380,7 +389,10 @@ streamlit run panel_empleados/streamlit_app.py
       `usuario_id` aparece aquí en vivo, con el contador correcto y
       "Límite alcanzado" cuando corresponde.
 
-### 8.5 Ajustes — reindexar RAG
+### 8.5 Herramientas
+
+<img src="assets/panel-herramientas.png" alt="Panel interno, sección Herramientas: bloque Base de conocimiento (RAG) con 12 fragmentos indexados de 8 notas y botón Reindexar conocimiento; bloque Borrado de datos con aviso de acción irreversible" width="100%" />
+
 - [ ] Botón "Reindexar conocimiento" → tras el spinner, mensaje de éxito
       con el número de fragmentos indexados. Editar una nota del vault
       antes de pulsar (p.ej. cambiar un precio en `servicios.md`) y
@@ -389,12 +401,42 @@ streamlit run panel_empleados/streamlit_app.py
 - [ ] Provocar un error (p.ej. apuntar `vault_obsidian` a una ruta
       inexistente temporalmente) → el panel muestra el error en vez de
       crashear.
-- [ ] Sección de solo lectura de **contadores** (uno por tipo de entidad):
-      muestra el valor actual de cada contador (clientes, testimonios...);
-      inicializarlos a un valor concreto desde aquí y comprobar que el
-      siguiente id generado por ese tipo de entidad continúa desde ahí.
+- [ ] **Borrado de datos** — solo visible con `ENTORNO_LOCAL=true`: sin esa
+      variable, la sección queda oculta con un aviso; con ella, pide marcar
+      el checkbox de confirmación antes de habilitar el botón. **No
+      ejecutar el borrado contra ningún `DATABASE_URL` real** (acción
+      irreversible sobre citas/clientes/pedidos — ver "Autonomous Operation
+      Policy" en `CLAUDE.md`), solo verificar en memoria o en una base de
+      pruebas desechable.
 
-### 8.6 Testimonios
+### 8.6 Contadores
+
+<img src="assets/panel-contadores.png" alt="Panel interno, sección Contadores: vista de solo lectura con cita 4, cliente 2, nota_cliente 2, testimonio 3" width="100%" />
+
+- [ ] Sección de solo lectura (consultar no incrementa ningún contador),
+      una tarjeta por tipo de entidad (cita, cliente, nota_cliente,
+      testimonio...) con su valor actual.
+- [ ] Tras crear una entidad nueva (p.ej. un cliente) por chat o por panel,
+      recargar esta sección → el contador correspondiente sube en 1.
+
+### 8.7 Promobar
+
+<img src="assets/panel-promobar.png" alt="Panel interno, sección Promobar: aviso 'Promobar 48 euros' activo con vista previa renderizada del descuento del masaje de 1h" width="100%" />
+
+- [ ] Crear un promobar nuevo con HTML básico (`<a href>`, `<strong>`,
+      `<em>`...) → la vista previa lo muestra ya renderizado (saneado), no
+      el markup en crudo.
+- [ ] Incluir una etiqueta o atributo no permitido (p.ej. `<script>`) → se
+      elimina al mostrarse, tanto en la vista previa del panel como en la
+      cabecera del frontend público.
+- [ ] Activar un promobar con otro ya activo → el anterior se desactiva
+      solo (como mucho uno activo a la vez); comprobar que la cabecera del
+      frontend (sección 4) refleja el cambio.
+
+### 8.8 Testimonios
+
+<img src="assets/panel-testimonios.png" alt="Panel interno, sección Testimonios: lista con dos reseñas de 5 estrellas, cada una con botones Editar y Eliminar" width="100%" />
+
 - [ ] Crear/editar/eliminar un testimonio manualmente desde el panel → se
       refleja de inmediato en esta lista y (tras recargar) en el carrusel
       del Hero del frontend (sección 4).
