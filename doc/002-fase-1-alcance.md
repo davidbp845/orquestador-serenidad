@@ -163,6 +163,16 @@ herramienta que un dueño de negocio no técnico ya podría usar para escribir y
 organizar notas, sin necesitar tocar código para actualizar un precio o
 añadir una política nueva (issue #3, cerrado).
 
+**Vault de ejemplo versionado en el repo (#46, cerrado).** `vault_negocio/`
+está gitignoreado (mismo motivo que `config/data/`: puede contener datos
+reales de un negocio concreto, no algo para el repo público del esqueleto —
+ver sección 6). Sin nada versionado, clonar el repo no da ningún contenido
+con el que probar el sistema. #46 añadió `vault_example/`, sí trackeado en
+git, con el vault del negocio demo ("Centro de Masajes Serenidad") —
+`config/business.yaml` apunta ahí vía `vault_obsidian: "./vault_example"`,
+así que el esqueleto funciona de punta a punta nada más clonar, sin que
+nadie tenga que escribir una sola nota a mano primero.
+
 El puente entre el LLM y este índice es la herramienta
 `consultar_conocimiento_negocio`, resuelta por el caso de uso
 `ConsultarConocimientoNegocio`: busca los fragmentos más relevantes para la
@@ -188,6 +198,20 @@ activadas. Se cierra por prioridad (el aviso es cosmético, no bloquea
 ninguna funcionalidad) — `HF_TOKEN` ya quedó documentado como placeholder en
 `.env.example` por si se retoma más adelante, desde otro navegador o
 dispositivo.
+
+**Roadmap no construido — #94 — Automatizar la guía de redacción del
+vault.** `tmp/guia_redaccion_vault.md` (borrador de trabajo, todavía no
+promovido a `doc/`) documenta cómo escribir cada nota para que funcione bien
+a la vez para los cuatro consumidores reales del contenido: el propio
+asistente (RAG, sensible al chunking por párrafos de
+`obsidian_ingest.py::trocear_texto()`), buscadores (SEO), otros LLMs que
+rastrean la web (GEO) y el cliente humano — con una checklist explícita por
+nota (H1 único y descriptivo, `resumen` de 120–160 caracteres, sin "pendiente
+de confirmar" en notas publicadas, terminología consistente entre notas y con
+`business.yaml`...). Hoy esa checklist se aplica solo a mano, releyendo la
+guía cada vez. #94 queda como recordatorio para retomar más adelante si (y
+cómo) automatizar total o parcialmente esas comprobaciones — sin analizar ni
+diseñar todavía el alcance real.
 
 ## 4. El agente habla con distintos proveedores de LLM
 
@@ -434,6 +458,37 @@ reservar sin fricción", con cuatro piezas independientes:
   dirección/instrucciones de llegada (`instrucciones_llegada`) en columnas
   lado a lado a partir de tablet.
 
+**Tema visual y assets reales de cada negocio (#76, #96, ambos cerrados).**
+Todo el frontend se apoya en siete variables CSS (`TemaConfig`: fondo,
+superficie, texto, texto_suave, borde, acento, acento_suave) con valores
+neutros por defecto en `global.css`, sobreescribibles desde la sección `tema`
+de `business.yaml` (#76) — mismo patrón opcional que `imagen_fondo_url`: sin
+esa sección, el esqueleto usa su paleta neutra de siempre. Las fuentes van
+autoalojadas (`fuente_titulo_url`/`fuente_cuerpo_url`, `.woff2`). Como estos
+valores —y el logo, y cualquier foto real del negocio— son datos propios de
+un despliegue concreto y no del esqueleto público, #96 gitignoreó
+`frontend/public/negocio/` (mismo criterio que `vault_negocio/` y
+`config/data/`, ver sección 6) para que un logo o una foto real no acaben
+nunca commiteados en el repo público; la demo del esqueleto sigue sirviendo
+sus propios assets desde la raíz de `frontend/public/`, sí versionada.
+
+**Título corto de tarjeta, separado del H1 (#93, cerrado).**
+`extraerTitulo()` usaba el primer `# H1` de la nota tanto para el `<title>`
+de la página completa como para el título de su tarjeta en `GridContenido`
+— un H1 pensado para SEO local (p.ej. "Servicios y precios — HerukaLife
+Mataró") queda mal en una tarjeta compacta. `titulo_corto`, campo opcional
+del frontmatter justo antes de `resumen`, da a la tarjeta un título propio
+más corto sin tocar el H1 de la página; sin ese campo, la tarjeta sigue
+cayendo al H1 completo, igual que antes.
+
+**Roadmap no construido — fotos del centro (#95).** Sección de fotos del
+centro/cabina, deliberadamente sin usar una tarjeta más de `GridContenido`
+(pensada para contenido del vault, no para una galería de imágenes). Quedó
+abierto dónde exactamente —sección propia antes de "Cómo llegar" (opción
+preferida de entrada) o dentro de la propia `Ubicacion.astro`— y de dónde
+salen las imágenes (previsiblemente un campo nuevo en `business.yaml`, mismo
+patrón que `imagen_fondo_url`) — sin decidir todavía.
+
 ## 9. Panel interno para el negocio
 
 **Qué resuelve:** que alguien del equipo (no el dueño necesariamente) pueda
@@ -540,6 +595,13 @@ canales que ya autentican por sí mismos (Telegram siempre, WhatsApp solo si
 el teléfono dictado coincide con el número real de la sesión). Ver
 `doc/003-modelo-datos.md` para el detalle de dónde vive `CodigoVerificacion`.
 
+**Pendiente — #87 — probar verificación de teléfono y notificaciones
+WhatsApp/SMS con credenciales reales.** #84/#85/#86 (arriba) están cerrados
+y probados con fakes/mocks en los tests automáticos, pero nunca de punta a
+punta contra la Graph API de WhatsApp o Twilio reales — #87 es el
+seguimiento abierto para esa verificación manual, mismo motivo que #48 (ver
+`doc/013-plan-pruebas-manual.md` secciones 7.1 a 7.3).
+
 **Roadmap no construido — autoedición del vault por el propietario (#25):**
 al analizar #25 se detectó que el flujo actual de contenido (propietario edita
 `.md` en Obsidian → ingesta RAG + build de Astro leen el mismo archivo) exige
@@ -626,8 +688,8 @@ para desarrollo que no deberían llegar tal cual a producción.
 
 | Estado | Issues |
 |---|---|
-| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #17, #18, #19 (parcial/incremental), #20, #23 (cerrado sin implementar — signup de Hugging Face bloqueado, aviso cosmético, ver sección 3), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #37 (movido a `doc/007-despliegue.md`), #38, #39, #40, #41, #43, #46, #84, #85, #86 |
-| **Backlog / abiertos** | #48, #71, #72, #76 |
+| **Hecho y cerrado** | #1, #2, #3, #4, #5, #6, #7, #8 (no aplica), #9, #10, #12, #13, #17, #18, #19 (parcial/incremental), #20, #23 (cerrado sin implementar — signup de Hugging Face bloqueado, aviso cosmético, ver sección 3), #25 (fusionado en #10), #26, #27, #28, #29, #31, #32, #33, #34, #35, #36 (movido a `doc/003-modelo-datos.md`), #37 (movido a `doc/007-despliegue.md`), #38, #39, #40, #41, #43, #46, #71, #72, #76, #84, #85, #86, #93, #96 |
+| **Backlog / abiertos** | #48, #87, #91, #92, #94, #95 |
 
 > Nota: esta tabla se dejó de actualizar issue a issue en algún punto después
 > del #46 — #17 (canal WhatsApp de entrada) ya está implementado en el código
@@ -635,22 +697,31 @@ para desarrollo que no deberían llegar tal cual a producción.
 > #21 y #22 también están cerrados pese a seguir listados como backlog, y hay
 > issues intermedios (#47–#83, ej. #52 identidad de cliente, #77 notas
 > estructuradas) resueltos y no reflejados en este resumen. Se corrige lo
-> verificable (conteo real vía `gh issue list --label "Fase I"`: 77
-> etiquetados `Fase I`, 73 cerrados a día de hoy) y se añaden #17, #84, #85 y
-> #86 (los últimos tres con su narrativa completa arriba, en la sección 9);
-> una pasada completa del resumen, con narrativa para cada issue intermedio,
-> queda pendiente aparte.
+> verificable (conteo real vía `gh issue list --label "Fase I"`: 83
+> etiquetados `Fase I`, 77 cerrados a día de hoy) y se añaden #17, #71, #72,
+> #76, #84, #85, #86, #93 y #96 (con su narrativa completa arriba, en las
+> secciones 3, 8 y 9); una pasada completa del resumen, con narrativa para
+> cada issue intermedio del rango #47–#83, queda pendiente aparte.
 
-De 77 issues etiquetados `Fase I`, 73 están cerrados. Abiertos hoy: #48
+De 83 issues etiquetados `Fase I`, 77 están cerrados. Abiertos hoy: #48
 (probar WhatsApp en local con un número de prueba de Meta, seguimiento de
-#17), y tres de ajustes finos de interfaz (#71 panel interno, #72 y #76
-frontend cliente) sin narrativa propia en este documento todavía. Las
-notificaciones proactivas al cliente (#38, y su ampliación a WhatsApp/SMS en
-#86/#85), la verificación de teléfono (#84), la revisión del modelo de datos
-(#36), el Postgres real de desarrollo (#41), la CI rota en `main` (#42, sin
-label `Fase I` por ser un fallo de infraestructura de CI, no de alcance —
-fuera de este recuento), la documentación inicial completa (#20), el
-checklist de producción (#37), el vault de ejemplo versionado (#46) y el
-ciclo de vida completo de la Cita (#43) ya están resueltos — ver la
-sección 9,
-`doc/003-modelo-datos.md` y `doc/007-despliegue.md` respectivamente.
+#17) y #87 (mismo tipo de pendiente, pero para verificación de teléfono y
+WhatsApp/SMS con credenciales reales — #84/#85/#86, ver sección 9); #91
+panel interno y #92 frontend cliente, los issues paraguas de ajustes finos
+de interfaz vigentes hoy (sucesores de #71/#72, ya cerrados); y dos
+"roadmap no construido" con el diseño todavía abierto — #94 (automatizar la
+guía de redacción del vault, sección 3) y #95 (sección de fotos del centro,
+sección 8).
+
+El resto de lo cerrado desde el #46 ya tiene narrativa propia en algún punto
+de este documento o de la serie `doc/`: notificaciones proactivas al cliente
+y su ampliación a WhatsApp/SMS (#38, #86, #85), verificación de teléfono
+(#84) y ciclo de vida completo de la Cita (#43) en la sección 9; tema visual
+configurable y assets reales por negocio (#76, #96) y título corto de
+tarjeta (#93) en la sección 8; revisión del modelo de datos (#36) en
+`doc/003-modelo-datos.md`; Postgres real de desarrollo (#41) en la sección
+6; documentación inicial completa (#20) y checklist de producción (#37,
+movido a `doc/007-despliegue.md`) en la sección 10; vault de ejemplo
+versionado (#46) en la sección 3; y la CI rota en `main` (#42, sin label
+`Fase I` por ser un fallo de infraestructura, no de alcance — fuera de este
+recuento) en `doc/011-integracion-continua.md`.
