@@ -1,6 +1,6 @@
 """
 Casos de uso: orquestan entidades y puertos para resolver una acción
-de negocio concreta. Esto es lo que el orquestador de agentes va a
+de negocio concreta. Esto es lo que el orquestador agéntico va a
 invocar como "herramientas" (tools) del LLM.
 """
 from __future__ import annotations

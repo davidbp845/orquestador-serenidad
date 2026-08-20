@@ -1,5 +1,5 @@
 """
-Orquestador de agentes: puerto de entrada conversacional. Recibe un
+Orquestador agéntico: puerto de entrada conversacional. Recibe un
 mensaje de cualquier canal (web, Telegram...) junto con el historial,
 decide qué herramientas invocar mediante el LLM, ejecuta esas
 herramientas contra el dominio, y devuelve una respuesta en lenguaje

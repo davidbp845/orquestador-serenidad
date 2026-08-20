@@ -82,7 +82,7 @@ tienen issue propio todavía: si el modelo actual (una única entidad
 pasa con las sesiones en memoria en un despliegue con más de un worker sin
 Redis delante.
 
-## 2. El orquestador de agentes (aplicación)
+## 2. El orquestador agéntico (aplicación)
 
 **Qué resuelve:** el bucle conversacional — recibir un mensaje, decidir si
 hace falta consultar disponibilidad o crear una reserva, ejecutar esa acción

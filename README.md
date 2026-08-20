@@ -1,11 +1,12 @@
 # Orquestador agéntico — esqueleto hexagonal
 
-Esqueleto funcional de un orquestador de agentes con arquitectura 
+Esqueleto funcional de un orquestador agéntico con arquitectura 
 hexagonal (puertos y adaptadores), pensado para negocios "AI-first", 
 donde el producto es el conocimiento del negocio y la capacidad de 
-actuar sobre él vía agentes, expuesto sobre todo a través de canales 
-conversacionales (chat, Telegram), mientras la web actúa como 
-escaparate estático generado desde la misma fuente de conocimiento.
+actuar sobre él vía un agente conversacional, expuesto sobre todo a 
+través de canales conversacionales (chat, Telegram), mientras la web 
+actúa como escaparate estático generado desde la misma fuente de 
+conocimiento.
 
 [Documentación](doc/001-intro.md) — narrativa más profunda que este README:
 arquitectura, RAG, cómo extender a otro negocio, despliegue y referencia de
@@ -17,7 +18,7 @@ la API del chat.
 domain/           → entidades, puertos (interfaces) y casos de uso.
                      Sin dependencias externas. Esto es lo único que
                      cambia de verdad entre negocios.
-application/      → orquestador de agentes (síncrono y en streaming),
+application/      → orquestador agéntico (síncrono y en streaming),
                      definición de tools, construcción del system
                      prompt.
 adapters/in_/     → adaptadores de entrada: FastAPI (chat web, con

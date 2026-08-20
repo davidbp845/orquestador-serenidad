@@ -1,5 +1,5 @@
 """
-Adaptador de entrada: expone el orquestador de agentes vía HTTP para
+Adaptador de entrada: expone el orquestador agéntico vía HTTP para
 el chat de la web. No contiene lógica de negocio, solo traduce
 HTTP <-> orquestador.
 """
